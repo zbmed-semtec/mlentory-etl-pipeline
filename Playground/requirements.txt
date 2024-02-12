@@ -1,2 +1,6 @@
 transformers
-huggingface-hub 
+huggingface-hub
+matplotlib
+numpy
+pandas
+seaborn
