@@ -1,5 +1,5 @@
-transformers
 huggingface-hub
+transformers
 matplotlib
 numpy
 pandas

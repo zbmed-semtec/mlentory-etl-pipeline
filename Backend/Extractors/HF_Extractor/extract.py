@@ -9,7 +9,7 @@ from collections import defaultdict
 
 api = HfApi()
 
-model_retreival_limit = 500
+model_retreival_limit = 200
 model_list = list(api.list_models(limit=model_retreival_limit,sort="last_modified",direction=-1))
 
 cnt_models_to_process = 3
