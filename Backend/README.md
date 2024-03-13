@@ -88,3 +88,23 @@ sudo chmod +x /usr/local/bin/docker-compose
 ```
 docker-compose --version
 ```
+
+### Run the project
+
+1. You need to build the images for the containers in project
+
+```
+docker-compose build
+```
+
+2. Create the containers and 
+
+```
+docker-compose run
+```
+
+3. If you want to access any of the running containers:
+
+```
+docker exec -it <container_name> sh
+```

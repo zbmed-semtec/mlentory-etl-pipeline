@@ -6,6 +6,7 @@ WORKDIR /app
 
 # Install dependencies from requirements.txt
 COPY requirements.txt ./
+RUN pip cache purge
 RUN pip install -r requirements.txt
 
 # Copy your Python application code
