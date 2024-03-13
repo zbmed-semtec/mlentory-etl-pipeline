@@ -1,0 +1,34 @@
+version: "3.8"  # Specify docker-compose version
+
+services:
+  # Extractor service
+  hf_extractor:
+    build: 
+      context: ./Extractors/HF_Extractor
+      dockerfile: Dockerfile  # Path to your extractor Dockerfile
+    # Optional: Define volumes to mount scraper scripts or dependencies
+    volumes:
+      - ./Extractors/HF_Extractor:/app/HF_extractor  # Example volume mapping for scraper code
+
+  # Transformer service
+  # transformer:
+  #   build: ./transformer  # Path to your transformer Dockerfile
+  #   # Optional: Define volumes to mount transformation logic
+  #   volumes:
+  #     - ./transformer:/app/transformer  # Example volume mapping for transformation code
+  #   depends_on:
+  #     - extractor  # Wait for extractor to finish before starting transformer
+
+  # Loader service
+  # loader:
+  #   build: ./loader  # Path to your loader Dockerfile
+  #   # Optional: Define volumes for output data or database connection details
+  #   volumes:
+  #     - ./loader:/app/loader  # Example volume mapping for loader code
+  #   depends_on:
+  #     - transformer  # Wait for transformer to finish before starting loader
+
+# Define a network for communication between services
+networks:
+  etl-network:
+    driver: bridge
