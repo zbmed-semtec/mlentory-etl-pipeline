@@ -6,14 +6,29 @@ services:
     build: 
       context: ./Extractors/HF_Extractor
       dockerfile: Dockerfile  # Path to your extractor Dockerfile
-    # Optional: Define volumes to mount scraper scripts or dependencies
+    # Define volumes to mount extractor scripts or dependencies
     volumes:
-      - ./Extractors/HF_Extractor:/app/HF_extractor  # Example volume mapping for scraper code
+      - ./Extractors/HF_Extractor:/app
+    network_mode: "host"
+    dns:
+      - 1.1.1.1
+
+  hf_extractor_test:
+    build: 
+      context: ./Extractors/HF_Extractor
+      dockerfile: Dockerfile  # Path to your extractor Dockerfile
+    # Define volumes to mount extractor scripts or dependencies
+    volumes:
+      - ./Extractors/HF_Extractor:/app
+    network_mode: "host"
+    dns:
+      - 1.1.1.1
+    
 
   # Transformer service
   # transformer:
   #   build: ./transformer  # Path to your transformer Dockerfile
-  #   # Optional: Define volumes to mount transformation logic
+  #   # Define volumes to mount transformation logic
   #   volumes:
   #     - ./transformer:/app/transformer  # Example volume mapping for transformation code
   #   depends_on:
@@ -28,7 +43,3 @@ services:
   #   depends_on:
   #     - transformer  # Wait for transformer to finish before starting loader
 
-# Define a network for communication between services
-networks:
-  etl-network:
-    driver: bridge
