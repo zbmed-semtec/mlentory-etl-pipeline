@@ -9,9 +9,10 @@ services:
     # Define volumes to mount extractor scripts or dependencies
     volumes:
       - ./Extractors/HF_Extractor:/app
-    network_mode: "host"
     dns:
       - 1.1.1.1
+    # networks:
+    #   - my-macvlan-net
 
   hf_extractor_test:
     build: 
@@ -20,10 +21,11 @@ services:
     # Define volumes to mount extractor scripts or dependencies
     volumes:
       - ./Extractors/HF_Extractor:/app
-    network_mode: "host"
+    # network_mode: "host"
     dns:
       - 1.1.1.1
-    
+    # networks:
+    #   - my-macvlan-net
 
   # Transformer service
   # transformer:
@@ -42,4 +44,11 @@ services:
   #     - ./loader:/app/loader  # Example volume mapping for loader code
   #   depends_on:
   #     - transformer  # Wait for transformer to finish before starting loader
+
+# networks:
+#   my-macvlan-net:
+#     external: true
+#     name: my-macvlan-net
+#   host:
+#     external: true
 
