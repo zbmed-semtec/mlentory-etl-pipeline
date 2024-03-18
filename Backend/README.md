@@ -106,5 +106,40 @@ docker-compose run
 3. If you want to access any of the running containers:
 
 ```
-docker exec -it <container_name> sh
+docker exec -it <container_name> /bin/bash
+```
+
+### Update the default Docker DNS server
+If you are using the WSL or a Linux distribution as your OS you need to configure the following in order for the private container network to resolve outside hostnames and interact correctly with the internet.
+
+1. Install dnsmasq and resolvconf.
+```
+sudo apt update
+sudo apt install dnsmasq resolvconf
+```
+
+2. Find your docker IP (in this case, 172.17.0.1):
+```
+root@host:~# ifconfig | grep -A2 docker0
+docker0   Link encap:Ethernet  HWaddr 02:42:bb:b4:4a:50  
+          inet addr:172.17.0.1  Bcast:0.0.0.0  Mask:255.255.0.0
+```
+
+3. Edit /etc/dnsmasq.conf and add these lines:
+```
+interface=docker0
+bind-interfaces
+listen-address=172.17.0.1
+```
+4. Create/edit /etc/resolvconf/resolv.conf.d/tail and add this line:
+```
+nameserver 172.17.0.1
+```
+5. Re-read the configuration files and regenerate /etc/resolv.conf.
+```
+sudo resolvconf -u
+```
+6. Restart your OS. If you are using WSL run the following in your windows terminal:
+```
+wsl.exe --shutdown
 ```
