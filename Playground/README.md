@@ -155,7 +155,7 @@ listen-address=172.17.0.1
 ```
 4. Create/edit /etc/resolvconf/resolv.conf.d/tail and add this line:
 ```
-nameserver 172.17.0.1
+nameserver 8.8.8.8
 ```
 5. Re-read the configuration files and regenerate /etc/resolv.conf.
 ```
