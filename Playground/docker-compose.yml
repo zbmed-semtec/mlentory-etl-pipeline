@@ -1,0 +1,19 @@
+version: '3'
+services:
+  ml:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    volumes:
+      - .:/app
+    ports:
+      - 8888:8888
+    deploy:
+      resources:
+        reservations:
+          devices:
+          - driver: nvidia
+            capabilities: [gpu]
+    command: ["tail", "-f", "/dev/null"]
+    dns:
+      - 1.1.1.1

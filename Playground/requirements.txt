@@ -1,6 +1,9 @@
 transformers
+datasets
 huggingface-hub
 matplotlib
 numpy
 pandas
 seaborn
+jupyter 
+notebook

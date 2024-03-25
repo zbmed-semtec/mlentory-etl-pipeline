@@ -1,5 +1,6 @@
 huggingface-hub
 transformers
+datasets
 matplotlib
 numpy
 pandas
