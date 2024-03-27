@@ -28,7 +28,8 @@ RUN pip3 install torch -f https://download.pytorch.org/whl/cu113
 COPY requirements.txt .
 RUN pip3 install -r requirements.txt
 
-# RUN jupyter notebook --ip 0.0.0.0 --port 8888 --no-browser --allow-root
 
 WORKDIR /app
 COPY . .
+
+RUN jupyter notebook --ip 0.0.0.0 --port 8888 --no-browser --allow-root
