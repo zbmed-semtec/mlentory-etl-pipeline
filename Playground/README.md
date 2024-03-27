@@ -2,9 +2,9 @@
 
 In this folder you will find the code needed to experiment with the tool we later used in production 
 
-## Run the project
+## Run the playground
 
-We use a docker based tools to run the project.
+We use a docker based tools to run make our tests in the playground.
 
 If you are in machine with a Unix based operating system you just need to install the Docker and Docker Compose services.
 
@@ -29,7 +29,7 @@ sudo apt install apt-transport-https ca-certificates curl software-properties-co
 
 3. Add the GPG key for the official Docker repository:
 ``` console
-curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -
+sudo curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -
 ```
 
 
@@ -45,13 +45,13 @@ sudo apt update
 ```
 
 
-7. Install Docker:
+6. Install Docker:
 ```
-sudo apt install docker-ce
+sudo apt install -y docker-ce
 ```
 
 
-8. Verify the installation:
+7. Verify the installation:
 ```
 sudo docker run hello-world
 ```
@@ -70,6 +70,9 @@ sudo groupadd docker
 sudo usermod -aG docker ${USER}
 ```
 3. Log out and log back in for changes to take effect.
+```
+sudo reboot
+```
 
 4. Verify you can run Docker commands without sudo:
 ```
@@ -93,12 +96,14 @@ docker-compose --version
 
 ### Setup NVIDIA GPUs
 
-You can follow the guide at https://docs.nvidia.com/cuda/wsl-user-guide/index.html if you want to setup the NVDIA GPUs in your WSL.
+* You can follow the guide at https://docs.nvidia.com/cuda/wsl-user-guide/index.html if you want to setup the NVDIA GPUs in your WSL.
 
-But in general you have to guarantee that you have the GPU drivers, the NVIDIA container toolkit, and you have CUDA install.
+* But in general you have to guarantee that you have the GPU drivers, the NVIDIA container toolkit, and you have CUDA toolkit install.
 
-If you are using Windows with WSL you have to install the GPU drivers in Windows.
-You can check the NVIDIA GPU drivers at: https://www.nvidia.com/Download/index.aspx
+* If you are using Windows with WSL you have to install the GPU drivers in Windows, otherwise just install the drivers in your host OS. 
+    * In Windows you can check the NVIDIA GPU drivers at: https://www.nvidia.com/Download/index.aspx
+    * In Ubuntu you can check how to download the drivers at: https://ubuntu.com/server/docs/nvidia-drivers-installation
+    * Remember to restart your system after installation.
 
 The NVIDIA container toolkit has to be installed in the Linux distribution. The links for installation can be found here: https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html#installing-with-apt
 
@@ -130,6 +135,26 @@ docker exec -it <container_name> /bin/bash
 ```
 jupyter notebook --ip 0.0.0.0 --port 8888 --no-browser --allow-root
 ```
+
+5. You can now access the Jupyter notebooks in your browser using the links that the previous command gives you as an output.
+
+
+
+### Check everything went fine
+
+* If everything went well you should be able to run the command:
+```
+docker-compose run --d
+```
+* After that there should be one container running, you can enter the container running:
+```
+docker exec -it <container_name> /bin/bash
+```
+* You should be able to run the following command inside the container and get an immediate update:
+```
+apt-get update
+```
+* If your the command is not able to resolve the ubuntu.com hostname you need to update the DNS server, as shown in the next section.
 
 ### Update the default Docker DNS server
 If you are using the WSL or a Linux distribution as your OS you need to configure the following in order for the private container network to resolve outside hostnames and interact correctly with the internet.
