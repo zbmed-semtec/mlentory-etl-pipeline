@@ -15,5 +15,6 @@ services:
           - driver: nvidia
             capabilities: [gpu]
     command: ["tail", "-f", "/dev/null"]
+    network_mode: "host"
     dns:
       - 1.1.1.1
