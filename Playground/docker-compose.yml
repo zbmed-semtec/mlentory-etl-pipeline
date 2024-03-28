@@ -17,3 +17,4 @@ services:
     command: ["tail", "-f", "/dev/null"]
     dns:
       - 1.1.1.1
+
