@@ -11,7 +11,9 @@ What model is used as the base model?
 What evaluation metrics were used?
 What were the values of the evaluation metrics?
 What hyperparameters were optimized during the training process?
-What hyperparameters were selected?
+What hyperparameters values were selected?
 What publications are related to the model?
 Where is the model deployed?
 What use license is associated with the model?
+What languages does the model work with?
+What software libraries were used for the model to work?

@@ -28,22 +28,22 @@ services:
     #   - my-macvlan-net
 
   # Transformer service
-  # transformer:
-  #   build: ./transformer  # Path to your transformer Dockerfile
-  #   # Define volumes to mount transformation logic
-  #   volumes:
-  #     - ./transformer:/app/transformer  # Example volume mapping for transformation code
-  #   depends_on:
-  #     - extractor  # Wait for extractor to finish before starting transformer
+  transformer:
+    build: ./transformer  # Path to your transformer Dockerfile
+    # Define volumes to mount transformation logic
+    volumes:
+      - ./transformer:/app/transformer  # Example volume mapping for transformation code
+    depends_on:
+      - extractor  # Wait for extractor to finish before starting transformer
 
   # Loader service
-  # loader:
-  #   build: ./loader  # Path to your loader Dockerfile
-  #   # Optional: Define volumes for output data or database connection details
-  #   volumes:
-  #     - ./loader:/app/loader  # Example volume mapping for loader code
-  #   depends_on:
-  #     - transformer  # Wait for transformer to finish before starting loader
+  loader:
+    build: ./loader  # Path to your loader Dockerfile
+    # Optional: Define volumes for output data or database connection details
+    volumes:
+      - ./loader:/app/loader  # Example volume mapping for loader code
+    depends_on:
+      - transformer  # Wait for transformer to finish before starting loader
 
 # networks:
 #   my-macvlan-net:
