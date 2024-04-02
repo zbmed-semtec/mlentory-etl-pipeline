@@ -1,11 +1,27 @@
-FROM python:3.10
+FROM nvidia/cuda:11.2.2-cudnn8-devel-ubuntu20.04
 
-# Create a working directory
+ARG DEBIAN_FRONTEND=noninteractive
+
+RUN apt-get update
+RUN apt-get install -y \
+    wget\
+    curl \
+    git \
+    python3.9 \
+    python3-pip \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN nvcc --version
+
+RUN pip3 install torch -f https://download.pytorch.org/whl/cu113
+
+COPY requirements.txt .
+RUN pip3 install -r requirements.txt
+
+
 WORKDIR /app
-
-# Install dependencies from requirements.txt
-COPY requirements.txt ./
-RUN pip cache purge
-RUN pip install -r requirements.txt
+COPY . .
 
 CMD ["tail", "-f", "/dev/null"]
+
+# CMD [ "python3 extract_from_Dataset.py" ]
