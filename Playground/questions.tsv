@@ -1,6 +1,6 @@
 0
 What is the name of the model?
-Who created/uploaded the model?
+What user uploaded the model?
 When was the model created/uploaded?
 What tasks can the model solve?
 What datasets was the model trained on?
@@ -17,3 +17,4 @@ Where is the model deployed?
 What use license is associated with the model?
 What languages does the model work with?
 What software libraries were used for the model to work?
+Who created the model?
