@@ -23,6 +23,13 @@ class MetadataParser:
         answer = self.qa_pipeline({"question": question, "context": context})
         return answer['answer']+''
     
+    def add_default_extraction_info(self,data,extraction_method,confidence):
+        return {"data":data,
+                    "extraction_method":extraction_method,
+                    "confidence":confidence}
+                
+            
+    
     def parse_known_fields_HF(self, HF_df: pd.DataFrame) -> pd.DataFrame:
         HF_df.loc[:,"q_id_0"] = HF_df.loc[:, ("modelId")]
         HF_df.loc[:,"q_id_1"] = HF_df.loc[:, ("author")]
@@ -87,6 +94,10 @@ class MetadataParser:
                 else:
                     if(tag_for_q3 not in HF_df["q_id_3"][index]):
                         HF_df.loc[index, "q_id_3"].append(tag_for_q3)
+        
+        # for id in ['q_id_3', 'q_id_4','q_id_13','q_id_15','q_id_16','q_id_17']:
+        #     HF_df.loc[:, id] = [self.add_default_extraction_info(x) for x in HF_df.loc[:, id]]
+        
         return HF_df
     
     def parse_fields_from_txt_HF(self, HF_df: pd.DataFrame) -> pd.DataFrame:
