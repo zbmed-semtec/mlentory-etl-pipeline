@@ -22,6 +22,6 @@ RUN pip3 install -r requirements.txt
 WORKDIR /app
 COPY . .
 
-CMD ["tail", "-f", "/dev/null"]
+# CMD ["tail", "-f", "/dev/null"]
 
 # CMD [ "python3 extract_from_Dataset.py" ]
