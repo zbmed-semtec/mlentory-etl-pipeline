@@ -4,41 +4,34 @@ from Utils.MetadataParser import MetadataParser
 import pandas as pd
 import os
 
-def load_config_file(path):
-    config_info = [val[0].lower() for val in pd.read_csv(path,sep='\t').values.tolist()]
-    config_info = set(config_info)
-    return config_info
-
-
 dataset_models = load_dataset("librarian-bots/model_cards_with_metadata")['train']
 HF_df = dataset_models.to_pandas()
 
+#With GPU
 qa_pipeline = pipeline("question-answering", model="Intel/dynamic_tinybert",device=0)
+#Without GPU
+# qa_pipeline = pipeline("question-answering", model="Intel/dynamic_tinybert")
 parser = MetadataParser(qa_pipeline)
 
-    
-# Getting the tags
-tags_language = load_config_file("./Config_Data/tags_language.tsv")
-tags_libraries = load_config_file("./Config_Data/tags_libraries.tsv")
-tags_other = load_config_file("./Config_Data/tags_other.tsv")
-tags_task = load_config_file("./Config_Data/tags_task.tsv")
-
-#Getting the questions
-questions = load_config_file("./Config_Data/questions.tsv")
-
 #Create new columns to answer each question in the dataframe
-HF_df_small = HF_df.iloc[0:10] 
+HF_df = HF_df.iloc[0:10] 
 
 new_columns = {}
 
-for idx in range(len(questions)):
+for idx in range(len(parser.questions)):
     q_id = "q_id_"+str(idx)
-    new_columns[q_id] = [None for _ in range(len(HF_df_small))]
+    new_columns[q_id] = [None for _ in range(len(HF_df))]
 
-HF_df_small = HF_df_small.assign(**new_columns)
+HF_df = HF_df.assign(**new_columns)
 
-print(HF_df_small.head())
+#Fill the new columns
+HF_df = parser.parse_fields_from_txt_HF(HF_df=HF_df)
+HF_df = parser.parse_fields_from_tags_HF(HF_df=HF_df)
+HF_df = parser.parse_known_fields_HF(HF_df=HF_df)
 
+#Remove unecessary columns
+HF_df = HF_df.drop(columns=['modelId', 'author', 'last_modified', 'downloads', 'likes',
+       'library_name', 'tags', 'pipeline_tag', 'createdAt', 'card'])
 
-
-
+HF_df.to_csv("Parsed_HF_Dataframe.tsv",sep="\t")
+print(HF_df.head())
