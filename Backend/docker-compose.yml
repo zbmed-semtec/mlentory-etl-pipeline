@@ -16,6 +16,7 @@ services:
           - driver: nvidia
             capabilities: [gpu]
     command: ["python3", "extract_from_Dataset.py"]
+    # command: ["tail", "-f", "/dev/null"]
     dns:
       - 1.1.1.1
     # networks:

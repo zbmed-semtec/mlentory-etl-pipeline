@@ -1,4 +1,3 @@
-from transformers import pipeline
 from datasets import load_dataset
 from Utils.MetadataParser import MetadataParser
 import pandas as pd
@@ -7,11 +6,8 @@ import os
 dataset_models = load_dataset("librarian-bots/model_cards_with_metadata")['train']
 HF_df = dataset_models.to_pandas()
 
-#With GPU
-qa_pipeline = pipeline("question-answering", model="Intel/dynamic_tinybert",device=0)
-#Without GPU
-# qa_pipeline = pipeline("question-answering", model="Intel/dynamic_tinybert")
-parser = MetadataParser(qa_pipeline)
+
+parser = MetadataParser(qa_model="Intel/dynamic_tinybert")
 
 #Create new columns to answer each question in the dataframe
 HF_df = HF_df.iloc[0:10] 
