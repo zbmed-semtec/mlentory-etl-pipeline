@@ -22,5 +22,5 @@ RUN pip3 install -r requirements.txt
 WORKDIR /app
 COPY . .
 
-RUN jupyter notebook --ip 0.0.0.0 --port 8888 --no-browser --allow-root
+# RUN jupyter notebook --ip 0.0.0.0 --port 8888 --no-browser --allow-root
 
