@@ -8,7 +8,7 @@ We use a docker based tools to run the project.
 
 If you are in machine with a Unix based operating system you just need to install the Docker and Docker Compose services.
 
-If you are in Windows I recommend installing the Windows subsystem for Linux (WSL 2) and install Ubuntu 20.04. The idea is to have a Linux machine inside Windows so that everything can run smoothly. Particularly when working with machine learning libraries using the Windows service for Docker can become troublesome.
+If you are in Windows we recommend installing the Windows subsystem for Linux (WSL 2) and install Ubuntu 20.04. The idea is to have a Linux machine inside Windows so that everything can run smoothly. Particularly when working with machine learning libraries using the Windows service for Docker can become troublesome.
 
 ### Setting up Docker on Linux
 
