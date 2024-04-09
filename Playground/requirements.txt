@@ -1,3 +1,4 @@
+rdflib
 transformers
 datasets
 huggingface-hub

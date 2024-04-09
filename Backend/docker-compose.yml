@@ -15,13 +15,24 @@ services:
           devices:
           - driver: nvidia
             capabilities: [gpu]
-    command: ["python3", "extract_from_Dataset.py"]
-    # command: ["tail", "-f", "/dev/null"]
     dns:
       - 1.1.1.1
-    # networks:
-    #   - my-macvlan-net
-
+    depends_on:
+      - mysql
+    # Uncomment this line to test the script
+    # command: ["python3", "extract_from_Dataset.py"]
+    # Uncomment this line to develop on the script
+    command: ["tail", "-f", "/dev/null"]
+    
+  mysql:
+    image: mysql:latest
+    environment:
+      MYSQL_ROOT_PASSWORD: password123
+      MYSQL_DATABASE: Extraction_Results
+      MYSQL_USER: user
+      MYSQL_PASSWORD: password123
+    ports:
+      - "3306:3306"
   # Transformer service
   # transformer:
   #   build: ./transformer  # Path to your transformer Dockerfile
