@@ -1,4 +1,6 @@
 rdflib
+virtuoso
+sqlalchemy
 transformers
 datasets
 huggingface-hub
