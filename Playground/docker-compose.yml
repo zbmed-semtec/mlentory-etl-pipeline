@@ -2,10 +2,10 @@ version: '3'
 services:
   ml:
     build:
-      context: .
+      context: ./HF_API
       dockerfile: Dockerfile
     volumes:
-      - .:/app
+      - ./HF_API:/app
     ports:
       - 8888:8888
     deploy:
