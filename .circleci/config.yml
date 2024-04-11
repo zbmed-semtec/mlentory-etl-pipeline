@@ -1,10 +1,9 @@
 version: 2.1
 
-executor:
-  name: docker
 
 jobs:
   build:
+    executor: docker
     steps:
       - checkout
       - service: docker # Service pre-installs Docker and docker-compose
