@@ -1,36 +1,21 @@
-# This config was automatically generated from your source code
-# Stacks detected: deps:python:Playground/HF_API
 version: 2.1
-orbs:
-  python: circleci/python@2
+
+executor:
+  name: docker
+
 jobs:
-  test-python:
-    # Install dependencies and run tests
-    docker:
-      - image: cimg/python:3.8-node
-    working_directory: ~/project/Playground/HF_API
+  build:
     steps:
-      - checkout:
-          path: ~/project
-      - python/install-packages
-      - run:
-          name: Run tests
-          command: pytest --junitxml=junit.xml || ((($? == 5)) && echo 'Did not find any tests to run.')
-      - store_test_results:
-          path: junit.xml
-  deploy:
-    # This is an example deploy job, not actually used by the workflow
-    docker:
-      - image: cimg/base:stable
-    steps:
-      # Replace this with steps to deploy to users
-      - run:
-          name: deploy
-          command: '#e.g. ./deploy.sh'
+      - checkout
+      - service: docker # Service pre-installs Docker and docker-compose
+      - working_directory: ./Backend
+      - docker-compose pull
+      - docker-compose up -d
+      - docker-compose logs -f
+
 workflows:
   build-and-test:
     jobs:
-      - test-python
-    # - deploy:
-    #     requires:
-    #       - test-python
+      - build
+
+      
