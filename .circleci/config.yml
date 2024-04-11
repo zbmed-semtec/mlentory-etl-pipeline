@@ -1,17 +1,24 @@
 version: 2.1
 
-# machine:
-#   image: ubuntu-2004
+machine:
+  image: ubuntu-2004
 
 jobs:
-  build:
-    executor: docker
-    working_directory: ./Backend
-    steps:
-      - checkout
-      - docker-compose pull
-      - docker-compose up -d
-      - docker-compose logs -f
+  build:  
+    machine:
+      working_directory: ./Backend
+      steps:
+        - run:
+          name: Install Docker Compose
+          command: |
+            set -x
+            curl -L https://github.com/docker/compose/releases/download/1.11.2/docker-compose-`uname -s`-`uname -m` > /usr/local/bin/docker-compose
+            chmod +x /usr/local/bin/docker-compose
+        - checkout
+        - docker-compose pull
+        - docker-compose up -d
+        - docker-compose logs -f
+
 
 workflows:
   build-and-test:
