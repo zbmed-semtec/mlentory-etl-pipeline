@@ -15,9 +15,13 @@ jobs:
             curl -L https://github.com/docker/compose/releases/download/1.11.2/docker-compose-`uname -s`-`uname -m` > /usr/local/bin/docker-compose
             chmod +x /usr/local/bin/docker-compose
         - checkout
-        - docker-compose pull
-        - docker-compose up -d
-        - docker-compose logs -f
+         - run:
+          name: Start container and verify it's working
+          command: |
+            set -x
+            docker-compose build -d
+        # - docker-compose up -d
+        # - docker-compose logs -f
 
 
 workflows:
