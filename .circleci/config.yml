@@ -1,12 +1,13 @@
 version: 2.1
 
+# machine:
+#   image: ubuntu-2004
 
 jobs:
   build:
     executor: docker
     steps:
       - checkout
-      - service: docker # Service pre-installs Docker and docker-compose
       - working_directory: ./Backend
       - docker-compose pull
       - docker-compose up -d
