@@ -6,9 +6,9 @@ version: 2.1
 jobs:
   build:
     executor: docker
+    working_directory: ./Backend
     steps:
       - checkout
-      - working_directory: ./Backend
       - docker-compose pull
       - docker-compose up -d
       - docker-compose logs -f
