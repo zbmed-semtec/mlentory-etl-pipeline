@@ -1,5 +1,5 @@
 rdflib
-virtuoso
+# virtuoso
 sqlalchemy
 transformers
 datasets

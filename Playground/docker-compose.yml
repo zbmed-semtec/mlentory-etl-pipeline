@@ -1,9 +1,9 @@
-version: '3'
+version: '3.8'
 services:
-  ml:
+  dev_with_gpu:
     build:
       context: ./HF_API
-      dockerfile: Dockerfile
+      dockerfile: Dockerfile.gpu
     volumes:
       - ./HF_API:/app
     ports:
@@ -20,9 +20,28 @@ services:
       MYSQL_USER: user
       MYSQL_PASSWORD: password123
     command: ["tail", "-f", "/dev/null"]
+    profiles: [gpu]
     dns:
       - 1.1.1.1
     # command: ["jupyter notebook --ip 0.0.0.0 --port 8888 --no-browser --allow-root"]
+  
+  dev_no_gpu:
+    build:
+      context: ./HF_API
+      dockerfile: Dockerfile.no_gpu
+    volumes:
+      - ./HF_API:/app
+    ports:
+      - 8888:8888
+    profiles: [no_gpu]
+    environment:
+      MYSQL_ROOT_PASSWORD: password123
+      MYSQL_DATABASE: Extraction_Results
+      MYSQL_USER: user
+      MYSQL_PASSWORD: password123
+    command: ["tail", "-f", "/dev/null"]
+    dns:
+      - 1.1.1.1
 
   virtuoso:
     image: openlink/virtuoso-opensource-7:latest
