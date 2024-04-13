@@ -4,7 +4,8 @@ machine:
   image: ubuntu-2004
 
 jobs:
-  build:  
+  build:
+    executor: docker  
     working_directory: ./Backend
     steps:
       - run:
