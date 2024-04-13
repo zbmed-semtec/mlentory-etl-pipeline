@@ -8,6 +8,7 @@ jobs:
     executor: docker  
     working_directory: ./Backend
     steps:
+      - checkout
       - run:
         name: Install Docker Compose
         command: |
@@ -15,12 +16,9 @@ jobs:
           mkdir -p ~/.docker/cli-plugins
           chmod +x ~/docker-compose
           mv ~/docker-compose ~/.docker/cli-plugins/docker-compose
-      - checkout
       - run:
         name: Start container and verify it's working
-        command: |
-          set -x
-          docker-compose --profile no_gpu build
+        command: docker-compose --profile no_gpu build
       # - docker-compose up -d
       # - docker-compose logs -f
 
