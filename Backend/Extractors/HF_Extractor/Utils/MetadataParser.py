@@ -9,12 +9,12 @@ class MetadataParser:
         try:
             import torch  # Import torch to check for cuda availability
             if torch.cuda.is_available():
-                device = 0  # Use GPU if available
+                self.device = 0  # Use GPU if available
             else:
-                device = None  # Don't specify device if no GPU
+                self.device = None  # Don't specify device if no GPU
         except ModuleNotFoundError:
             # If transformers.torch is not available, assume no GPU
-            device = None
+            self.device = None
             
         # Getting the tags
         self.tags_language = set(self.load_config_file("./Config_Data/tags_language.tsv"))
@@ -25,7 +25,10 @@ class MetadataParser:
         self.questions = self.load_config_file("./Config_Data/questions.tsv")
         #Assigning the question answering pipeline
         self.qa_model = qa_model
-        self.qa_pipeline = pipeline("question-answering", model=qa_model,device=device)
+        if self.device != None:
+            self.qa_pipeline = pipeline("question-answering", model=qa_model,device=self.device)
+        else:
+            self.qa_pipeline = pipeline("question-answering", model=qa_model)
         
     def load_config_file(self, path: str) -> Set[str]:
         config_info = [val[0].lower() for val in pd.read_csv(path,sep='\t').values.tolist()]
