@@ -2,10 +2,11 @@ version: "3.8"
 
 services:
   # Extractor service
-  hf_extractor:
+  hf_extractor_with_gpu:
+    profiles: [gpu]
     build: 
       context: ./Extractors/HF_Extractor
-      dockerfile: Dockerfile  # Path to extractor Dockerfile
+      dockerfile: Dockerfile.gpu  # Path to extractor Dockerfile
     # Define volumes to mount extractor scripts or dependencies
     volumes:
       - ./Extractors/HF_Extractor:/app
@@ -17,22 +18,37 @@ services:
             capabilities: [gpu]
     dns:
       - 1.1.1.1
-    depends_on:
-      - mysql
+    # depends_on:
+    #   - mysql
+    # Uncomment this line to run the script
+    command: ["python3", "extract_from_Dataset.py"]
+    # Uncomment this line to develop on the script, you need to enter the container to execute the script.
+    # command: ["tail", "-f", "/dev/null"]
+  
+  hf_extractor_with_no_gpu:
+    profiles: [no_gpu]
+    build: 
+      context: ./Extractors/HF_Extractor
+      dockerfile: Dockerfile.no_gpu  # Path to extractor Dockerfile
+    # Define volumes to mount extractor scripts or dependencies
+    volumes:
+      - ./Extractors/HF_Extractor:/app
+    dns:
+      - 1.1.1.1
+    # depends_on:
+    #   - mysql
     # Uncomment this line to test the script
-    # command: ["python3", "extract_from_Dataset.py"]
-    # Uncomment this line to develop on the script
-    command: ["tail", "-f", "/dev/null"]
-    
-  mysql:
-    image: mysql:latest
-    environment:
-      MYSQL_ROOT_PASSWORD: password123
-      MYSQL_DATABASE: Extraction_Results
-      MYSQL_USER: user
-      MYSQL_PASSWORD: password123
-    ports:
-      - "3306:3306"
+    command: ["python3", "extract_from_Dataset.py"]
+  
+  # mysql:
+  #   image: mysql:latest
+  #   environment:
+  #     MYSQL_ROOT_PASSWORD: password123
+  #     MYSQL_DATABASE: Extraction_Results
+  #     MYSQL_USER: user
+  #     MYSQL_PASSWORD: password123
+  #   ports:
+  #     - "3306:3306"
   # Transformer service
   # transformer:
   #   build: ./transformer  # Path to your transformer Dockerfile
