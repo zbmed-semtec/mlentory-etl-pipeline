@@ -5,7 +5,9 @@ machine:
 
 jobs:
   build:
-    executor: docker  
+    executor: 
+      docker:
+      - image: ubuntu-2004
     working_directory: ./Backend
     steps:
       - checkout
@@ -24,7 +26,7 @@ jobs:
 
 
 workflows:
-  build:
+  build-and-test:
     jobs:
       - build
 
