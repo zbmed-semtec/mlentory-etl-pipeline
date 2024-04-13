@@ -5,23 +5,23 @@ machine:
 
 jobs:
   build:  
-    machine:
-      working_directory: ./Backend
-      steps:
-        - run:
-          name: Install Docker Compose
-          command: |
-            set -x
-            curl -L https://github.com/docker/compose/releases/download/1.11.2/docker-compose-`uname -s`-`uname -m` > /usr/local/bin/docker-compose
-            chmod +x /usr/local/bin/docker-compose
-        - checkout
-        - run:
-          name: Start container and verify it's working
-          command: |
-            set -x
-            docker-compose --profile no_gpu build
-        # - docker-compose up -d
-        # - docker-compose logs -f
+    working_directory: ./Backend
+    steps:
+      - run:
+        name: Install Docker Compose
+        command: |
+          curl -sSL "https://github.com/docker/compose/releases/download/${COMPOSE_VERSION}/docker-compose-$(uname -s)-$(uname -m)" -o ~/docker-compose
+          mkdir -p ~/.docker/cli-plugins
+          chmod +x ~/docker-compose
+          mv ~/docker-compose ~/.docker/cli-plugins/docker-compose
+      - checkout
+      - run:
+        name: Start container and verify it's working
+        command: |
+          set -x
+          docker-compose --profile no_gpu build
+      # - docker-compose up -d
+      # - docker-compose logs -f
 
 
 workflows:
