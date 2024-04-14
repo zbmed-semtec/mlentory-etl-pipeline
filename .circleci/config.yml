@@ -1,13 +1,13 @@
 version: 2.1
 
-machine:
-  image: ubuntu-2004
+  
+executors:
+  docker:
+    image: ubuntu:20.04
 
 jobs:
   build:
-    executor: 
-      docker:
-      - image: ubuntu-2004
+    executor: docker
     working_directory: ./Backend
     steps:
       - checkout
