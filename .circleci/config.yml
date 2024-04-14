@@ -9,22 +9,16 @@ jobs:
   build:
     machine: # executor type
       image: ubuntu-2004:202010-01
-    working_directory: ./Backend
     steps:
-      - checkout
-      # - run:
-      #     name: Install Docker Compose
-      #     command: |
-      #       curl -sSL "https://github.com/docker/compose/releases/download/${COMPOSE_VERSION}/docker-compose-$(uname -s)-$(uname -m)" -o ~/docker-compose
-      #       mkdir -p ~/.docker/cli-plugins
-      #       chmod +x ~/docker-compose
-      #       mv ~/docker-compose ~/.docker/cli-plugins/docker-compose
+      - run:
+          name: Go to the production folder
+          command: cd Backend/
       - run:
           name: Check docker-compose version 
           command: docker-compose --version
       - run:
-          name: Check where I am in the OS
-          command: ls
+          name: Build the container architecture
+          command: - docker-compose --profile no_gpu build
       # - docker-compose up -d
       # - docker-compose logs -f
 
