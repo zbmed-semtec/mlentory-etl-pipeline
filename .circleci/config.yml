@@ -11,8 +11,7 @@ jobs:
       image: ubuntu-2004:202010-01
     # working_directory: /Backend
     steps:
-      - checkout:
-          path: ~/Backend
+      - checkout
       - run:
           name: 
           command: ls
@@ -23,7 +22,7 @@ jobs:
       - run:
           name: Build the container architecture
           command: docker-compose --profile no_gpu build
-          working_directory: /Backend
+          working_directory: ./Backend
       # - docker-compose up -d
       # - docker-compose logs -f
 
