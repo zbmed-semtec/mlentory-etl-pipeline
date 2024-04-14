@@ -11,7 +11,8 @@ jobs:
       image: ubuntu-2004:202010-01
     # working_directory: /Backend
     steps:
-      - checkout
+      - checkout:
+          path: ~/Backend
       - run:
           name: 
           command: ls
