@@ -9,7 +9,7 @@ jobs:
   build:
     machine: # executor type
       image: ubuntu-2004:202010-01
-    working_directory: /Backend
+    # working_directory: /Backend
     steps:
       - run:
           name: 
@@ -17,9 +17,11 @@ jobs:
       - run:
           name: Check docker-compose version 
           command: docker-compose --version
+          working_directory: ./Backend
       - run:
           name: Build the container architecture
           command: docker-compose --profile no_gpu build
+          working_directory: /Backend
       # - docker-compose up -d
       # - docker-compose logs -f
 
