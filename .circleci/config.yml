@@ -9,10 +9,11 @@ jobs:
   build:
     machine: # executor type
       image: ubuntu-2004:202010-01
+    working_directory: /Backend
     steps:
       - run:
-          name: Go to the production folder
-          command: cd Backend/
+          name: 
+          command: ls
       - run:
           name: Check docker-compose version 
           command: docker-compose --version
