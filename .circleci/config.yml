@@ -18,7 +18,7 @@ jobs:
           command: docker-compose --version
       - run:
           name: Build the container architecture
-          command: - docker-compose --profile no_gpu build
+          command: docker-compose --profile no_gpu build
       # - docker-compose up -d
       # - docker-compose logs -f
 
