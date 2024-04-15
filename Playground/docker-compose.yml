@@ -2,10 +2,10 @@ version: '3.8'
 services:
   dev_with_gpu:
     build:
-      context: ./HF_API
+      context: .
       dockerfile: Dockerfile.gpu
     volumes:
-      - ./HF_API:/app
+      - .:/app
     ports:
       - 8888:8888
     deploy:
@@ -27,10 +27,10 @@ services:
   
   dev_no_gpu:
     build:
-      context: ./HF_API
+      context: .
       dockerfile: Dockerfile.no_gpu
     volumes:
-      - ./HF_API:/app
+      - .:/app
     ports:
       - 8888:8888
     profiles: [no_gpu]
@@ -43,15 +43,23 @@ services:
     dns:
       - 1.1.1.1
 
-  virtuoso:
-    image: openlink/virtuoso-opensource-7:latest
+  anzograph:
+    image: cambridgesemantics/anzograph:latest
     ports:
-      - "1111:1111"
-      - "8890:8890"
-    environment:
-      DBA_PASSWORD: my_strong_password
+      - "8080:8080"
+      - "8443:8443"
     volumes:
-      - /DB/virtuoso-data:/opt/virtuoso-opensource/database
+      - /DB/anzograph-data:/opt/anzograph-data
+
+  # virtuoso:
+  #   image: openlink/virtuoso-opensource-7:latest
+  #   ports:
+  #     - "1111:1111"
+  #     - "8890:8890"
+  #   environment:
+  #     DBA_PASSWORD: my_strong_password
+  #   volumes:
+  #     - /DB/virtuoso-data:/opt/virtuoso-opensource/database
 
   # mysql:
   #   image: mysql:latest
