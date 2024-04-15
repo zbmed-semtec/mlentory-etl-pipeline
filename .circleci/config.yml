@@ -41,11 +41,12 @@ jobs:
       - run:
           name: Check the result .tsv file of the HF Extractor step
           command: |
-            if [ -f /Extractors/HF_Extractor/Parsed_HF_Dataframe.tsv ]; then
-              echo "File output.txt exists!"
+            if [ -f Parsed_HF_Dataframe.tsv ]; then
+              echo "File Parsed_HF_Dataframe.tsv exists!"
             else
-              echo "File output.txt does not exist."
+              echo "File Parsed_HF_Dataframe.tsv does not exist."
             fi
+          working_directory: ./Backend/Extractors/HF_Extractor
       # - docker-compose logs -f
 
 
