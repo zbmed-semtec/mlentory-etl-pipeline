@@ -118,10 +118,10 @@ https://developer.nvidia.com/cuda-downloads
 docker-compose build
 ```
 
-2. Create the containers and 
+2. Bring up the container architecture
 
 ```
-docker-compose run
+docker-compose up
 ```
 
 3. If you want to access any of the running containers:
@@ -130,7 +130,7 @@ docker-compose run
 docker exec -it <container_name> /bin/bash
 ```
 
-4. To enable the Jupyter notebooks in the container run:
+4. To enable the Jupyter notebooks inside the container run:
 
 ```
 jupyter notebook --ip 0.0.0.0 --port 8888 --no-browser --allow-root
