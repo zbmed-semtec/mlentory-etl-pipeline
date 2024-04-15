@@ -34,7 +34,18 @@ jobs:
           name: Build the container architecture
           command: docker-compose --profile no_gpu build
           working_directory: ./Backend
-      # - docker-compose up -d
+      - run:
+          name: Run the container architecture
+          command: docker-compose --profile no_gpu up
+          working_directory: ./Backend
+      - run:
+          name: Check the result .tsv file of the HF Extractor step
+          command: |
+            if [ -f /Extractors/HF_Extractor/Parsed_HF_Dataframe.tsv ]; then
+              echo "File output.txt exists!"
+            else
+              echo "File output.txt does not exist."
+            fi
       # - docker-compose logs -f
 
 
