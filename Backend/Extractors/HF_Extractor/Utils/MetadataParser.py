@@ -5,20 +5,34 @@ from typing import Any, Dict, List, Set, Union
 class MetadataParser:
 
     def __init__(self, qa_model: str) -> None:
+        # Check for GPU availability
+        try:
+            import torch  # Import torch to check for cuda availability
+            if torch.cuda.is_available():
+                self.device = 0  # Use GPU if available
+            else:
+                self.device = None  # Don't specify device if no GPU
+        except ModuleNotFoundError:
+            # If transformers.torch is not available, assume no GPU
+            self.device = None
+            
         # Getting the tags
-        self.tags_language = self.load_config_file("./Config_Data/tags_language.tsv")
-        self.tags_libraries = self.load_config_file("./Config_Data/tags_libraries.tsv")
-        self.tags_other = self.load_config_file("./Config_Data/tags_other.tsv")
-        self.tags_task = self.load_config_file("./Config_Data/tags_task.tsv")
+        self.tags_language = set(self.load_config_file("./Config_Data/tags_language.tsv"))
+        self.tags_libraries = set(self.load_config_file("./Config_Data/tags_libraries.tsv"))
+        self.tags_other = set(self.load_config_file("./Config_Data/tags_other.tsv"))
+        self.tags_task = set(self.load_config_file("./Config_Data/tags_task.tsv"))
         #Getting the questions
         self.questions = self.load_config_file("./Config_Data/questions.tsv")
         #Assigning the question answering pipeline
         self.qa_model = qa_model
-        self.qa_pipeline = pipeline("question-answering", model=qa_model,device=0)
+        if self.device != None:
+            self.qa_pipeline = pipeline("question-answering", model=qa_model,device=self.device)
+        else:
+            self.qa_pipeline = pipeline("question-answering", model=qa_model)
         
     def load_config_file(self, path: str) -> Set[str]:
         config_info = [val[0].lower() for val in pd.read_csv(path,sep='\t').values.tolist()]
-        config_info = set(config_info)
+        # config_info = set(config_info)
         return config_info
 
     def answer_question(self, question: str, context: str) -> str:
@@ -126,7 +140,7 @@ class MetadataParser:
             
             # Add a new column for each question and populate with answers
             for question, answer in answers.items():
-                print(answer)
+                # print(answer)
                 HF_df.loc[index, question] = answer
         
         return HF_df

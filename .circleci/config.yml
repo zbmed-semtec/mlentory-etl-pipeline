@@ -1,0 +1,58 @@
+version: 2.1
+
+  
+# executors:
+#   docker:
+#     image: ubuntu:20.04
+
+jobs:
+  build:
+    machine: # executor type
+      image: ubuntu-2204:2024.01.2
+    # working_directory: /Backend
+    steps:
+      - run:
+          name: Install last version of Docker Compose
+          command: |
+            sudo apt-get remove docker-compose
+            VERSION=$(curl --silent https://api.github.com/repos/docker/compose/releases/latest | grep -Po '"tag_name": "\K.*\d')
+            DESTINATION=/usr/local/bin/docker-compose
+            sudo curl -L https://github.com/docker/compose/releases/download/${VERSION}/docker-compose-$(uname -s)-$(uname -m) -o $DESTINATION
+            sudo chmod 755 $DESTINATION
+      - run:
+          name: Check Docker version
+          command: docker --version
+      - checkout
+      - run:
+          name: 
+          command: ls
+      - run:
+          name: Check docker-compose version 
+          command: docker-compose --version
+          working_directory: ./Backend
+      - run:
+          name: Build the container architecture
+          command: docker-compose --profile no_gpu build
+          working_directory: ./Backend
+      - run:
+          name: Run the container architecture
+          command: docker-compose --profile no_gpu up
+          working_directory: ./Backend
+      - run:
+          name: Check the result .tsv file of the HF Extractor step
+          command: |
+            if [ -f Parsed_HF_Dataframe.tsv ]; then
+              echo "File Parsed_HF_Dataframe.tsv exists!"
+            else
+              echo "File Parsed_HF_Dataframe.tsv does not exist."
+            fi
+          working_directory: ./Backend/Extractors/HF_Extractor
+      # - docker-compose logs -f
+
+
+workflows:
+  build-and-test:
+    jobs:
+      - build
+
+      

@@ -102,10 +102,14 @@ https://developer.nvidia.com/cuda-downloads
 docker-compose build
 ```
 
-2. Create the containers and 
+2. Bring up the container architecture, if you have a Nvidia gpu use the profile 'gpu' otherwise use the profile 'no_gpu'
 
 ```
-docker-compose run
+docker-compose --profile gpu up
+```
+or
+```
+docker-compose --profile no_gpu up
 ```
 
 3. If you want to access any of the running containers:

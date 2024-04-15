@@ -1,11 +1,11 @@
-version: '3'
+version: '3.8'
 services:
-  ml:
+  dev_with_gpu:
     build:
-      context: .
-      dockerfile: Dockerfile
+      context: ./HF_API
+      dockerfile: Dockerfile.gpu
     volumes:
-      - .:/app
+      - ./HF_API:/app
     ports:
       - 8888:8888
     deploy:
@@ -14,7 +14,68 @@ services:
           devices:
           - driver: nvidia
             capabilities: [gpu]
+    environment:
+      MYSQL_ROOT_PASSWORD: password123
+      MYSQL_DATABASE: Extraction_Results
+      MYSQL_USER: user
+      MYSQL_PASSWORD: password123
+    command: ["tail", "-f", "/dev/null"]
+    profiles: [gpu]
+    dns:
+      - 1.1.1.1
+    # command: ["jupyter notebook --ip 0.0.0.0 --port 8888 --no-browser --allow-root"]
+  
+  dev_no_gpu:
+    build:
+      context: ./HF_API
+      dockerfile: Dockerfile.no_gpu
+    volumes:
+      - ./HF_API:/app
+    ports:
+      - 8888:8888
+    profiles: [no_gpu]
+    environment:
+      MYSQL_ROOT_PASSWORD: password123
+      MYSQL_DATABASE: Extraction_Results
+      MYSQL_USER: user
+      MYSQL_PASSWORD: password123
     command: ["tail", "-f", "/dev/null"]
     dns:
       - 1.1.1.1
 
+  virtuoso:
+    image: openlink/virtuoso-opensource-7:latest
+    ports:
+      - "1111:1111"
+      - "8890:8890"
+    environment:
+      DBA_PASSWORD: my_strong_password
+    volumes:
+      - /DB/virtuoso-data:/opt/virtuoso-opensource/database
+
+  # mysql:
+  #   image: mysql:latest
+  #   hostname: mysql
+  #   environment:
+  #     MYSQL_ROOT_PASSWORD: password123
+  #     MYSQL_DATABASE: Extraction_Results
+  #     MYSQL_USER: user
+  #     MYSQL_PASSWORD: password123
+  #   ports:
+  #     - "3306:3306"
+  
+  # phpmyadmin:
+  #   image: phpmyadmin:latest
+  #   restart: always
+  #   ports:
+  #     - 8080:80
+  #   depends_on:
+  #     - mysql
+  #   environment:
+  #     # PMA_ARBITRARY: 1
+  #     PMA_HOST: mysql
+  #     PMA_PORT: 3306
+  #     MYSQL_USER: user
+  #     MYSQL_PASSWORD: password123
+  #     MYSQL_ROOT_PASSWORD: password123
+      
