@@ -8,18 +8,21 @@ version: 2.1
 jobs:
   build:
     machine: # executor type
-      image: ubuntu-2004:202010-01
+      image: ubuntu-2004
     # working_directory: /Backend
     steps:
-      - checkout
       - run:
-          name: Install Docker Compose
+          name: Install last version of Docker Compose
           command: |
             sudo apt-get remove docker-compose
             VERSION=$(curl --silent https://api.github.com/repos/docker/compose/releases/latest | grep -Po '"tag_name": "\K.*\d')
             DESTINATION=/usr/local/bin/docker-compose
             sudo curl -L https://github.com/docker/compose/releases/download/${VERSION}/docker-compose-$(uname -s)-$(uname -m) -o $DESTINATION
             sudo chmod 755 $DESTINATION
+      - run:
+          name: Check Docker version
+          command: docker --version
+      - checkout
       - run:
           name: 
           command: ls
