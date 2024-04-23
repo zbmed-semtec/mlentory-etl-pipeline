@@ -1,0 +1,17 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+authors:
+  - family-names: "Quiñones"
+    given-names: "Nelson"
+    orchid: "https://orcid.org/0000-0002-5037-0443"
+  - family-names: "Rebholz-Schuhmann"
+    given-names: "Dietrich"
+    orcid: "https://orcid.org/0000-0002-1018-0370"
+  - family-names: "Castro"
+    given-names: "Leyla Jael"
+    orcid: "https://orcid.org/0000-0003-3986-0510"
+title: "mlentory-data-loader"
+version: 0.0.1
+license: GPL-3.0-or-later
+copyright: ZB MED
+repository-code: "https://github.com/zbmed-semtec/mlentory-data-loader"
