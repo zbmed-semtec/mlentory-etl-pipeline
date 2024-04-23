@@ -1,4 +1,4 @@
-# Mlentory Data Loader
+# MLentory Data Loader
 
 ## Purpose
 To build a system that extracts ML model information from different platforms, normalizes that data in a common format, stores it, and shares it in a FAIR Digital Object (FDO) registry to facilitate information retrieval (IR) and comparison/recommendation systems.
