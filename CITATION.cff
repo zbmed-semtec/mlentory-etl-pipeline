@@ -10,8 +10,8 @@ authors:
   - family-names: "Castro"
     given-names: "Leyla Jael"
     orcid: "https://orcid.org/0000-0003-3986-0510"
-title: "mlentory-data-loader"
+title: "mlentory-etl-pipepline"
 version: 0.0.1
 license: GPL-3.0-or-later
 copyright: ZB MED
-repository-code: "https://github.com/zbmed-semtec/mlentory-data-loader"
+repository-code: "https://github.com/zbmed-semtec/mlentory-etl-pipeline"
