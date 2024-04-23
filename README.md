@@ -53,3 +53,6 @@ The project structure is the following:
 - A Playground folder where we test and get familiar with the different technologies used in the project.
 - A Assets folder where you can find resources related to the project like diagrams, functions, and documentation.
 
+## Acknowledgements
+
+This project is part of NFDI4DataScience consortium services. [NFDI4DataScience](https://www.nfdi4datascience.de/) is funded by the [German Research Foundation (DFG)](https://www.dfg.de/), [project number 460234259](https://gepris.dfg.de/gepris/projekt/460234259).
