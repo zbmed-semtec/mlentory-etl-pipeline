@@ -15,12 +15,12 @@ RUN nvcc --version
 
 RUN pip3 install torch -f https://download.pytorch.org/whl/cu113
 
-COPY requirements.txt .
+COPY Extractors/HF_Extractor/requirements.txt .
 RUN pip3 install -r requirements.txt
 
 
 WORKDIR /app
-COPY . .
-
+COPY Extractors/HF_Extractor/. .
+COPY ./Config_Data /app/
 # RUN jupyter notebook --ip 0.0.0.0 --port 8888 --no-browser --allow-root
 

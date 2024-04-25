@@ -96,10 +96,14 @@ https://developer.nvidia.com/cuda-downloads
 
 ### Run the project
 
-1. You need to build the images for the containers in project
+1. You need to build the images for the containers in the project
 
 ```
-docker-compose build
+docker-compose --profile gpu build
+```
+or
+```
+docker-compose --profile no_gpu build
 ```
 
 2. Bring up the container architecture, if you have a Nvidia gpu use the profile 'gpu' otherwise use the profile 'no_gpu'

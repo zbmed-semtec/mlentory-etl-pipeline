@@ -5,8 +5,8 @@ services:
   hf_extractor_with_gpu:
     profiles: [gpu]
     build: 
-      context: ./Extractors/HF_Extractor
-      dockerfile: Dockerfile.gpu  # Path to extractor Dockerfile
+      context: .
+      dockerfile: ./Extractors/HF_Extractor/Dockerfile.gpu  # Path to extractor Dockerfile
     # Define volumes to mount extractor scripts or dependencies
     volumes:
       - ./Extractors/HF_Extractor:/app
@@ -28,8 +28,8 @@ services:
   hf_extractor_with_no_gpu:
     profiles: [no_gpu]
     build: 
-      context: ./Extractors/HF_Extractor
-      dockerfile: Dockerfile.no_gpu  # Path to extractor Dockerfile
+      context: .
+      dockerfile: ./Extractors/HF_Extractor/Dockerfile.no_gpu  # Path to extractor Dockerfile
     # Define volumes to mount extractor scripts or dependencies
     volumes:
       - ./Extractors/HF_Extractor:/app
@@ -39,6 +39,8 @@ services:
     #   - mysql
     # Uncomment this line to test the script
     command: ["python3", "extract_from_Dataset.py"]
+    # command: ["tail", "-f", "/dev/null"]
+
   
   # mysql:
   #   image: mysql:latest
