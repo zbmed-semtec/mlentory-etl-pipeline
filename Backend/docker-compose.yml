@@ -39,9 +39,9 @@ services:
     # depends_on:
     #   - mysql
     # Uncomment this line to test the script
-    # command: ["python3", "extract_from_Dataset.py"]
+    command: ["python3", "extract_from_Dataset.py"]
     # Uncomment this line to develop on the container
-    command: ["tail", "-f", "/dev/null"]
+    # command: ["tail", "-f", "/dev/null"]
 
   transform:
     build: 
