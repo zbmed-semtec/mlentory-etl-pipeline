@@ -16,12 +16,11 @@ RUN pip3 install torch -f https://download.pytorch.org/whl/cu113
 COPY Extractors/HF_Extractor/requirements.txt .
 RUN pip3 install -r requirements.txt
 
+RUN mkdir Transform_Queue
 RUN mkdir app
+
 WORKDIR /app
 COPY Extractors/HF_Extractor .
-# RUN mkdir /app/Config_Data
-ADD Config_Data /Config_Data
-# RUN mv /Config_Data /app
 
 # RUN jupyter notebook --ip 0.0.0.0 --port 8888 --no-browser --allow-root
 

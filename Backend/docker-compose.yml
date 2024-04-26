@@ -26,21 +26,22 @@ services:
     # command: ["tail", "-f", "/dev/null"]
   
   hf_extractor_with_no_gpu:
-    profiles: [nono_gpu]
+    profiles: [no_gpu]
     build: 
       context: .
       dockerfile: ./Extractors/HF_Extractor/Dockerfile.no_gpu  # Path to extractor Dockerfile
     # Define volumes to mount extractor scripts or dependencies
     volumes:
       - ./Extractors/HF_Extractor:/app
+      - ./Transform_Queue:/Transform_Queue
     dns:
       - 1.1.1.1
     # depends_on:
     #   - mysql
     # Uncomment this line to test the script
-    command: ["python3", "extract_from_Dataset.py"]
+    # command: ["python3", "extract_from_Dataset.py"]
     # Uncomment this line to develop on the container
-    # command: ["tail", "-f", "/dev/null"]
+    command: ["tail", "-f", "/dev/null"]
 
   transform:
     build: 
@@ -49,7 +50,7 @@ services:
     # Define volumes to mount extractor scripts or dependencies
     volumes:
       - ./Transform:/app
-      - ./Transform_Queue:/To_transform
+      - ./Transform_Queue:/Transform_Queue
     dns:
       - 1.1.1.1
 
