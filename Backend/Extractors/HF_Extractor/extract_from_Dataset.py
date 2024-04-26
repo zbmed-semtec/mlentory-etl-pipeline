@@ -1,11 +1,13 @@
-from datasets import load_dataset
 from Utils.MetadataParser import MetadataParser
+from datasets import load_dataset
+from datetime import datetime
 import pandas as pd
 import os
 
 dataset_models = load_dataset("librarian-bots/model_cards_with_metadata")['train']
 HF_df = dataset_models.to_pandas()
 
+#Creating the parser object that will perform the transformations on the raw data 
 parser = MetadataParser(qa_model="Intel/dynamic_tinybert")
 
 #Create new columns to answer each question in the dataframe
@@ -43,5 +45,12 @@ def augment_column_name(name:str)->str:
     
 HF_df.columns = HF_df.columns.map(augment_column_name)
 
-HF_df.to_csv("./../Transform_Queue/Parsed_HF_Dataframe.tsv",sep="\t")
+now = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")  # Get current date and time
+
+filename = f"./../Transform_Queue/{now}_Parsed_HF_Dataframe.tsv"  # Create new filename
+
+HF_df.to_csv(filename,sep="\t")
 print(HF_df.head())
+
+if __name__ == "__main__":
+    print("Hello")
