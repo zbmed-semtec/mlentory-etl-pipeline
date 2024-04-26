@@ -22,11 +22,11 @@ services:
     #   - mysql
     # Uncomment this line to run the script
     command: ["python3", "extract_from_Dataset.py"]
-    # Uncomment this line to develop on the script, you need to enter the container to execute the script.
+    # Uncomment this line to develop on the container
     # command: ["tail", "-f", "/dev/null"]
   
   hf_extractor_with_no_gpu:
-    profiles: [no_gpu]
+    profiles: [nono_gpu]
     build: 
       context: .
       dockerfile: ./Extractors/HF_Extractor/Dockerfile.no_gpu  # Path to extractor Dockerfile
@@ -39,8 +39,24 @@ services:
     #   - mysql
     # Uncomment this line to test the script
     command: ["python3", "extract_from_Dataset.py"]
+    # Uncomment this line to develop on the container
     # command: ["tail", "-f", "/dev/null"]
 
+  transform:
+    build: 
+      context: .
+      dockerfile: ./Transform/Dockerfile  # Path to extractor Dockerfile
+    # Define volumes to mount extractor scripts or dependencies
+    volumes:
+      - ./Transform:/app
+      - ./Transform_Queue:/To_transform
+    dns:
+      - 1.1.1.1
+
+    # Uncomment this line to test the script
+    command: ["tail", "-f", "/dev/null"]
+    # Uncomment for production
+    #command: ["python3", "extract_from_Dataset.py"]
   
   # mysql:
   #   image: mysql:latest
