@@ -3,7 +3,7 @@ FROM python:3.9
 COPY Extractors/HF_Extractor/requirements.txt .
 RUN pip3 install -r requirements.txt
 
-RUN mkdir To_transform
+RUN mkdir Transform_Queue
 
 WORKDIR /app
 COPY Extractors/HF_Extractor .
