@@ -4,10 +4,8 @@ import time
 
 
 if __name__ == "__main__":
-    # Example usage
     observer = QueueObserver("./../Transform_Queue/")
     observer.start()
-
    
     try:
         # Keep the script running to monitor changes
