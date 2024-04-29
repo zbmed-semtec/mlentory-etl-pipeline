@@ -10,6 +10,7 @@ services:
     # Define volumes to mount extractor scripts or dependencies
     volumes:
       - ./Extractors/HF_Extractor:/app
+      - ./Transform_Queue:/Transform_Queue
     deploy:
       resources:
         reservations:
@@ -55,7 +56,7 @@ services:
       - 1.1.1.1
 
     # Uncomment this line to test the script
-    # command: ["tail", "-f", "/dev/null"]
+    command: ["tail", "-f", "/dev/null"]
     # Uncomment for production
     #command: ["python3", "ExtractFromDataset.py"]
   

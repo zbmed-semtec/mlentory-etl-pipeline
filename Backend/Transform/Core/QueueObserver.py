@@ -1,12 +1,22 @@
 from watchdog.events import PatternMatchingEventHandler
 from watchdog.observers import Observer
+from queue import *
+from Core.FilesProcessor import FilesProcessor
+
 
 class MyEventHandler(PatternMatchingEventHandler):
+  
+    def __init__(self, files_processor):
+      super().__init__()
+      self.file_processor = files_processor
+  
     """
     This class defines the logic to be executed when changes are made on the directory being watched.
     """
     def on_created(self,event):
-        print(f"hey, {event.src_path} has been created!")
+      self.file_processor.add_file("event.src_path")      
+      print(f"hey, {event.src_path} has been created!")
+        
     def on_deleted(self,event):
         print(f"Someone deleted {event.src_path}!")
         
@@ -24,7 +34,7 @@ class QueueObserver:
       watch_dir (str): The path to the directory to be monitored.
     """
     self.watch_dir = watch_dir
-    self.event_handler = MyEventHandler()
+    self.event_handler = MyEventHandler(FilesProcessor(num_workers=2))
     self.observer = Observer()
 
   def start(self):
