@@ -89,9 +89,18 @@ sudo chmod +x /usr/local/bin/docker-compose
 docker-compose --version
 ```
 
-### Install CUDA Toolkit
+### Setup NVIDIA GPUs
 
-If you don't have CUDA drivers install to use your GPU for ML development you can follow the instructions here: 
+* You can follow the guide at https://docs.nvidia.com/cuda/wsl-user-guide/index.html if you want to setup the NVDIA GPUs in your WSL.
+
+* But in general you have to guarantee that you have the GPU drivers, the NVIDIA container toolkit, and you have CUDA toolkit install.
+
+* If you are using Windows with WSL you have to install the GPU drivers in Windows, otherwise just install the drivers in your host OS. 
+    * In Windows you can check the NVIDIA GPU drivers at: https://www.nvidia.com/Download/index.aspx
+    * In Ubuntu you can check how to download the drivers at: https://ubuntu.com/server/docs/nvidia-drivers-installation
+    * Remember to restart your system after installation.
+
+If you don't have CUDA drivers installed to use your GPU for ML development you can follow the instructions here: 
 https://developer.nvidia.com/cuda-downloads
 
 ### Run the project
