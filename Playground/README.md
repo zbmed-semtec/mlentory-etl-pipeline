@@ -107,7 +107,7 @@ docker-compose --version
 
 The NVIDIA container toolkit has to be installed in the Linux distribution. The links for installation can be found here: https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html#installing-with-apt
 
-If you don't have CUDA drivers install to use your GPU for ML development you can follow the instructions here: 
+If you don't have CUDA drivers installed to use your GPU for ML development you can follow the instructions here: 
 https://developer.nvidia.com/cuda-downloads
 
 ### Run the project
