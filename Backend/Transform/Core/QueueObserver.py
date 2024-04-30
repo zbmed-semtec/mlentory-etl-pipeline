@@ -2,7 +2,11 @@ from watchdog.events import PatternMatchingEventHandler
 from watchdog.observers import Observer
 from queue import *
 from Core.FilesProcessor import FilesProcessor
+import logging
 
+logging.basicConfig(filename='./Processing_Logs/transform.log', filemode='w', format='%(asctime)s %(name)s - %(levelname)s - %(message)s', datefmt='%d-%b-%y %H:%M:%S')
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
 
 class MyEventHandler(PatternMatchingEventHandler):
   
@@ -14,11 +18,11 @@ class MyEventHandler(PatternMatchingEventHandler):
     This class defines the logic to be executed when changes are made on the directory being watched.
     """
     def on_created(self,event):
+      logger.info(f"{event.src_path} has been added to the processing queue")
       self.file_processor.add_file(event.src_path)      
-      print(f"hey, {event.src_path} has been created!")
         
     def on_deleted(self,event):
-        print(f"Someone deleted {event.src_path}!")
+      logger.info(f"Someone deleted {event.src_path}!")
         
 
 class QueueObserver:
