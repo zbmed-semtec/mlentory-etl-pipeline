@@ -1,0 +1,52 @@
+event.src_path: adfadfasdfadf
+event.src_path: adfadfasdfadf
+event.src_path: adfadfasdfadf
+event.src_path: adfadfasdfadf
+event.src_path: adfadfasdfadf
+./../Transform_Queue/b.txt: adfadfasdfadf
+./../Transform_Queue/a.txt: adfadfasdfadf
+./../Transform_Queue/a copy.txt: adfadfasdfadf
+./../Transform_Queue/a copy 2.txt: adfadfasdfadf
+./../Transform_Queue/a copy 3.txt: adfadfasdfadf
+./../Transform_Queue/a copy.txt: adfadfasdfadf
+./../Transform_Queue/a copy 2.txt: adfadfasdfadf
+./../Transform_Queue/a copy 3.txt: adfadfasdfadf
+./../Transform_Queue/a copy 4.txt: adfadfasdfadf
+./../Transform_Queue/a copy.txt: adfadfasdfadf
+./../Transform_Queue/a copy 3.txt: adfadfasdfadf
+./../Transform_Queue/a copy 2.txt: adfadfasdfadf
+./../Transform_Queue/a copy 4.txt: adfadfasdfadf
+./../Transform_Queue/a.txt: adfadfasdfadf
+./../Transform_Queue/a copy.txt: adfadfasdfadf
+./../Transform_Queue/a copy 3.txt: adfadfasdfadf
+./../Transform_Queue/a copy 2.txt: adfadfasdfadf
+./../Transform_Queue/a copy 4.txt: adfadfasdfadf
+./../Transform_Queue/a copy 5.txt: adfadfasdfadf
+./../Transform_Queue/a copy 6.txt: adfadfasdfadf
+./../Transform_Queue/a copy 7.txt: adfadfasdfadf
+./../Transform_Queue/a copy.txt: adfadfasdfadf
+./../Transform_Queue/a copy 2.txt: adfadfasdfadf
+./../Transform_Queue/a copy 3.txt: adfadfasdfadf
+./../Transform_Queue/a copy 4.txt: adfadfasdfadf
+./../Transform_Queue/a copy.txt: adfadfasdfadf
+./../Transform_Queue/a copy 2.txt: adfadfasdfadf
+./../Transform_Queue/a copy 3.txt: adfadfasdfadf
+./../Transform_Queue/a copy 4.txt: adfadfasdfadf
+./../Transform_Queue/a copy 5.txt: adfadfasdfadf
+./../Transform_Queue/a copy 6.txt: adfadfasdfadf
+./../Transform_Queue/a copy 7.txt: adfadfasdfadf
+./../Transform_Queue/a copy 8.txt: adfadfasdfadf
+./../Transform_Queue/a copy.txt: adfadfasdfadf
+./../Transform_Queue/a copy 2.txt: adfadfasdfadf
+./../Transform_Queue/a copy 3.txt: adfadfasdfadf
+./../Transform_Queue/a copy 4.txt: adfadfasdfadf
+./../Transform_Queue/a copy 5.txt: adfadfasdfadf
+./../Transform_Queue/a copy 6.txt: adfadfasdfadf
+./../Transform_Queue/a copy 7.txt: adfadfasdfadf
+./../Transform_Queue/a copy 8.txt: adfadfasdfadf
+./../Transform_Queue/a copy 9.txt: adfadfasdfadf
+./../Transform_Queue/a copy 10.txt: adfadfasdfadf
+./../Transform_Queue/a copy 11.txt: adfadfasdfadf
+./../Transform_Queue/a copy 12.txt: adfadfasdfadf
+./../Transform_Queue/a copy 13.txt: adfadfasdfadf
+./../Transform_Queue/2024-04-26_12-32-29_Parsed_HF_Dataframe copy.tsv: adfadfasdfadf

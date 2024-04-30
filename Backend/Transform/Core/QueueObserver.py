@@ -14,7 +14,7 @@ class MyEventHandler(PatternMatchingEventHandler):
     This class defines the logic to be executed when changes are made on the directory being watched.
     """
     def on_created(self,event):
-      self.file_processor.add_file("event.src_path")      
+      self.file_processor.add_file(event.src_path)      
       print(f"hey, {event.src_path} has been created!")
         
     def on_deleted(self,event):
@@ -34,7 +34,8 @@ class QueueObserver:
       watch_dir (str): The path to the directory to be monitored.
     """
     self.watch_dir = watch_dir
-    self.event_handler = MyEventHandler(FilesProcessor(num_workers=2))
+    self.files_processor = FilesProcessor(num_workers=4)
+    self.event_handler = MyEventHandler(self.files_processor)
     self.observer = Observer()
 
   def start(self):
