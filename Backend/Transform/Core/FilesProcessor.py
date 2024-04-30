@@ -1,43 +1,74 @@
-from queue import Queue
-from multiprocessing import Process
+from multiprocessing import Process,Pool
 from typing import Callable, List
+import time
 
 class FilesProcessor:
   def __init__(self, num_workers):
-    self.queue = Queue()
-    self.workers = []
+    self.files_to_proc = []
     self.num_workers = num_workers
-    self._create_workers()
-
-  def _create_workers(self):
-    for _ in range(self.num_workers):
-      worker = Process(target=self._worker)
-      worker.daemon = True
+    self.num_jobs_left = 0
+    self.next_batch_proc_time = 30
+    
+    
+  def create_workers(self):
+    workers = []
+    
+    files_in_procc = self.files_to_proc
+    
+    self.files_to_proc = []
+    
+    self.num_jobs_left = 0
+    
+    print(files_in_procc)
+    
+    s = time.perf_counter()
+    
+    for file_name in files_in_procc:
+      
+      worker = Process(target=self.process_file,args=(file_name,))
+      # worker.daemon = True
       worker.start()
-      self.workers.append(worker)
-
-  def _worker(self):
-    while True:
-      try:
-        filename = self.queue.get()
-        self.process_file(filename)  # Replace with your actual processing logic
-        self.queue.task_done()
-      except Exception as e:
-        print(f"Error processing file: {e}")
+      workers.append(worker)
+    
+    for worker in workers:
+      worker.join()
+    
+    for worker in workers:
+      worker.terminate()
+    
+    elapsed = time.perf_counter() - s
+    print(f"{__file__} executed in {elapsed:0.2f} seconds.")
 
   def process_file(self, filename):
-    # Replace this with your actual file processing logic
-    print(f"Processing file: {filename}")
+    try:
+      # Replace this with your actual file processing logic
+      with open("./../Transform_Queue/logs.txt", "a") as f:
+          time.sleep(5)
+          f.write(f"{filename}: adfadfasdfadf\n")
+      return f"Processing file: {filename}"
+    except Exception as e:
+      print(f"Error processing file: {e}")
 
+  def log_result(self,result):
+    print(result)
+  
   def add_file(self, filename):
-    print("hello")
-    self.queue.put(filename)
+    # result = self.pool.apply_async(self.process_file,args=(filename,),callback = self.log_result)
+    self.files_to_proc.append(filename)
+    self.num_jobs_left += 1
+    if(self.num_jobs_left == self.num_workers):
+      self.create_workers()
+    
+    # print(result.get())
 
-  def wait_for_completion(self):
-    # Wait for all workers to finish processing tasks in the queue
-    self.queue.join()
-
-  def shutdown(self):
-    # Stop all worker processes
-    for worker in self.workers:
-      worker.terminate()
+  def update_time_to_proccess(self):
+    print(self.next_batch_proc_time)
+    self.next_batch_proc_time -= 1
+    
+    if(self.num_jobs_left == 0):
+      self.next_batch_proc_time = 30
+      
+    if self.next_batch_proc_time == 0:
+      self.next_batch_proc_time = 30
+      self.create_workers()
+    
