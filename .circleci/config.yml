@@ -32,21 +32,12 @@ jobs:
           working_directory: ./Backend
       - run:
           name: Build the container architecture
-          command: docker-compose --profile no_gpu build
+          command: docker-compose --profile test build
           working_directory: ./Backend
       - run:
           name: Run the container architecture
-          command: docker-compose --profile no_gpu up
+          command: docker-compose --profile ci_test up
           working_directory: ./Backend
-      - run:
-          name: Check the result .tsv file of the HF Extractor step
-          command: |
-            if [ -f Parsed_HF_Dataframe.tsv ]; then
-              echo "File Parsed_HF_Dataframe.tsv exists!"
-            else
-              echo "File Parsed_HF_Dataframe.tsv does not exist."
-            fi
-          working_directory: ./Backend/Extractors/HF_Extractor
       # - docker-compose logs -f
 
 

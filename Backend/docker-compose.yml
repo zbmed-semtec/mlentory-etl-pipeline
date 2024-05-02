@@ -45,6 +45,9 @@ services:
     # command: ["tail", "-f", "/dev/null"]
 
   transform:
+    profiles:
+      - gpu
+      - no_gpu
     build: 
       context: .
       dockerfile: ./Transform/Dockerfile  # Path to extractor Dockerfile
@@ -59,7 +62,37 @@ services:
     command: ["tail", "-f", "/dev/null"]
     # Uncomment for production
     #command: ["python3", "ExtractFromDataset.py"]
+
+  test:
+    profiles:
+      - test
+    build: 
+      context: .
+      dockerfile: ./Tests/Dockerfile  # Path to extractor Dockerfile
+    # Define volumes to mount extractor scripts or dependencies
+    volumes:
+      - ./Tests:/app/Tests
+      - ./Transform_Queue:/Transform_Queue
+    dns:
+      - 1.1.1.1
+
+    # Uncomment this line to test the script
+    command: ["tail", "-f", "/dev/null"]
   
+  ci_test:
+    profiles:
+      - ci_test
+    volumes:
+      - ./Test:/app
+      - ./Transform_Queue:/Transform_Queue
+    build: 
+      context: .
+      dockerfile: ./Tests/Dockerfile  # Path to extractor Dockerfile
+    # Define volumes to mount extractor scripts or dependencies
+    dns:
+      - 1.1.1.1
+    command: ["python3", "./Tests/test.py"] 
+
   # mysql:
   #   image: mysql:latest
   #   environment:
