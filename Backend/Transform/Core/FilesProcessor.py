@@ -1,6 +1,10 @@
 from multiprocessing import Process,Pool
 from typing import Callable, List
+import logging
 import time
+
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
 
 class FilesProcessor:
   def __init__(self, num_workers):
@@ -19,7 +23,7 @@ class FilesProcessor:
     
     self.num_jobs_left = 0
     
-    print(files_in_procc)
+    # print(files_in_procc)
     
     s = time.perf_counter()
     
@@ -41,16 +45,13 @@ class FilesProcessor:
 
   def process_file(self, filename):
     try:
-      # Replace this with your actual file processing logic
       with open("./../Transform_Queue/logs.txt", "a") as f:
           time.sleep(5)
           f.write(f"{filename}: adfadfasdfadf\n")
-      return f"Processing file: {filename}"
+          logger.info(f"Processing file: {filename}")
     except Exception as e:
-      print(f"Error processing file: {e}")
+      logger.exception(f"Error processing file: {e}")
 
-  def log_result(self,result):
-    print(result)
   
   def add_file(self, filename):
     # result = self.pool.apply_async(self.process_file,args=(filename,),callback = self.log_result)
@@ -62,12 +63,12 @@ class FilesProcessor:
     # print(result.get())
 
   def update_time_to_proccess(self):
-    print(self.next_batch_proc_time)
+    # print(self.next_batch_proc_time)
     self.next_batch_proc_time -= 1
     
     if(self.num_jobs_left == 0):
       self.next_batch_proc_time = 30
-      
+    
     if self.next_batch_proc_time == 0:
       self.next_batch_proc_time = 30
       self.create_workers()
