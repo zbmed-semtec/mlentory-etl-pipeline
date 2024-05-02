@@ -15,11 +15,10 @@ if __name__ == "__main__":
     observer = QueueObserver("./../Transform_Queue/")
     observer.start()
     
-    
     try:
         # Keep the script running to monitor changes
         while True:
-            observer.files_processor.update_time_to_proccess()
+            observer.files_processor.update_time_to_process()
             time.sleep(0.5)
     except Exception as e:
         logger.exception("Exception occurred")
