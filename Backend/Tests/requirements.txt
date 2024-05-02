@@ -1,6 +1,6 @@
 transformers
 datasets
 huggingface-hub
+watchdog
 numpy
 pandas
-mysql-connector-python
