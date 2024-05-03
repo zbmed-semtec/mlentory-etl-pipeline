@@ -18,7 +18,7 @@ class QueueObserver:
         observer (Observer): An instance of the Observer class for monitoring the directory.
     """
 
-    def __init__(self, watch_dir: str):
+    def __init__(self, watch_dir: str, files_processor: FilesProcessor):
         """
         Initializes a new QueueObserver instance.
 
@@ -26,8 +26,8 @@ class QueueObserver:
             watch_dir (str): The path to the directory to be monitored.
         """
         self.watch_dir = watch_dir
-        self.files_processor = FilesProcessor(num_workers=4)
-        self.event_handler = MyEventHandler(self.files_processor)
+        self.files_processor = files_processor
+        self.event_handler = MyQueueEventHandler(self.files_processor)
         self.observer = Observer()
 
     def start(self) -> None:
@@ -46,7 +46,7 @@ class QueueObserver:
         self.observer.stop()
         self.observer.join()
         
-class MyEventHandler(PatternMatchingEventHandler):
+class MyQueueEventHandler(PatternMatchingEventHandler):
     """
     This class defines the logic to be executed when changes are made on the directory being watched.
 
@@ -61,7 +61,7 @@ class MyEventHandler(PatternMatchingEventHandler):
         Args:
             files_processor (FilesProcessor): An instance of the FilesProcessor class.
         """
-        super().__init__()
+        super().__init__(patterns=["*.tsv"])
         self.file_processor = files_processor
 
     def on_created(self, event) -> None:

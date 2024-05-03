@@ -72,6 +72,8 @@ services:
     # Define volumes to mount extractor scripts or dependencies
     volumes:
       - ./Tests:/app/Tests
+      - ./Transform:/app/Transform
+      - ./Extractors:/app/Extractors
       - ./Transform_Queue:/Transform_Queue
     dns:
       - 1.1.1.1
@@ -79,19 +81,31 @@ services:
     # Uncomment this line to test the script
     command: ["tail", "-f", "/dev/null"]
   
+
+
+
+
+
+
+
+
+
+
+
+
+
   ci_test:
     profiles:
       - ci_test
-    volumes:
-      - ./Test:/app
-      - ./Transform_Queue:/Transform_Queue
     build: 
       context: .
       dockerfile: ./Tests/Dockerfile  # Path to extractor Dockerfile
     # Define volumes to mount extractor scripts or dependencies
+    volumes:
+      - ./Transform_Queue:/Transform_Queue
     dns:
       - 1.1.1.1
-    command: ["python3", "./Tests/test.py"] 
+    command: ["python3", "Tests/test.py"] 
 
   # mysql:
   #   image: mysql:latest
