@@ -14,11 +14,11 @@ class FilesProcessor:
     Attributes:
         files_to_proc (List[str]): A list of filenames to be processed.
         num_workers (int): The number of worker processes to use for processing.
-        num_jobs_left (int): The number of remaining files to be processed.
-        next_batch_proc_time (float): Time (in seconds) to wait before processing the next batch of files (if no new files are added).
+        next_batch_proc_time (int): Time (in seconds) to wait before processing the next batch of files (if no new files are added).
+        curr_waiting_time (int): Time (in seconds) remaining before processing the next batch of files.
     """
 
-    def __init__(self, num_workers: int):
+    def __init__(self, num_workers: int, next_batch_proc_time: int):
         """
         Initializes a new FilesProcessor instance.
 
@@ -27,8 +27,8 @@ class FilesProcessor:
         """
         self.files_to_proc: List[str] = []
         self.num_workers = num_workers
-        self.num_jobs_left = 0
-        self.next_batch_proc_time = 30
+        self.next_batch_proc_time = next_batch_proc_time
+        self.curr_waiting_time = 0
 
     def create_workers(self) -> None:
         """
@@ -43,9 +43,8 @@ class FilesProcessor:
         workers: List[Process] = []
         files_in_proc = self.files_to_proc.copy()  # Avoid modifying original list during iteration
         self.files_to_proc = []
-        self.num_jobs_left = 0
 
-        start_time = time.perf_counter()
+        # start_time = time.perf_counter()
 
         for filename in files_in_proc:
             worker = Process(target=self.process_file, args=(filename,))
@@ -59,8 +58,9 @@ class FilesProcessor:
         for worker in workers:
             worker.terminate()  # Best practice to terminate even if join() finishes first
 
-        elapsed_time = time.perf_counter() - start_time
-        print(f"{__file__} executed in {elapsed_time:0.2f} seconds.")
+        # elapsed_time = time.perf_counter() - start_time
+        # print(f"{__file__} executed in {elapsed_time:0.2f} seconds.")
+        logger.info("Finished processing batch\n")
 
     def process_file(self, filename: str) -> None:
         """
@@ -73,10 +73,8 @@ class FilesProcessor:
             Exception: If an error occurs during processing.
         """
         try:
-            with open("./../Transform_Queue/logs.txt", "a") as f:
-                time.sleep(5)
-                f.write(f"{filename}: adfadfasdfadf\n")
-                logger.info(f"Processing file: {filename}")
+            time.sleep(0.3)
+            logger.info(f"Processing file: {filename}")
         except Exception as e:
             logger.exception(f"Error processing file: {e}")
 
@@ -88,9 +86,8 @@ class FilesProcessor:
             filename (str): The name of the file to be added.
         """
         self.files_to_proc.append(filename)
-        self.num_jobs_left += 1
 
-        if self.num_jobs_left == self.num_workers:
+        if len(self.files_to_proc) == self.num_workers:
             self.create_workers()
 
     def update_time_to_process(self) -> None:
@@ -99,9 +96,9 @@ class FilesProcessor:
 
         Also triggers processing if the timer reaches zero or there are no jobs left.
         """
-        self.next_batch_proc_time -= 1
+        self.curr_waiting_time -= 1
 
-        if (self.num_jobs_left == 0) or (self.next_batch_proc_time == 0):
-            self.next_batch_proc_time = 30  # Reset timer
+        if (len(self.files_to_proc)== 0) or (self.curr_waiting_time == 0):
+            self.curr_waiting_time = self.next_batch_proc_time  # Reset timer
             if self.files_to_proc:
                 self.create_workers()

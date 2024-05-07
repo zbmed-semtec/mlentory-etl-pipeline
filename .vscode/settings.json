@@ -1,5 +1,13 @@
 {
     "cSpell.words": [
         "caplog"
-    ]
+    ],
+    "circleci.persistedProjectSelection": [
+        "circleci/4KKqYGJto5paz4jMn8Pj6L/FQUavsi3FFnaPrhQgngbPJ"
+    ],
+    "python.testing.pytestArgs": [
+        "Backend"
+    ],
+    "python.testing.unittestEnabled": false,
+    "python.testing.pytestEnabled": true
 }

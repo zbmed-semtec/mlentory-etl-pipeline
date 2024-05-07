@@ -24,7 +24,7 @@ def main():
 
   try:
     #Initializing the updater
-    files_processor = FilesProcessor(num_workers=4)
+    files_processor = FilesProcessor(num_workers=4,next_batch_proc_time=30)
     observer = QueueObserver(watch_dir=args.folder,files_processor=files_processor)
     observer.start()
     
