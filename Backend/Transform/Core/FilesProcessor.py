@@ -28,7 +28,7 @@ class FilesProcessor:
         self.files_to_proc: List[str] = []
         self.num_workers = num_workers
         self.next_batch_proc_time = next_batch_proc_time
-        self.curr_waiting_time = 0
+        self.curr_waiting_time = next_batch_proc_time
 
     def create_workers(self) -> None:
         """
@@ -98,7 +98,7 @@ class FilesProcessor:
         """
         self.curr_waiting_time -= 1
 
-        if (len(self.files_to_proc)== 0) or (self.curr_waiting_time == 0):
+        if (len(self.files_to_proc) == 0) or (self.curr_waiting_time == 0):
             self.curr_waiting_time = self.next_batch_proc_time  # Reset timer
             if self.files_to_proc:
                 self.create_workers()
