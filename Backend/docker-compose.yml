@@ -80,18 +80,6 @@ services:
 
     # Uncomment this line to test the script
     command: ["tail", "-f", "/dev/null"]
-  
-
-
-
-
-
-
-
-
-
-
-
 
 
   ci_test:
