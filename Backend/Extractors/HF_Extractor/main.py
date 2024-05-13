@@ -27,7 +27,7 @@ if __name__ == "__main__":
     HF_df = parser.parse_fields_from_tags_HF(HF_df=HF_df)
     HF_df = parser.parse_known_fields_HF(HF_df=HF_df)
 
-    #Remove unecessary columns, the information is contained int the 
+    #Remove unnecessary columns, the information is contained int the 
     HF_df = HF_df.drop(columns=['modelId', 'author', 'last_modified', 'downloads', 'likes',
         'library_name', 'tags', 'pipeline_tag', 'createdAt', 'card'])
 
@@ -51,4 +51,3 @@ if __name__ == "__main__":
 
     HF_df.to_csv(filename,sep="\t")
     print(HF_df.head())
-    print("Hello")

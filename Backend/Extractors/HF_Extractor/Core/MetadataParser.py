@@ -4,7 +4,7 @@ from typing import Any, Dict, List, Set, Union
 
 class MetadataParser:
 
-    def __init__(self, qa_model: str) -> None:
+    def __init__(self, qa_model: str, path_to_config_data: str = "./") -> None:
         # Check for GPU availability
         try:
             import torch  # Import torch to check for cuda availability
@@ -17,12 +17,12 @@ class MetadataParser:
             self.device = None
             
         # Getting the tags
-        self.tags_language = set(self.load_config_file("./Config_Data/tags_language.tsv"))
-        self.tags_libraries = set(self.load_config_file("./Config_Data/tags_libraries.tsv"))
-        self.tags_other = set(self.load_config_file("./Config_Data/tags_other.tsv"))
-        self.tags_task = set(self.load_config_file("./Config_Data/tags_task.tsv"))
+        self.tags_language = set(self.load_config_file(f"{path_to_config_data}/tags_language.tsv"))
+        self.tags_libraries = set(self.load_config_file(f"{path_to_config_data}/tags_libraries.tsv"))
+        self.tags_other = set(self.load_config_file(f"{path_to_config_data}/tags_other.tsv"))
+        self.tags_task = set(self.load_config_file(f"{path_to_config_data}/tags_task.tsv"))
         #Getting the questions
-        self.questions = self.load_config_file("./Config_Data/questions.tsv")
+        self.questions = self.load_config_file(f"{path_to_config_data}/questions.tsv")
         #Assigning the question answering pipeline
         self.qa_model = qa_model
         if self.device != None:
@@ -45,8 +45,6 @@ class MetadataParser:
         return {"data":data,
                     "extraction_method":extraction_method,
                     "confidence":confidence}
-                
-            
     
     def parse_known_fields_HF(self, HF_df: pd.DataFrame) -> pd.DataFrame:
         HF_df.loc[:,"q_id_0"] = HF_df.loc[:, ("modelId")]
@@ -54,6 +52,10 @@ class MetadataParser:
         HF_df.loc[:,"q_id_2"] = HF_df.loc[:, ("createdAt")]
         
         # Check if the model was finetuned or retrained
+        # q_id_8 asks What model is used as the base model? 
+        # q_id_4 asks What datasets was the model trained on?
+        # q_id_6 asks What datasets were used to finetune the model?
+        # q_id_7 asks What datasets were used to retrain the model?
         for index, row in HF_df.iterrows():
             if(row['q_id_8'] != '[CLS]' and row['q_id_8'] != None):
                 q_4_answer = HF_df.loc[index:index,"q_id_4"]
@@ -66,10 +68,11 @@ class MetadataParser:
         return HF_df
     
     def parse_fields_from_tags_HF(self, HF_df: pd.DataFrame) -> pd.DataFrame:
+ 
         for index, row in HF_df.iterrows():
             for tag in row['tags']:
                 #Check question 3
-                tag_for_q3 = tag.replace('-'," ")
+                tag_for_q3 = tag.replace('-'," ").lower()
                 if tag_for_q3 in self.tags_task:
                     if(HF_df.loc[index, "q_id_3"] == None):
                         HF_df.loc[index, "q_id_3"] = [tag_for_q3]
@@ -103,14 +106,15 @@ class MetadataParser:
                     else:
                         HF_df.loc[index, "q_id_16"].append(tag)
                 #Check question 17
-                if tag in self.tags_libraries:
+                tag_for_q17 = tag.lower()
+                if tag_for_q17 in self.tags_libraries:
                     if(HF_df["q_id_17"][index] == None):
-                        HF_df.loc[index, "q_id_17"] = [tag]
+                        HF_df.loc[index, "q_id_17"] = [tag_for_q17]
                     else:
-                        HF_df.loc[index, "q_id_17"].append(tag)
-            #Check question 3 again
+                        HF_df.loc[index, "q_id_17"].append(tag_for_q17)
+            #Check question 3 in pipeline_tags
             if(row['pipeline_tag'] != None):
-                tag_for_q3 = row['pipeline_tag'].replace("-"," ")
+                tag_for_q3 = row['pipeline_tag'].replace("-"," ").lower()
                 if(HF_df["q_id_3"][index] == None):
                     HF_df.loc[index, "q_id_3"] = [tag_for_q3]
                 else:
@@ -127,9 +131,9 @@ class MetadataParser:
 
         for index, row in HF_df.iterrows():
             context = row["card"]  # Getting the context from the "card" column
-
-            # Create an empty dictionary to store answers for each question
+        # Create an empty dictionary to store answers for each question
             answers = {}
+    
             q_cnt = -1
             for question in self.questions:
                 q_cnt+=1

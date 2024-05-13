@@ -2,6 +2,7 @@ FROM python:3.11
 
 COPY Tests/requirements.txt .
 RUN pip3 install -r requirements.txt
+RUN pip3 install torch -f https://download.pytorch.org/whl/cu113
 
 RUN mkdir Transform_Queue
 
