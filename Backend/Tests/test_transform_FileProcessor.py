@@ -3,9 +3,10 @@ import sys
 import os
 import time
 
-sys.path.append('./../Transform')
-from Core.QueueObserver import QueueObserver,MyQueueEventHandler
-from Core.FilesProcessor import FilesProcessor
+# print(os.getcwd())
+sys.path.append('../')
+from Transform.Core.FilesProcessor import FilesProcessor
+from Transform.Core.QueueObserver import QueueObserver,MyQueueEventHandler
 
 
 STOP_SIGNAL = "Stop Read"
@@ -107,7 +108,7 @@ class TestFileProcessor:
         #This tests can fail if the wait_for_response is not setup correctly, 
         # the events expected may not be logged and thus the test will fail. 
         file_paths.extend(self.create_files_for_batch_processing(caplog_workaround,test_dir,
-                                               wait_for_response=1,
+                                               wait_for_response=1.2,
                                                files_to_create=6,
                                                start_file_num=0,
                                                logger=logger))
@@ -160,14 +161,14 @@ class TestFileProcessor:
         #This tests can fail if the wait_for_response is not setup correctly, 
         # the events expected may not be logged and thus the test will fail. 
         file_paths.extend(self.create_files_for_batch_processing(caplog_workaround,test_dir,
-                                               wait_for_response=0.7,
+                                               wait_for_response=0.9,
                                                files_to_create=5,
                                                start_file_num=0,
                                                logger=logger))
         
         self.wait_for_next_batch_processing(caplog_workaround,file_processor, logger,
                                             waiting_period = 10,
-                                            wait_for_response = 0.4)
+                                            wait_for_response = 0.6)
         
         # Assert the current waiting time has reseted 
         assert file_processor.curr_waiting_time == file_processor.next_batch_proc_time

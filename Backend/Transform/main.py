@@ -18,10 +18,9 @@ def main():
   timestamp = now.strftime('%Y-%m-%d_%H-%M-%S')
   filename = f'./Processing_Logs/transform_{timestamp}.log'
   logging.basicConfig(filename=filename, filemode='w', format='%(asctime)s %(name)s - %(levelname)s - %(message)s', datefmt='%d-%b-%y %H:%M:%S')
-  logger = logging.getLogger(__name__)
+  logger = logging.getLogger("main")
   logger.setLevel(logging.INFO)
-  
-
+  logger.info("HOLA")
   try:
     #Initializing the updater
     files_processor = FilesProcessor(num_workers=4,next_batch_proc_time=30)
@@ -36,9 +35,9 @@ def main():
   except Exception as e:
     logger.exception("Exception occurred ", e)
   except KeyboardInterrupt:
-    logging.info("Server Stop")
+    logger.info("Server Stop")
       
-  logging.info("Server Shutdown")
+  logger.info("Server Shutdown")
   observer.stop()
 
 if __name__ == "__main__":

@@ -22,9 +22,9 @@ services:
     # depends_on:
     #   - mysql
     # Uncomment this line to run the script
-    command: ["python3", "ExtractFromDataset.py"]
+    # command: ["python3", "ExtractFromDataset.py"]
     # Uncomment this line to develop on the container
-    # command: ["tail", "-f", "/dev/null"]
+    command: ["tail", "-f", "/dev/null"]
   
   hf_extractor_with_no_gpu:
     profiles: [no_gpu]
@@ -90,10 +90,13 @@ services:
       dockerfile: ./Tests/Dockerfile  # Path to extractor Dockerfile
     # Define volumes to mount extractor scripts or dependencies
     volumes:
+      - ./Tests:/app/Tests
+      - ./Transform:/app/Transform
+      - ./Extractors:/app/Extractors
       - ./Transform_Queue:/Transform_Queue
     dns:
       - 1.1.1.1
-    command: ["python3", "Tests/test.py"] 
+    command: ["pytest"] 
 
   # mysql:
   #   image: mysql:latest
