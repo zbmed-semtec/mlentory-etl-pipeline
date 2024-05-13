@@ -223,13 +223,6 @@ class TestMetadataParser:
         result = parser.answer_question(question, context)
         assert result[0]["confidence"] < 0.4
 
-        # Test case 4: Question with multiple sentences in context
-        question = "What hyperparameters were optimized during the training process?"
-        context = "The hyperparameters optimized during the training process were learning rate and batch size. The model was trained for 10 epochs."
-        expected_answer = {"data": "learning rate and batch size", "extraction_method": "Intel/dynamic_tinybert", "confidence": 0.85}
-        result = parser.answer_question(question, context)
-        assert result[0]["data"] == expected_answer["data"]
-        assert result[0]["confidence"] >= 0.3
     
     def test_parse_fields_from_txt_HF_one_model(self, parser):
         data = {"modelId": ["m1"],

@@ -4,7 +4,7 @@ from watchdog.observers import Observer
 from Core.FilesProcessor import FilesProcessor
 import logging
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("main_2")
 logger.setLevel(logging.INFO)
 
 class QueueObserver:
