@@ -3,8 +3,8 @@ import sys
 import os
 import time
 
-# print(os.getcwd())
-sys.path.append('../')
+
+sys.path.append('.')
 from Transform.Core.FilesProcessor import FilesProcessor
 from Transform.Core.QueueObserver import QueueObserver,MyQueueEventHandler
 

@@ -6,8 +6,8 @@ import os
 import pytest
 import sys
 
-sys.path.append('./../Extractors/HF_Extractor')
-from Core.MetadataParser import MetadataParser
+sys.path.append('.')
+from Extractors.HF_Extractor.Core.MetadataParser import MetadataParser
 
 
 class TestMetadataParser:
@@ -20,7 +20,7 @@ class TestMetadataParser:
     @pytest.fixture
     def parser(self):
         #Creating the parser object that will perform the transformations on the raw data 
-        parser = MetadataParser(qa_model="Intel/dynamic_tinybert",path_to_config_data="./../Extractors/HF_Extractor/Config_Data")
+        parser = MetadataParser(qa_model="Intel/dynamic_tinybert",path_to_config_data="./Extractors/HF_Extractor/Config_Data")
         return parser
     
     def add_base_questions(self,df,parser):

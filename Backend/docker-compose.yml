@@ -96,7 +96,10 @@ services:
       - ./Transform_Queue:/Transform_Queue
     dns:
       - 1.1.1.1
+    # command: ["./Tests/validate_tests.sh"]
     command: ["pytest"] 
+    # command: ["tail", "-f", "/dev/null"]
+
 
   # mysql:
   #   image: mysql:latest
