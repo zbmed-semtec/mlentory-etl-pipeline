@@ -5,7 +5,7 @@ import os
 import time
 import logging
 
-print(os.getcwd())
+# print(os.getcwd())
 sys.path.append('../')
 from Transform.Core.QueueObserver import QueueObserver,MyQueueEventHandler
 from Transform.Core.FilesProcessor import FilesProcessor
