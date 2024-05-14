@@ -76,7 +76,6 @@ class TestFileProcessor:
         time.sleep(0.1)
         
         assert len(file_processor.files_to_proc) == 2
-        assert False == True
     
     @pytest.mark.fixture_data(2,2)
     def test_creates_workers_on_complete_batch(self,caplog,setup_file_processor,caplog_workaround,logger):
