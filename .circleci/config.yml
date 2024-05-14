@@ -36,8 +36,8 @@ jobs:
           working_directory: ./Backend
       - run:
           name: Run the container architecture
-          command: docker-compose --profile ci_test up
           working_directory: ./Backend
+          command: sh Tests/validate_tests.sh
       # - docker-compose logs -f
 
 

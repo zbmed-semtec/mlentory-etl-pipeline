@@ -6,9 +6,9 @@ RUN pip3 install torch -f https://download.pytorch.org/whl/cu113
 
 RUN mkdir Transform_Queue
 
-WORKDIR /app
+WORKDIR /app_test
 RUN mkdir Tests
 COPY ./Transform ./Transform
 COPY ./Extractors ./Extractors
 COPY ./Tests ./Tests
-
+RUN chmod +x ./Tests/validate_tests.sh
