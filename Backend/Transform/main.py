@@ -18,9 +18,8 @@ def main():
   timestamp = now.strftime('%Y-%m-%d_%H-%M-%S')
   filename = f'./Processing_Logs/transform_{timestamp}.log'
   logging.basicConfig(filename=filename, filemode='w', format='%(asctime)s %(name)s - %(levelname)s - %(message)s', datefmt='%d-%b-%y %H:%M:%S')
-  logger = logging.getLogger("main")
+  logger = logging.getLogger(__name__)
   logger.setLevel(logging.INFO)
-  logger.info("HOLA")
   try:
     #Initializing the updater
     files_processor = FilesProcessor(num_workers=4,next_batch_proc_time=30)
