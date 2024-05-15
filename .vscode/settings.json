@@ -1,6 +1,7 @@
 {
     "cSpell.words": [
-        "caplog"
+        "caplog",
+        "pytest"
     ],
     "circleci.persistedProjectSelection": [
         "circleci/4KKqYGJto5paz4jMn8Pj6L/FQUavsi3FFnaPrhQgngbPJ"

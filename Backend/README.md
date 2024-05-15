@@ -91,6 +91,8 @@ docker-compose --version
 
 ### Setup NVIDIA GPUs
 
+* It is not necessary to have a gpu to run the Backend, but it will make the pipeline run faster.
+
 * You can follow the guide at https://docs.nvidia.com/cuda/wsl-user-guide/index.html if you want to setup the NVDIA GPUs in your WSL.
 
 * But in general you have to guarantee that you have the GPU drivers, the NVIDIA container toolkit, and you have CUDA toolkit install.
@@ -105,7 +107,7 @@ https://developer.nvidia.com/cuda-downloads
 
 ### Run the project
 
-1. You need to build the images for the containers in the project
+1. You need to build the images for the containers in the project, if you have a Nvidia gpu configured use the profile 'gpu' otherwise use the profile 'no_gpu':
 
 ```
 docker-compose --profile gpu build
@@ -115,7 +117,7 @@ or
 docker-compose --profile no_gpu build
 ```
 
-2. Bring up the container architecture, if you have a Nvidia gpu use the profile 'gpu' otherwise use the profile 'no_gpu'
+2. Bring up the container architecture:
 
 ```
 docker-compose --profile gpu up
