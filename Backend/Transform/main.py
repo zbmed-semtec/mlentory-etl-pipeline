@@ -20,9 +20,10 @@ def main():
   logging.basicConfig(filename=filename, filemode='w', format='%(asctime)s %(name)s - %(levelname)s - %(message)s', datefmt='%d-%b-%y %H:%M:%S')
   logger = logging.getLogger(__name__)
   logger.setLevel(logging.INFO)
+  
   try:
     #Initializing the updater
-    files_processor = FilesProcessor(num_workers=4,next_batch_proc_time=30)
+    files_processor = FilesProcessor(num_workers=4,next_batch_proc_time=30, processed_files_log_path="./Processing_Logs/Processed_files.txt")
     observer = QueueObserver(watch_dir=args.folder,files_processor=files_processor)
     observer.start()
     

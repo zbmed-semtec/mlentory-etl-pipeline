@@ -35,9 +35,9 @@ class TestFileProcessor:
         test_dir.mkdir()
         
         if marker is None:
-            file_processor = FilesProcessor(num_workers=2, next_batch_proc_time=1)
+            file_processor = FilesProcessor(num_workers=2, next_batch_proc_time=1,processed_files_log_path="./Processing_Logs/Processed_files.txt")
         else:
-            file_processor = FilesProcessor(num_workers=marker.args[0], next_batch_proc_time=marker.args[1]) 
+            file_processor = FilesProcessor(num_workers=marker.args[0], next_batch_proc_time=marker.args[1],processed_files_log_path="./Processing_Logs/Processed_files.txt") 
         
         # Create a QueueObserver instance
         observer = QueueObserver(watch_dir=test_dir, files_processor=file_processor)

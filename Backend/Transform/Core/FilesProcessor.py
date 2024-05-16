@@ -16,9 +16,10 @@ class FilesProcessor:
         num_workers (int): The number of worker processes to use for processing.
         next_batch_proc_time (int): Time (in seconds) to wait before processing the next batch of files (if no new files are added).
         curr_waiting_time (int): Time (in seconds) remaining before processing the next batch of files.
+        processed_files_log_path (str): The path to a file that keeps track of the processed files
     """
 
-    def __init__(self, num_workers: int, next_batch_proc_time: int):
+    def __init__(self, num_workers: int, next_batch_proc_time: int, processed_files_log_path: str):
         """
         Initializes a new FilesProcessor instance.
 
@@ -29,6 +30,14 @@ class FilesProcessor:
         self.num_workers = num_workers
         self.next_batch_proc_time = next_batch_proc_time
         self.curr_waiting_time = next_batch_proc_time
+        self.processed_files_log_path = processed_files_log_path
+        
+        #Getting current processed files
+        with open(self.processed_files_log_path, 'r') as file:
+            self.processed_files = set(line.strip() for line in file)
+        
+        print(self.processed_files)
+        
 
     def create_workers(self) -> None:
         """
@@ -73,8 +82,10 @@ class FilesProcessor:
             Exception: If an error occurs during processing.
         """
         try:
-            time.sleep(0.3)
             logger.info(f"Processing file: {filename}")
+            time.sleep(0.3)
+            logger.info(f"Finished processing: {filename}")
+            #When the file is being processed you need to keep in mind 
         except Exception as e:
             logger.exception(f"Error processing file: {e}")
 
@@ -85,10 +96,11 @@ class FilesProcessor:
         Args:
             filename (str): The name of the file to be added.
         """
-        self.files_to_proc.append(filename)
+        if(filename not in self.processed_files):
+            self.files_to_proc.append(filename)
 
-        if len(self.files_to_proc) == self.num_workers:
-            self.create_workers()
+            if len(self.files_to_proc) == self.num_workers:
+                self.create_workers()
 
     def update_time_to_process(self) -> None:
         """
