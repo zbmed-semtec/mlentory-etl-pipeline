@@ -71,9 +71,9 @@ services:
       dockerfile: ./Tests/Dockerfile  # Path to extractor Dockerfile
     # Define volumes to mount extractor scripts or dependencies
     volumes:
-      - ./Tests:/app/Tests
-      - ./Transform:/app/Transform
-      - ./Extractors:/app/Extractors
+      - ./Tests:/app_test/Tests
+      - ./Transform:/app_test/Transform
+      - ./Extractors:/app_test/Extractors
       - ./Transform_Queue:/Transform_Queue
     dns:
       - 1.1.1.1
@@ -90,9 +90,9 @@ services:
       dockerfile: ./Tests/Dockerfile  # Path to extractor Dockerfile
     # Define volumes to mount extractor scripts or dependencies
     volumes:
-      - ./Tests:/app/Tests
-      - ./Transform:/app/Transform
-      - ./Extractors:/app/Extractors
+      - ./Tests:/app_test/Tests
+      - ./Transform:/app_test/Transform
+      - ./Extractors:/app_test/Extractors
       - ./Transform_Queue:/Transform_Queue
     dns:
       - 1.1.1.1

@@ -1,10 +1,11 @@
-from multiprocessing import Process, Pool
+from multiprocessing import Process, Pool,set_start_method,get_context
 from typing import Callable, List
 import logging
 import time
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
+
 
 
 class FilesProcessor:
@@ -26,17 +27,19 @@ class FilesProcessor:
         Args:
             num_workers (int): The number of worker processes to use.
         """
+        set_start_method("spawn", force=True)
+        manager = get_context('spawn').Manager()
         self.files_to_proc: List[str] = []
         self.num_workers = num_workers
         self.next_batch_proc_time = next_batch_proc_time
         self.curr_waiting_time = next_batch_proc_time
         self.processed_files_log_path = processed_files_log_path
-        
+        self.processed_files = manager.dict()
         #Getting current processed files
-        with open(self.processed_files_log_path, 'r') as file:
-            self.processed_files = set(line.strip() for line in file)
+        # with open(self.processed_files_log_path, 'r') as file:
+        #     self.processed_files = set(line.strip() for line in file)
         
-        print(self.processed_files)
+        # print(self.processed_files)
         
 
     def create_workers(self) -> None:
@@ -67,8 +70,7 @@ class FilesProcessor:
         for worker in workers:
             worker.terminate()  # Best practice to terminate even if join() finishes first
 
-        # elapsed_time = time.perf_counter() - start_time
-        # print(f"{__file__} executed in {elapsed_time:0.2f} seconds.")
+        
         logger.info("Finished processing batch\n")
 
     def process_file(self, filename: str) -> None:
@@ -84,6 +86,7 @@ class FilesProcessor:
         try:
             logger.info(f"Processing file: {filename}")
             time.sleep(0.3)
+            self.processed_files[filename] = 1
             logger.info(f"Finished processing: {filename}")
             #When the file is being processed you need to keep in mind 
         except Exception as e:
@@ -96,11 +99,13 @@ class FilesProcessor:
         Args:
             filename (str): The name of the file to be added.
         """
-        if(filename not in self.processed_files):
-            self.files_to_proc.append(filename)
+        # print(filename)
+        # print(self.processed_files)
+        # if(filename not in self.processed_files):
+        self.files_to_proc.append(filename)
 
-            if len(self.files_to_proc) == self.num_workers:
-                self.create_workers()
+        if len(self.files_to_proc) == self.num_workers:
+            self.create_workers()
 
     def update_time_to_process(self) -> None:
         """

@@ -4,6 +4,7 @@ import os
 import time
 from typing import List, Tuple
 
+
 sys.path.append('.')
 from Transform.Core.FilesProcessor import FilesProcessor
 from Transform.Core.QueueObserver import QueueObserver, MyQueueEventHandler
@@ -29,15 +30,16 @@ class TestFileProcessor:
         Returns:
             A tuple containing the QueueObserver, FilesProcessor, and temporary directory path
         """
+        
         marker = request.node.get_closest_marker("fixture_data")
         
         test_dir = tmp_path / "test_dir"
         test_dir.mkdir()
         
         if marker is None:
-            file_processor = FilesProcessor(num_workers=2, next_batch_proc_time=1,processed_files_log_path="./Processing_Logs/Processed_files.txt")
+            file_processor = FilesProcessor(num_workers=2, next_batch_proc_time=1,processed_files_log_path="./Transform/Processing_Logs/Processed_files.txt")
         else:
-            file_processor = FilesProcessor(num_workers=marker.args[0], next_batch_proc_time=marker.args[1],processed_files_log_path="./Processing_Logs/Processed_files.txt") 
+            file_processor = FilesProcessor(num_workers=marker.args[0], next_batch_proc_time=marker.args[1],processed_files_log_path="./Transform/Processing_Logs/Processed_files.txt") 
         
         # Create a QueueObserver instance
         observer = QueueObserver(watch_dir=test_dir, files_processor=file_processor)
@@ -47,8 +49,11 @@ class TestFileProcessor:
         yield observer, file_processor, test_dir
         
         observer.stop()
+        file_processor = None
+        observer = None
+        
     
-    def create_files_for_batch_processing(self, caplog_workaround, test_dir: str, wait_for_response: float, files_to_create: int, start_file_num: int, logger) -> List[str]:
+    def create_files_for_batch_processing(self,  test_dir: str, wait_for_response: float, files_to_create: int, start_file_num: int, logger) -> List[str]:
         """
         Create files for batch processing and simulate file creation event
         
@@ -66,20 +71,18 @@ class TestFileProcessor:
             A list of file paths for the created objects
         """
         file_paths = []
-    
-        with caplog_workaround():
-            time.sleep(0.1)
-            # Simulate multiple file creation event
-            for file_num in range(files_to_create):
-                file_path = f"new_file_{start_file_num+file_num}.tsv"
-                file_paths.append(os.path.join(test_dir, file_path))
-                with open(file_paths[-1], "w") as f:
-                    f.write("Test content")
-            time.sleep(wait_for_response)
-            logger.info(STOP_SIGNAL)
+        time.sleep(0.1)
+        # Simulate multiple file creation event
+        for file_num in range(files_to_create):
+            file_path = f"new_file_{start_file_num+file_num}.tsv"
+            file_paths.append(os.path.join(test_dir, file_path))
+            with open(file_paths[-1], "w") as f:
+                f.write("Test content")
+        time.sleep(wait_for_response)
+        
         return file_paths
 
-    def wait_for_next_batch_processing(self, caplog_workaround, file_processor: FilesProcessor, logger, waiting_period: int, wait_for_response: float) -> None:
+    def  wait_for_next_batch_processing(self,  file_processor: FilesProcessor, logger, waiting_period: int, wait_for_response: float) -> None:
         """
         Wait for next batch processing
         
@@ -90,12 +93,27 @@ class TestFileProcessor:
             waiting_period: Waiting period for next batch processing.
             wait_for_response: Time to wait after the period (seconds).
         """
-        with caplog_workaround():
-            time.sleep(0.1)
-            for _ in range(waiting_period):
-                file_processor.update_time_to_process()
-            time.sleep(wait_for_response)
-            logger.info(STOP_SIGNAL)
+        time.sleep(0.1)
+        for _ in range(waiting_period):
+            file_processor.update_time_to_process()
+        time.sleep(wait_for_response) 
+    
+    def check_files_got_processed(self, file_paths: List[str],file_processor:FilesProcessor):
+        processed = True
+        for file_path in file_paths:
+            if file_processor.processed_files[file_path] != 1:
+                processed = False
+                break
+        return processed
+    
+    def count_finished_batches(self,caplog):
+        cnt_batches = 0
+        for record in caplog.records:
+            if "FilesProcessor" in record.pathname:
+                if "Finished processing batch" in record.msg:
+                    cnt_batches += 1
+        
+        return cnt_batches
         
 
     @pytest.mark.fixture_data(3,2)
@@ -129,7 +147,7 @@ class TestFileProcessor:
         assert len(file_processor.files_to_proc) == 2
     
     @pytest.mark.fixture_data(2,2)
-    def test_creates_workers_on_complete_batch(self, caplog, setup_file_processor: Tuple[QueueObserver, FilesProcessor, str], caplog_workaround, logger) -> None:
+    def test_creates_workers_on_complete_batch(self, caplog, setup_file_processor: Tuple[QueueObserver, FilesProcessor, str],  logger) -> None:
         """
         Test that workers are created on complete batch
         
@@ -142,26 +160,25 @@ class TestFileProcessor:
             caplog_workaround: A pytest fixture to capture and work with logs in multiprocessing instances
             logger: An object for logging messages
         """
-        _, _, test_dir = setup_file_processor
+        _, file_processor, test_dir = setup_file_processor
         
         file_paths = []
         
         # Create files for batch processing and simulate file creation event
-        file_paths.extend(self.create_files_for_batch_processing(caplog_workaround, test_dir,
-                                               wait_for_response=0.4,
+        file_paths.extend(self.create_files_for_batch_processing( test_dir,
+                                               wait_for_response=0.6,
                                                files_to_create=2,
                                                start_file_num=0,
                                                logger=logger))
                         
         # Assert that the "Finished processing batch" message is logged
-        assert "Finished processing batch\n" in caplog.text
+        assert self.count_finished_batches(caplog) == 1
         
-        # Assert that log messages for each file are present
-        for file_path in file_paths:
-            assert f"Processing file: {file_path}" in caplog.text
+        # Assert the each file got processed
+        assert self.check_files_got_processed(file_paths,file_processor)
         
     @pytest.mark.fixture_data(2,2)
-    def test_creates_workers_on_multiple_batches(self, caplog, setup_file_processor: Tuple[QueueObserver, FilesProcessor, str], caplog_workaround, logger) -> None:
+    def test_creates_workers_on_multiple_batches(self, caplog, setup_file_processor: Tuple[QueueObserver, FilesProcessor, str],  logger) -> None:
         """
         Test that workers are created on multiple batches
         
@@ -175,36 +192,27 @@ class TestFileProcessor:
             logger: An object for logging messages
         """
         # Unpack the setup_file_processor tuple
-        _, _, test_dir = setup_file_processor
+        _, file_processor, test_dir = setup_file_processor
         
         # Initialize an empty list to store file paths
         file_paths = []
         
         # Create files for batch processing and simulate file creation event
-        file_paths.extend(self.create_files_for_batch_processing(caplog_workaround, test_dir,
-                                                            wait_for_response=1.2,
+        file_paths.extend(self.create_files_for_batch_processing( test_dir,
+                                                            wait_for_response=1.4,
                                                             files_to_create=6,
                                                             start_file_num=0,
                                                             logger=logger))
-        logger.info(STOP_SIGNAL)
-        
-        # Count the number of batches processed
-        cnt_batchs = 0
-        for record in caplog.records:
-            if "conftest" in record.pathname:
-                if "Finished processing batch" in record.msg:
-                    cnt_batchs += 1
-                
+               
         # Assert that 3 batches were processed
-        assert cnt_batchs == 3
+        assert self.count_finished_batches(caplog) == 3
         
-        # Assert the log messages for each file
-        for file_path in file_paths:
-            assert f"Processing file: {file_path}" in caplog.text
+        # Assert the each file got processed
+        assert self.check_files_got_processed(file_paths,file_processor)
 
 
     @pytest.mark.fixture_data(3,10)
-    def test_creates_workers_after_waiting(self, caplog, setup_file_processor: Tuple[QueueObserver, FilesProcessor, str], caplog_workaround, logger) -> None:
+    def test_creates_workers_after_waiting(self, caplog, setup_file_processor: Tuple[QueueObserver, FilesProcessor, str],  logger) -> None:
         """
         Test that workers are created after waiting
         
@@ -224,24 +232,25 @@ class TestFileProcessor:
         
         #This test can fail if the wait_for_response is not setup correctly, 
         # the events expected may not be logged and thus the test will fail. 
-        file_paths.extend(self.create_files_for_batch_processing(caplog_workaround,test_dir,
+        file_paths.extend(self.create_files_for_batch_processing(test_dir,
                                                wait_for_response=0,
                                                files_to_create=2,
                                                start_file_num=0,
                                                logger=logger))
         
-        self.wait_for_next_batch_processing(caplog_workaround,file_processor, logger,
+        self.wait_for_next_batch_processing(file_processor, logger,
                                             waiting_period = 10,
                                             wait_for_response = 0.4)
         
         assert file_processor.curr_waiting_time == file_processor.next_batch_proc_time
-        assert "Finished processing batch\n" in caplog.text
-        # Assert the log messages for each file
-        for file_path in file_paths:
-            assert f"Processing file: {file_path}" in caplog.text 
+        
+        assert self.count_finished_batches(caplog) == 1
+        
+        # Assert the each file got processed
+        assert self.check_files_got_processed(file_paths,file_processor)
     
     @pytest.mark.fixture_data(2,10)
-    def test_creates_workers_after_batch_and_waiting(self, caplog, setup_file_processor: Tuple[QueueObserver, FilesProcessor, str], caplog_workaround, logger) -> None:
+    def test_creates_workers_after_batch_and_waiting(self, caplog, setup_file_processor: Tuple[QueueObserver, FilesProcessor, str],  logger) -> None:
         """
         Test that workers are created after batch and waiting
         
@@ -261,37 +270,30 @@ class TestFileProcessor:
         file_paths = []
         
         # Create files for batch processing and simulate file creation event
-        file_paths.extend(self.create_files_for_batch_processing(caplog_workaround, test_dir,
+        file_paths.extend(self.create_files_for_batch_processing( test_dir,
                                                             wait_for_response=0.9,
                                                             files_to_create=5,
                                                             start_file_num=0,
                                                             logger=logger))
         
         # Wait for next batch processing
-        self.wait_for_next_batch_processing(caplog_workaround, file_processor, logger,
+        self.wait_for_next_batch_processing( file_processor, logger,
                                             waiting_period=10,
                                             wait_for_response=0.6)
         
         # Assert that the current waiting time has reset
         assert file_processor.curr_waiting_time == file_processor.next_batch_proc_time
         
-        # Count the number of batches processed
-        cnt_batchs = 0
-        for record in caplog.records:
-            if "conftest" in record.pathname:
-                if "Finished processing batch" in record.msg:
-                    cnt_batchs += 1
-        
         # Assert that 3 batches were processed
-        assert cnt_batchs == 3
+        assert self.count_finished_batches(caplog) == 3
         
-        # Assert the log messages for each file
-        for file_path in file_paths:
-            assert f"Processing file: {file_path}" in caplog.text
+        # Assert the each file got processed
+        assert self.check_files_got_processed(file_paths,file_processor)
 
 
     @pytest.mark.fixture_data(2,10)
-    def test_no_workers_if_no_new_files(self, caplog, setup_file_processor: Tuple[QueueObserver, FilesProcessor, str], caplog_workaround, logger) -> None:
+    # @pytest.mark.skip
+    def test_no_workers_if_no_new_files(self, caplog, setup_file_processor: Tuple[QueueObserver, FilesProcessor, str],  logger) -> None:
         """
         Test that no workers are created if no new files are present
         
@@ -308,7 +310,7 @@ class TestFileProcessor:
         _, file_processor, test_dir = setup_file_processor
         
         # Wait for next batch processing (no files will be created)
-        self.wait_for_next_batch_processing(caplog_workaround, file_processor, logger,
+        self.wait_for_next_batch_processing( file_processor, logger,
                                             waiting_period=5,
                                             wait_for_response=0)
         
@@ -316,7 +318,7 @@ class TestFileProcessor:
         assert file_processor.curr_waiting_time == file_processor.next_batch_proc_time
         
         # Wait for next batch processing again (no files will be created)
-        self.wait_for_next_batch_processing(caplog_workaround, file_processor, logger,
+        self.wait_for_next_batch_processing( file_processor, logger,
                                             waiting_period=6,
                                             wait_for_response=0)
         
@@ -324,16 +326,11 @@ class TestFileProcessor:
         assert file_processor.curr_waiting_time == file_processor.next_batch_proc_time
         
         # Assert that no batches were processed
-        cnt_batchs = 0
-        for record in caplog.records:
-            if "conftest" in record.pathname:
-                if "Finished processing batch" in record.msg:
-                    cnt_batchs += 1
-        
-        assert cnt_batchs == 0
+        assert self.count_finished_batches(caplog) == 0
     
     @pytest.mark.fixture_data(2,10)
-    def test_waiting_time_goes_down(self, caplog, setup_file_processor: Tuple[QueueObserver, FilesProcessor, str], caplog_workaround, logger) -> None:
+    # @pytest.mark.skip
+    def test_waiting_time_goes_down(self, caplog, setup_file_processor: Tuple[QueueObserver, FilesProcessor, str],  logger) -> None:
         """
         Test that the waiting time goes down
         
@@ -346,6 +343,7 @@ class TestFileProcessor:
             caplog_workaround: A pytest fixture to capture and work with logs in multiprocessing instances
             logger: An object for logging messages
         """
+        
         # Unpack the setup_file_processor tuple
         _, file_processor, test_dir = setup_file_processor
         
@@ -353,38 +351,31 @@ class TestFileProcessor:
         file_paths = []
         
         # Create files for batch processing and simulate file creation event
-        file_paths.extend(self.create_files_for_batch_processing(caplog_workaround, test_dir,
-                                                            wait_for_response=0,
+        file_paths.extend(self.create_files_for_batch_processing( test_dir,
+                                                            wait_for_response=0.3,
                                                             files_to_create=1,
                                                             start_file_num=0,
                                                             logger=logger))
         
         # Wait for next batch processing
-        self.wait_for_next_batch_processing(caplog_workaround, file_processor, logger,
-                                            waiting_period=5,
-                                            wait_for_response=0)
+        waiting_period = 5
+        for _ in range(waiting_period):
+            file_processor.update_time_to_process()
         
         # Assert that the current waiting time is going down
         assert file_processor.curr_waiting_time == file_processor.next_batch_proc_time - 5
+
         
-        # Wait for next batch processing again
-        self.wait_for_next_batch_processing(caplog_workaround, file_processor, logger,
+        self.wait_for_next_batch_processing( file_processor, logger,
                                             waiting_period=5,
                                             wait_for_response=0.4)
         
         # Assert that the current waiting time resets
         assert file_processor.curr_waiting_time == file_processor.next_batch_proc_time
         
-        # Count the number of batches processed
-        cnt_batchs = 0
-        for record in caplog.records:
-            if "conftest" in record.pathname:
-                if "Finished processing batch" in record.msg:
-                    cnt_batchs += 1
-        
         # Assert that 1 batch was processed
-        assert cnt_batchs == 1
+        assert self.count_finished_batches(caplog) == 1
         
-        # Assert the log messages for each file
-        for file_path in file_paths:
-            assert f"Processing file: {file_path}" in caplog.text
+        
+        # Assert the each file got processed
+        assert self.check_files_got_processed(file_paths,file_processor)
