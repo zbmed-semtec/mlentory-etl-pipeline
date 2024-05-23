@@ -1,5 +1,6 @@
 from Core.QueueObserver import QueueObserver
 from Core.FilesProcessor import FilesProcessor
+from Core.FieldProcessorHF import FieldProcessorHF
 import argparse
 import datetime
 import logging
@@ -23,6 +24,7 @@ def main():
   
   try:
     #Initializing the updater
+    fields_processor_HF = FieldProcessorHF(path_to_config_data="./Config_Data")
     files_processor = FilesProcessor(num_workers=4,next_batch_proc_time=30, processed_files_log_path="./Processing_Logs/Processed_files.txt")
     observer = QueueObserver(watch_dir=args.folder,files_processor=files_processor)
     observer.start()
