@@ -11,6 +11,7 @@ services:
     volumes:
       - ./Extractors/HF_Extractor:/app
       - ./Transform_Queue:/Transform_Queue
+      - ./Config_Data:/Config_Data
     deploy:
       resources:
         reservations:
@@ -35,6 +36,7 @@ services:
     volumes:
       - ./Extractors/HF_Extractor:/app
       - ./Transform_Queue:/Transform_Queue
+      - ./Config_Data:/Config_Data
     dns:
       - 1.1.1.1
     # depends_on:
@@ -55,6 +57,7 @@ services:
     volumes:
       - ./Transform:/app
       - ./Transform_Queue:/Transform_Queue
+      - ./Config_Data:/Config_Data
     dns:
       - 1.1.1.1
 
@@ -75,6 +78,7 @@ services:
       - ./Transform:/app_test/Transform
       - ./Extractors:/app_test/Extractors
       - ./Transform_Queue:/Transform_Queue
+      - ./Config_Data:/Config_Data
     dns:
       - 1.1.1.1
 
@@ -94,6 +98,7 @@ services:
       - ./Transform:/app_test/Transform
       - ./Extractors:/app_test/Extractors
       - ./Transform_Queue:/Transform_Queue
+      - ./Config_Data:/Config_Data
     dns:
       - 1.1.1.1
     # command: ["./Tests/validate_tests.sh"]

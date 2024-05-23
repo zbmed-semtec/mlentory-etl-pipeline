@@ -2,11 +2,16 @@ from multiprocessing import Process, Pool,set_start_method,get_context
 from typing import Callable, List
 import logging
 import time
+import pandas as pd
+import os
+
+if("app_test" in os.getcwd()):
+    from Transform.Core.FieldProcessorHF import FieldProcessorHF
+else:
+    from Backend.Transform.Core.FieldProcessorHF import FieldProcessorHF
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
-
-
 
 class FilesProcessor:
     """
@@ -18,9 +23,15 @@ class FilesProcessor:
         next_batch_proc_time (int): Time (in seconds) to wait before processing the next batch of files (if no new files are added).
         curr_waiting_time (int): Time (in seconds) remaining before processing the next batch of files.
         processed_files_log_path (str): The path to a file that keeps track of the processed files
+        field_processor_HF (FieldProcessorHF): An instance of the FieldProcessorHF class for processing the fields of the files that come from HuggingFace.
+        self.processed_files (set): A set of files that have been processed.
+        self.processed_files_in_last_batch (list): A list of files that were processed in the last batch.
     """
 
-    def __init__(self, num_workers: int, next_batch_proc_time: int, processed_files_log_path: str):
+    def __init__(self, num_workers: int, 
+                 next_batch_proc_time: int,
+                 processed_files_log_path: str,
+                 field_processor_HF: FieldProcessorHF):
         """
         Initializes a new FilesProcessor instance.
 
@@ -36,6 +47,7 @@ class FilesProcessor:
         self.processed_files_log_path = processed_files_log_path
         self.processed_files = manager.dict()
         self.processed_files_in_last_batch = manager.list()
+        self.field_processor_HF = field_processor_HF
         #Getting current processed files
         with open(self.processed_files_log_path, 'r') as file:
             for line in file:
@@ -96,7 +108,12 @@ class FilesProcessor:
         """
         try:
             logger.info(f"Processing file: {filename}")
-            time.sleep(0.3)
+            df = pd.read_csv(filename, sep="\t", usecols=lambda x: x != 0)
+            print(df.head())
+            # Go through each row of the dataframe
+            for index, row in df.iterrows():
+                m4ml_model_data = self.field_processor_HF.process_row(row)
+                
             self.processed_files_in_last_batch.append(filename)
             logger.info(f"Finished processing: {filename}")
             #When the file is being processed you need to keep in mind 

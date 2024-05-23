@@ -12,6 +12,9 @@ from Transform.Core.QueueObserver import QueueObserver, MyQueueEventHandler
 
 STOP_SIGNAL = "Stop Read"
 
+        
+# Modify this variable depending on the average time to process one file in the system.
+AVRG_TIME_TO_PROCESS_FILE = 0.35
 
 class TestFileProcessor:
     """
@@ -78,7 +81,8 @@ class TestFileProcessor:
         #Dummy file that has already been processed
         file_already_processed_path = os.path.join(test_dir, "new_file_0.tsv")
         with open(file_already_processed_path, "w") as f:
-            f.write("Test content")
+            f.write("Col1\tCol2\n")
+            f.write("1\t2\n")
             
         #Create a "processed files" file on the test directory
         with open(test_dir / "Processed_files.txt", "w") as f:
@@ -125,7 +129,9 @@ class TestFileProcessor:
             file_path = f"new_file_{start_file_num+file_num}.tsv"
             file_paths.append(os.path.join(test_dir, file_path))
             with open(file_paths[-1], "w") as f:
-                f.write("Test content creation")
+                f.write("Col1\tCol2\n")
+                f.write("1\t2\n")
+                f.write("3\t4\n")
         time.sleep(wait_for_response)
         
         return file_paths
@@ -228,7 +234,7 @@ class TestFileProcessor:
     @pytest.mark.fixture_data(2,2)
     def test_add_file_after_processing_same_name_fails(self, caplog, setup_file_processor: Tuple[QueueObserver, FilesProcessor, str],  logger) -> None:
         """
-        Test that workers are created on complete batch
+        Test that adding a file after processing one with the same name fails.
         
         Args:
             pytest.mark.fixture_data(num_workers,next_batch_proc_time): Is a decorator to send data to the pytest fixtures.
@@ -245,7 +251,7 @@ class TestFileProcessor:
         
         # Create files for batch processing and simulate file creation event
         file_paths.extend(self.create_files_for_batch_processing( test_dir,
-                                               wait_for_response=0.5,
+                                               wait_for_response=AVRG_TIME_TO_PROCESS_FILE*2,
                                                files_to_create=2,
                                                start_file_num=0,
                                                logger=logger))
@@ -259,7 +265,7 @@ class TestFileProcessor:
         
         # Create files for batch processing with the same file names
         file_paths.extend(self.create_files_for_batch_processing( test_dir,
-                                               wait_for_response=0.5,
+                                               wait_for_response=0.1,
                                                files_to_create=2,
                                                start_file_num=0,
                                                logger=logger))
@@ -268,16 +274,16 @@ class TestFileProcessor:
         assert self.count_finished_batches(caplog) == 1
      
     @pytest.mark.fixture_data(2,2)
-    def test_add_file_already_processed(self, caplog, setup_file_processor_with_files: Tuple[QueueObserver, FilesProcessor, str],  logger) -> None:
+    def test_not_add_file_already_processed(self, caplog, setup_file_processor_with_files: Tuple[QueueObserver, FilesProcessor, str],  logger) -> None:
         """
-        Test that workers are created on complete batch
+        Test that a file that has already been processed is not added to the files_to_proc list.
         
         Args:
             pytest.mark.fixture_data(num_workers,next_batch_proc_time): Is a decorator to send data to the pytest fixtures.
                 num_workers: The number of threads the file_processor will use.
                 next_batch_proc_time: Waiting period for next batch processing.
             caplog: A pytest fixture to capture and work with logs.
-            setup_file_processor: A tuple containing the QueueObserver, FilesProcessor, and test directory
+            setup_file_processor_with_files: A tuple containing the QueueObserver, FilesProcessor, and test directory. The files_to_proc list will be populated with 1 file.
             caplog_workaround: A pytest fixture to capture and work with logs in multiprocessing instances
             logger: An object for logging messages
         """
@@ -287,7 +293,7 @@ class TestFileProcessor:
         
         # Create files for batch processing and simulate file creation event
         file_paths.extend(self.create_files_for_batch_processing( test_dir,
-                                               wait_for_response=0.5,
+                                               wait_for_response=AVRG_TIME_TO_PROCESS_FILE*2,
                                                files_to_create=3,
                                                start_file_num=0,
                                                logger=logger))
@@ -316,7 +322,7 @@ class TestFileProcessor:
     @pytest.mark.fixture_data(2,2)
     def test_creates_workers_on_complete_batch(self, caplog, setup_file_processor: Tuple[QueueObserver, FilesProcessor, str],  logger) -> None:
         """
-        Test that workers are created on complete batch
+        Test that workers are created on complete batch.
         
         Args:
             pytest.mark.fixture_data(num_workers,next_batch_proc_time): Is a decorator to send data to the pytest fixtures.
@@ -333,7 +339,7 @@ class TestFileProcessor:
         
         # Create files for batch processing and simulate file creation event
         file_paths.extend(self.create_files_for_batch_processing( test_dir,
-                                               wait_for_response=0.5,
+                                               wait_for_response=1,
                                                files_to_create=2,
                                                start_file_num=0,
                                                logger=logger))
@@ -366,7 +372,7 @@ class TestFileProcessor:
         
         # Create files for batch processing and simulate file creation event
         file_paths.extend(self.create_files_for_batch_processing( test_dir,
-                                                            wait_for_response=1.4,
+                                                            wait_for_response=2,
                                                             files_to_create=6,
                                                             start_file_num=0,
                                                             logger=logger))
@@ -438,7 +444,7 @@ class TestFileProcessor:
         
         # Create files for batch processing and simulate file creation event
         file_paths.extend(self.create_files_for_batch_processing( test_dir,
-                                                            wait_for_response=0.9,
+                                                            wait_for_response=2,
                                                             files_to_create=5,
                                                             start_file_num=0,
                                                             logger=logger))
