@@ -10,8 +10,9 @@ class FieldProcessorHF:
     """
     This class processes the fields of the incoming tsv files and maps it to the M4ML schema.
     """
-    def __init__(self, path_to_config_data: str = "Backend/Transform/Config_Data/M4ML_schema.tsv"):
-        self.M4ML_schema = pd.read_csv(path_to_config_data, sep="\t")
+    def __init__(self, path_to_config_data: str = "./../Config_Data"):
+        self.M4ML_schema = pd.read_csv(path_to_config_data+"/M4ML_schema.tsv", sep="\t")
+        print(self.M4ML_schema.head())
     
     def process_row(self, row):
         """
@@ -30,6 +31,6 @@ class FieldProcessorHF:
         
         print("Data line: \n", row)
         
-        return data_line
+        return df_M4ML
     
         

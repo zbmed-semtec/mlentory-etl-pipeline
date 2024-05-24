@@ -8,7 +8,7 @@ import os
 if("app_test" in os.getcwd()):
     from Transform.Core.FieldProcessorHF import FieldProcessorHF
 else:
-    from Backend.Transform.Core.FieldProcessorHF import FieldProcessorHF
+    from Core.FieldProcessorHF import FieldProcessorHF
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -38,7 +38,7 @@ class FilesProcessor:
         Args:
             num_workers (int): The number of worker processes to use.
         """
-        set_start_method("spawn", force=True)
+        # set_start_method("spawn", force=True)
         manager = get_context('spawn').Manager()
         self.files_to_proc: List[str] = []
         self.num_workers = num_workers

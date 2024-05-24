@@ -24,8 +24,8 @@ def main():
   
   try:
     #Initializing the updater
-    fields_processor_HF = FieldProcessorHF(path_to_config_data="./Config_Data")
-    files_processor = FilesProcessor(num_workers=4,next_batch_proc_time=30, processed_files_log_path="./Processing_Logs/Processed_files.txt")
+    fields_processor_HF = FieldProcessorHF(path_to_config_data="./../Config_Data")
+    files_processor = FilesProcessor(num_workers=4,next_batch_proc_time=30, processed_files_log_path="./Processing_Logs/Processed_files.txt", field_processor_HF=fields_processor_HF)
     observer = QueueObserver(watch_dir=args.folder,files_processor=files_processor)
     observer.start()
     

@@ -8,6 +8,7 @@ from typing import List, Tuple
 sys.path.append('.')
 from Transform.Core.FilesProcessor import FilesProcessor
 from Transform.Core.QueueObserver import QueueObserver, MyQueueEventHandler
+from Transform.Core.FieldProcessorHF import FieldProcessorHF
 
 class TestFieldProcessorHF:
     """
@@ -35,13 +36,21 @@ class TestFieldProcessorHF:
         #Create a "processed files" file on the test directory
         with open(test_dir / "Processed_files.txt", "w") as f:
             f.write("")
+        
         processed_files_log_path = test_dir / "Processed_files.txt"
         
-        if marker is None:
-            file_processor = FilesProcessor(num_workers=2, next_batch_proc_time=1,processed_files_log_path=processed_files_log_path)
-        else:
-            file_processor = FilesProcessor(num_workers=marker.args[0], next_batch_proc_time=marker.args[1],processed_files_log_path=processed_files_log_path) 
+        fields_processor_HF = FieldProcessorHF(path_to_config_data="./Config_Data")
         
+        if marker is None:
+            file_processor = FilesProcessor(num_workers=2, 
+                                            next_batch_proc_time=1,
+                                            processed_files_log_path=processed_files_log_path,
+                                            field_processor_HF=fields_processor_HF)
+        else:
+            file_processor = FilesProcessor(num_workers=marker.args[0], 
+                                            next_batch_proc_time=marker.args[1],
+                                            processed_files_log_path=processed_files_log_path,
+                                            field_processor_HF=fields_processor_HF)
         # Create a QueueObserver instance
         observer = QueueObserver(watch_dir=test_dir, files_processor=file_processor)
         
