@@ -23,6 +23,11 @@ class MetadataParser:
         self.tags_task = set(self.load_config_file(f"{path_to_config_data}/tags_task.tsv"))
         #Getting the questions
         self.questions = self.load_config_file(f"{path_to_config_data}/questions.tsv")
+        self.available_questions = set()
+        for id in range(len(self.questions)):
+            self.available_questions.add("q_id_"+str(id)) 
+        # print("len available questions", len(self.available_questions))
+        # print("QUESTIONS AVAILABLE", self.available_questions)
         #Assigning the question answering pipeline
         self.qa_model = qa_model
         if self.device != None:
@@ -50,6 +55,7 @@ class MetadataParser:
         HF_df.loc[:,"q_id_0"] = HF_df.loc[:, ("modelId")]
         HF_df.loc[:,"q_id_1"] = HF_df.loc[:, ("author")]
         HF_df.loc[:,"q_id_2"] = HF_df.loc[:, ("createdAt")]
+        HF_df.loc[:,"q_id_26"] = HF_df.loc[:, ("last_modified")]
         
         # Check if the model was finetuned or retrained
         # q_id_8 asks What model is used as the base model? 
@@ -59,11 +65,16 @@ class MetadataParser:
         for index, row in HF_df.iterrows():
             if(row['q_id_8'] != '[CLS]' and row['q_id_8'] != None):
                 q_4_answer = HF_df.loc[index:index,"q_id_4"]
-                HF_df.loc[index:index,"q_id_6"] = q_4_answer
-                HF_df.loc[index:index,"q_id_7"] = q_4_answer
-
-        for id in ['q_id_0', 'q_id_1','q_id_2','q_id_6','q_id_7']:
-            HF_df.loc[:, id] = [self.add_default_extraction_info(x,"Parsed_from_HF_dataset",1.0) for x in HF_df.loc[:, id]]
+                HF_df.loc[index,"q_id_6"] = [q_4_answer]
+                HF_df.loc[index,"q_id_7"] = [q_4_answer]
+                
+        for index in range(len(HF_df)):
+            for id in ['q_id_0', 'q_id_1','q_id_2','q_id_6','q_id_7','q_id_26']:
+                HF_df.loc[index, id] = [self.add_default_extraction_info(HF_df.loc[index, id],"Parsed_from_HF_dataset",1.0)]
+                print("CHECKING STRUCTURE",id,HF_df.loc[:, id])
+                
+        for id in ['q_id_0', 'q_id_1','q_id_2','q_id_6','q_id_7','q_id_26']:
+            self.available_questions.discard(id)
         
         return HF_df
     
@@ -123,11 +134,15 @@ class MetadataParser:
         
         for id in ['q_id_3', 'q_id_4','q_id_13','q_id_15','q_id_16','q_id_17']:
             HF_df.loc[:, id] = [self.add_default_extraction_info(x,"Parsed_from_HF_dataset",1.0) for x in HF_df.loc[:, id]]
+            self.available_questions.discard(id)
 
         return HF_df
     
     def parse_fields_from_txt_HF(self, HF_df: pd.DataFrame) -> pd.DataFrame:
-        questions_to_process = {5,8,9,10,11,12,14,18}
+        questions_to_process = set()
+        for q in self.available_questions:
+            print(q.split("_")[2])
+            questions_to_process.add(int(q.split("_")[2]))
 
         for index, row in HF_df.iterrows():
             context = row["card"]  # Getting the context from the "card" column
@@ -145,7 +160,7 @@ class MetadataParser:
             # Add a new column for each question and populate with answers
             for question, answer in answers.items():
                 # print(answer)
-                HF_df.loc[index, question] = answer
+                HF_df.loc[index, question] = [answer]
         
         return HF_df
     
