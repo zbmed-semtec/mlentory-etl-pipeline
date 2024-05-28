@@ -109,15 +109,18 @@ class FilesProcessor:
         try:
             logger.info(f"Processing file: {filename}")
             df = pd.read_csv(filename, sep="\t", usecols=lambda x: x != 0)
-            print(df.head())
+            # print(df.head())
             # Go through each row of the dataframe
             for index, row in df.iterrows():
                 m4ml_model_data = self.field_processor_HF.process_row(row)
+                
+            print(m4ml_model_data)
                 
             self.processed_files_in_last_batch.append(filename)
             logger.info(f"Finished processing: {filename}")
             #When the file is being processed you need to keep in mind 
         except Exception as e:
+            # print(f"Error processing file: {e}")
             logger.exception(f"Error processing file: {e}")
 
     def add_file(self, filename: str) -> None:

@@ -23,9 +23,9 @@ if __name__ == "__main__":
     HF_df = HF_df.assign(**new_columns)
 
     #Fill the new columns
-    HF_df = parser.parse_fields_from_txt_HF(HF_df=HF_df)
     HF_df = parser.parse_fields_from_tags_HF(HF_df=HF_df)
     HF_df = parser.parse_known_fields_HF(HF_df=HF_df)
+    HF_df = parser.parse_fields_from_txt_HF(HF_df=HF_df)
 
     #Remove unnecessary columns, the information is contained int the 
     HF_df = HF_df.drop(columns=['modelId', 'author', 'last_modified', 'downloads', 'likes',
