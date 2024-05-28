@@ -3,6 +3,7 @@ import sys
 import os
 import time
 from typing import List, Tuple
+from unittest.mock import Mock
 
 
 sys.path.append('.')
@@ -46,18 +47,19 @@ class TestFileProcessor:
         processed_files_log_path = test_dir / "Processed_files.txt"
         
         
-        fields_processor_HF = FieldProcessorHF(path_to_config_data="./Config_Data")
+        # fields_processor_HF = FieldProcessorHF(path_to_config_data="./Config_Data")
+        mock_field_processor_hf = Mock(spec=FieldProcessorHF)
         
         if marker is None:
             file_processor = FilesProcessor(num_workers=2, 
                                             next_batch_proc_time=1,
                                             processed_files_log_path=processed_files_log_path,
-                                            field_processor_HF=fields_processor_HF)
+                                            field_processor_HF=mock_field_processor_hf)
         else:
             file_processor = FilesProcessor(num_workers=marker.args[0], 
                                             next_batch_proc_time=marker.args[1],
                                             processed_files_log_path=processed_files_log_path,
-                                            field_processor_HF=fields_processor_HF) 
+                                            field_processor_HF=mock_field_processor_hf) 
         
         # Create a QueueObserver instance
         observer = QueueObserver(watch_dir=test_dir, files_processor=file_processor)
@@ -100,18 +102,18 @@ class TestFileProcessor:
             
         processed_files_log_path = test_dir / "Processed_files.txt"
         
-        fields_processor_HF = FieldProcessorHF(path_to_config_data="./Config_Data")
+        mock_field_processor_hf = Mock(spec=FieldProcessorHF)
         
         if marker is None:
             file_processor = FilesProcessor(num_workers=2, 
                                             next_batch_proc_time=1,
                                             processed_files_log_path=processed_files_log_path,
-                                            field_processor_HF=fields_processor_HF)
+                                            field_processor_HF=mock_field_processor_hf)
         else:
             file_processor = FilesProcessor(num_workers=marker.args[0], 
                                             next_batch_proc_time=marker.args[1],
                                             processed_files_log_path=processed_files_log_path,
-                                            field_processor_HF=fields_processor_HF)
+                                            field_processor_HF=mock_field_processor_hf)
         
         # Create a QueueObserver instance
         observer = QueueObserver(watch_dir=test_dir, files_processor=file_processor)
@@ -173,6 +175,8 @@ class TestFileProcessor:
     
     def check_files_got_processed(self, file_paths: List[str],file_processor:FilesProcessor):
         processed = True
+        print("PROCESSED FILES!",file_processor.processed_files)
+        print("FILES CREATED!",file_paths)
         for file_path in file_paths:
             if file_path not in file_processor.processed_files:
                 processed = False

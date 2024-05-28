@@ -84,6 +84,7 @@ class FilesProcessor:
         for worker in workers:
             worker.terminate()  # Best practice to terminate even if join() finishes first
 
+        print("GOT HEREEEEEEEEEEEEEEE", self.processed_files_in_last_batch)
         for filename in self.processed_files_in_last_batch:
             self.processed_files[filename] = 1
             #Write the file to the log file
@@ -114,7 +115,7 @@ class FilesProcessor:
             for index, row in df.iterrows():
                 m4ml_model_data = self.field_processor_HF.process_row(row)
                 
-            print(m4ml_model_data)
+            # print(m4ml_model_data)
                 
             self.processed_files_in_last_batch.append(filename)
             logger.info(f"Finished processing: {filename}")

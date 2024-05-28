@@ -65,8 +65,8 @@ class MetadataParser:
         for index, row in HF_df.iterrows():
             if(row['q_id_8'] != '[CLS]' and row['q_id_8'] != None):
                 q_4_answer = HF_df.loc[index:index,"q_id_4"]
-                HF_df.loc[index,"q_id_6"] = [q_4_answer]
-                HF_df.loc[index,"q_id_7"] = [q_4_answer]
+                HF_df.loc[index:index,"q_id_6"] = q_4_answer
+                HF_df.loc[index:index,"q_id_7"] = q_4_answer
                 
         for index in range(len(HF_df)):
             for id in ['q_id_0', 'q_id_1','q_id_2','q_id_6','q_id_7','q_id_26']:
