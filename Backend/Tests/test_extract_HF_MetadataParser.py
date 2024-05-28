@@ -73,9 +73,10 @@ class TestMetadataParser:
             parser (MetadataParser): The MetadataParser object
         """
         # Mock DataFrame
-        data = {"modelId": ["m1", "m2"],
-                "author": ["a1", "a2"],
-                "createdAt": ["c1", "c2"]}
+        data = {"modelId": ["m1","m2"], 
+                "author": ["a1","a2"],
+                "createdAt": ["c1","c2"],
+                "last_modified": ["lm1","lm2"]}
         
         mock_df = pd.DataFrame(data)
         
@@ -85,10 +86,11 @@ class TestMetadataParser:
         parsed_df = parser.parse_known_fields_HF(HF_df=mock_df.copy())
         
         # Assert the output (check for existence of new columns and data types)
-        assert all(col in parsed_df.columns for col in ["q_id_0", "q_id_1", "q_id_2"])
+        assert all(col in parsed_df.columns for col in ["q_id_0", "q_id_1", "q_id_2", "q_id_26"])
         assert parsed_df["q_id_0"].dtype == object
         assert parsed_df["q_id_1"].dtype == object
         assert parsed_df["q_id_2"].dtype == object
+        assert parsed_df["q_id_26"].dtype == object
     
     def test_parse_known_fields_HF_empty_dataframe(self, parser: MetadataParser) -> None:
         """
@@ -128,15 +130,15 @@ class TestMetadataParser:
         Args:
             parser (MetadataParser): The MetadataParser object
         """
-        data = {"modelId": ["m1"], "author": ["a1"], "createdAt": ["c1"]}
+        data = {"modelId": ["m1"], "author": ["a1"], "createdAt": ["c1"], "last_modified": ["lm1"]}
         mock_df = pd.DataFrame(data)
         mock_df = self.add_base_questions(mock_df, parser)
         parsed_df = parser.parse_known_fields_HF(HF_df=mock_df.copy())
         
         # Assert that all new columns have the expected info dictionary
-        for col in ["q_id_0", "q_id_1", "q_id_2"]:
-            assert parsed_df.loc[0, col]["extraction_method"] == "Parsed_from_HF_dataset"
-            assert parsed_df.loc[0, col]["confidence"] == 1.0
+        for col in ["q_id_0", "q_id_1", "q_id_2", "q_id_26"]:
+            assert parsed_df.loc[0, col][0]["extraction_method"] == "Parsed_from_HF_dataset"
+            assert parsed_df.loc[0, col][0]["confidence"] == 1.0
                 
     def test_parse_known_fields_HF_finetuned_model(self, parser: MetadataParser) -> None:
         """
@@ -147,7 +149,8 @@ class TestMetadataParser:
         """
         data = {"modelId": ["m1", "m2"],
                 "author": ["a1", "a2"],
-                "createdAt": ["c1", "c2"]}
+                "createdAt": ["c1", "c2"], 
+                "last_modified": ["lm1","lm2"]}
         mock_df = pd.DataFrame(data)
         mock_df = self.add_base_questions(mock_df, parser)
         
@@ -164,12 +167,12 @@ class TestMetadataParser:
         parsed_df = parser.parse_known_fields_HF(HF_df=mock_df.copy())
         
         # Assert that q_id_6 and q_id_7 have the value from q_id_4 for the second row only
-        assert parsed_df.loc[0, "q_id_6"]["data"] == "answer"
-        assert parsed_df.loc[0, "q_id_7"]["data"] == "answer"
-        assert pd.isna(parsed_df.loc[1, "q_id_6"]["data"])
-        assert pd.isna(parsed_df.loc[1, "q_id_7"]["data"])
-        assert pd.isna(parsed_df.loc[2, "q_id_6"]["data"]) 
-        assert pd.isna(parsed_df.loc[2, "q_id_7"]["data"])
+        assert parsed_df.loc[0, "q_id_6"][0]["data"] == "answer"
+        assert parsed_df.loc[0, "q_id_7"][0]["data"] == "answer"
+        assert pd.isna(parsed_df.loc[1, "q_id_6"][0]["data"])
+        assert pd.isna(parsed_df.loc[1, "q_id_7"][0]["data"])
+        assert pd.isna(parsed_df.loc[2, "q_id_6"][0]["data"]) 
+        assert pd.isna(parsed_df.loc[2, "q_id_7"][0]["data"])
 
 
     def test_parse_fields_from_tags_one_model_all_tags(self, parser: MetadataParser) -> None:
