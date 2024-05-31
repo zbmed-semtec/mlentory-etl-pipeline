@@ -73,7 +73,7 @@ class TestMetadataParser:
             parser (MetadataParser): The MetadataParser object
         """
         # Mock DataFrame
-        data = {"modelId": ["m1","m2"], 
+        data = {"modelId": ["nelson2424/gptj6b-FAQ-NelsMarketplace","nelson2424/gptj6b-FAQ-NelsMarketplace"], 
                 "author": ["a1","a2"],
                 "createdAt": ["c1","c2"],
                 "last_modified": ["lm1","lm2"]}
@@ -86,13 +86,14 @@ class TestMetadataParser:
         parsed_df = parser.parse_known_fields_HF(HF_df=mock_df.copy())
         
         # Assert the output (check for existence of new columns and data types)
-        assert all(col in parsed_df.columns for col in ["q_id_0", "q_id_1", "q_id_2", "q_id_26"])
+        assert all(col in parsed_df.columns for col in ["q_id_0", "q_id_1", "q_id_2", "q_id_26", "q_id_29"])
         assert parsed_df["q_id_0"].dtype == object
         assert parsed_df["q_id_1"].dtype == object
         assert parsed_df["q_id_2"].dtype == object
         assert parsed_df["q_id_26"].dtype == object
+        assert parsed_df["q_id_29"].dtype == object
     
-    def test_parse_known_fields_HF_empty_dataframe(self, parser: MetadataParser) -> None:
+    def test_parse_known_fields_HF_empty_dataframe_fails(self, parser: MetadataParser) -> None:
         """
         Test that parse_known_fields_HF raises a KeyError when given an empty DataFrame
         
@@ -107,7 +108,7 @@ class TestMetadataParser:
             parsed_df = parser.parse_known_fields_HF(HF_df=mock_df.copy())
 
 
-    def test_parse_known_fields_HF_missing_columns(self, parser: MetadataParser) -> None:
+    def test_parse_known_fields_HF_missing_columns_fails(self, parser: MetadataParser) -> None:
         """
         Test that parse_known_fields_HF raises a KeyError when given a DataFrame with missing columns
         
@@ -122,24 +123,6 @@ class TestMetadataParser:
         with pytest.raises(KeyError):
             parsed_df = parser.parse_known_fields_HF(HF_df=mock_df.copy())
 
-
-    def test_parse_known_fields_HF_default_info(self, parser: MetadataParser) -> None:
-        """
-        Test that parse_known_fields_HF adds the expected default info to the DataFrame
-        
-        Args:
-            parser (MetadataParser): The MetadataParser object
-        """
-        data = {"modelId": ["m1"], "author": ["a1"], "createdAt": ["c1"], "last_modified": ["lm1"]}
-        mock_df = pd.DataFrame(data)
-        mock_df = self.add_base_questions(mock_df, parser)
-        parsed_df = parser.parse_known_fields_HF(HF_df=mock_df.copy())
-        
-        # Assert that all new columns have the expected info dictionary
-        for col in ["q_id_0", "q_id_1", "q_id_2", "q_id_26"]:
-            assert parsed_df.loc[0, col][0]["extraction_method"] == "Parsed_from_HF_dataset"
-            assert parsed_df.loc[0, col][0]["confidence"] == 1.0
-                
     def test_parse_known_fields_HF_finetuned_model(self, parser: MetadataParser) -> None:
         """
         Test that parse_known_fields_HF handles finetuned models correctly
@@ -147,10 +130,11 @@ class TestMetadataParser:
         Args:
             parser (MetadataParser): The MetadataParser object
         """
-        data = {"modelId": ["m1", "m2"],
-                "author": ["a1", "a2"],
-                "createdAt": ["c1", "c2"], 
-                "last_modified": ["lm1","lm2"]}
+        data = {"modelId": ["EleutherAI/gpt-j-6b", "EleutherAI/gpt-j-6b", "EleutherAI/gpt-j-6b"],
+                "author": ["a1", "a2", "a3"],
+                "createdAt": ["c1", "c2", "c3"], 
+                "last_modified": ["lm1","lm2", "lm3"]}
+        
         mock_df = pd.DataFrame(data)
         mock_df = self.add_base_questions(mock_df, parser)
         
@@ -164,6 +148,8 @@ class TestMetadataParser:
         mock_df.loc[2, "q_id_8"] = None
         mock_df.loc[2, "q_id_4"] = "answer"
         
+        print(mock_df)
+        
         parsed_df = parser.parse_known_fields_HF(HF_df=mock_df.copy())
         
         # Assert that q_id_6 and q_id_7 have the value from q_id_4 for the second row only
@@ -174,6 +160,22 @@ class TestMetadataParser:
         assert pd.isna(parsed_df.loc[2, "q_id_6"][0]["data"]) 
         assert pd.isna(parsed_df.loc[2, "q_id_7"][0]["data"])
 
+    def test_parse_known_fields_HF_default_info(self, parser: MetadataParser) -> None:
+        """
+        Test that parse_known_fields_HF adds the expected default info to the DataFrame
+        
+        Args:
+            parser (MetadataParser): The MetadataParser object
+        """
+        data = {"modelId": ["nelson2424/gptj6b-FAQ-NelsMarketplace"], "author": ["a1"], "createdAt": ["c1"], "last_modified": ["lm1"]}
+        mock_df = pd.DataFrame(data)
+        mock_df = self.add_base_questions(mock_df, parser)
+        parsed_df = parser.parse_known_fields_HF(HF_df=mock_df.copy())
+        
+        # Assert that all new columns have the expected info dictionary
+        for col in ["q_id_0", "q_id_1", "q_id_2", "q_id_26","q_id_29"]:
+            assert parsed_df.loc[0, col][0]["extraction_method"] == "Parsed_from_HF_dataset"
+            assert parsed_df.loc[0, col][0]["confidence"] == 1.0
 
     def test_parse_fields_from_tags_one_model_all_tags(self, parser: MetadataParser) -> None:
         """
@@ -182,7 +184,7 @@ class TestMetadataParser:
         Args:
             parser (MetadataParser): The MetadataParser object
         """
-        data = {"modelId": ["m1"], 
+        data = {"modelId": ["EleutherAI/gpt-j-6b"], 
                 "tags": [["Image-Text-to-Text",
                         "dataset:dataset1",
                         "arxiv:paper1",

@@ -83,10 +83,10 @@ class FieldProcessorHF:
             processed_value = self.process_trainedOn(info_HF)
         elif property_name == 'fair4ml:usageInstructions':
             processed_value = self.find_value_in_HF(info_HF, "q_id_22")
+        elif property_name == 'fair4ml:validatedOn':
+            processed_value = self.find_value_in_HF(info_HF, "q_id_4")
         elif property_name == 'schema.org:distribution':
             processed_value = self.build_distribution_link(info_HF)
-        # elif property_name == 'fair4ml:validatedOn':
-        #     processed_value = process_dataset(info_HF[property_source])
         # elif property_name == 'schema.org:memoryRequirements':
         #     processed_value = process_text_or_url(info_HF[property_source])
         # elif property_name == 'schema.org:operatingSystem':

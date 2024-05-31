@@ -38,68 +38,6 @@ class TestFieldProcessorHF:
         
         return fields_processor_HF
     
-    def create_files_for_batch_processing(self,  test_dir: str, wait_for_response: float, files_to_create: int, start_file_num: int, logger) -> List[str]:
-        """
-        Create files for batch processing and simulate file creation event
-        
-        This test can fail if the wait_for_response is not setup correctly, the events expected may not be logged and thus the test will fail.
-        
-        Args:
-            caplog_workaround: A pytest fixture to capture and work with logs in multiprocessing instances.
-            test_dir: The path to the temporary directory.
-            wait_for_response: Time to wait after the period (seconds).
-            files_to_create: number of files to create
-            start_file_num: Starting number for file naming.
-            logger: An object for logging messages.
-        
-        Returns:
-            A list of file paths for the created objects
-        """
-        file_paths = []
-        time.sleep(0.1)
-        # Simulate multiple file creation event
-        for file_num in range(files_to_create):
-            file_path = f"new_file_{start_file_num+file_num}.tsv"
-            file_paths.append(os.path.join(test_dir, file_path))
-            self.hf_example_file.to_csv(file_paths[-1], sep="\t", index=False)
-            # print()
-        time.sleep(wait_for_response)
-        
-        return file_paths
-
-    def  wait_for_next_batch_processing(self,  file_processor: FilesProcessor, logger, waiting_period: int, wait_for_response: float) -> None:
-        """
-        Wait for next batch processing
-        
-        Args:
-            caplog_workaround: A pytest fixture to capture and work with logs in multiprocessing instances.
-            file_processor: The FilesProcessor instance.
-            logger: An object for logging messages.
-            waiting_period: Waiting period for next batch processing.
-            wait_for_response: Time to wait after the period (seconds).
-        """
-        time.sleep(0.1)
-        for _ in range(waiting_period):
-            file_processor.update_time_to_process()
-        time.sleep(wait_for_response) 
-    
-    def check_files_got_processed(self, file_paths: List[str],file_processor:FilesProcessor):
-        processed = True
-        for file_path in file_paths:
-            if file_path not in file_processor.processed_files:
-                processed = False
-                break
-        return processed
-    
-    def count_finished_batches(self,caplog):
-        cnt_batches = 0
-        for record in caplog.records:
-            if "FilesProcessor" in record.pathname:
-                if "Finished processing batch" in record.msg:
-                    cnt_batches += 1
-        
-        return cnt_batches
-    
     @pytest.mark.fixture_data(1,2)
     def test_creates_workers_on_complete_batch(self, caplog, setup_field_processor: FieldProcessorHF,  logger) -> None:
         """
