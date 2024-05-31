@@ -199,12 +199,12 @@ class TestMetadataParser:
         
         # Assert the output (check for existence of new columns and data types)
         assert all(col in parsed_df.columns for col in ["q_id_3", "q_id_4", "q_id_13", "q_id_15", "q_id_16", "q_id_17"])
-        assert parsed_df.loc[0, "q_id_3"]["data"] == ["image text to text", "text to video"]
-        assert parsed_df.loc[0, "q_id_4"]["data"] == ["dataset1"]
-        assert parsed_df.loc[0, "q_id_13"]["data"] == ["paper1"]
-        assert parsed_df.loc[0, "q_id_15"]["data"] == ["license1"]
-        assert parsed_df.loc[0, "q_id_16"]["data"] == ["en"]
-        assert parsed_df.loc[0, "q_id_17"]["data"] == ["pytorch"]
+        assert parsed_df.loc[0, "q_id_3"][0]["data"] == ["image text to text", "text to video"]
+        assert parsed_df.loc[0, "q_id_4"][0]["data"] == ["dataset1"]
+        assert parsed_df.loc[0, "q_id_13"][0]["data"] == ["paper1"]
+        assert parsed_df.loc[0, "q_id_15"][0]["data"] == ["license1"]
+        assert parsed_df.loc[0, "q_id_16"][0]["data"] == ["en"]
+        assert parsed_df.loc[0, "q_id_17"][0]["data"] == ["pytorch"]
     
     def test_parse_fields_from_tags_two_models_all_tags(self, parser: MetadataParser) -> None:
         """
@@ -236,18 +236,18 @@ class TestMetadataParser:
         
         # Assert the output (check for existence of new columns and data types)
         assert all(col in parsed_df.columns for col in ["q_id_3", "q_id_4", "q_id_13", "q_id_15", "q_id_16", "q_id_17"])
-        assert parsed_df.loc[0, "q_id_3"]["data"] == ["image text to text", "text to video"]
-        assert parsed_df.loc[0, "q_id_4"]["data"] == ["dataset1"]
-        assert parsed_df.loc[0, "q_id_13"]["data"] == ["paper1"]
-        assert parsed_df.loc[0, "q_id_15"]["data"] == ["license1"]
-        assert parsed_df.loc[0, "q_id_16"]["data"] == ["en"]
-        assert parsed_df.loc[0, "q_id_17"]["data"] == ["pytorch"]
-        assert parsed_df.loc[1, "q_id_3"]["data"] == ["image feature extraction", "text to text"]
-        assert parsed_df.loc[1, "q_id_4"]["data"] == ["dataset2"]
-        assert parsed_df.loc[1, "q_id_13"]["data"] == ["paper2"]
-        assert parsed_df.loc[1, "q_id_15"]["data"] == ["license2"]
-        assert parsed_df.loc[1, "q_id_16"]["data"] == ["sv"]
-        assert parsed_df.loc[1, "q_id_17"]["data"] == ["peft"]
+        assert parsed_df.loc[0, "q_id_3"][0]["data"] == ["image text to text", "text to video"]
+        assert parsed_df.loc[0, "q_id_4"][0]["data"] == ["dataset1"]
+        assert parsed_df.loc[0, "q_id_13"][0]["data"] == ["paper1"]
+        assert parsed_df.loc[0, "q_id_15"][0]["data"] == ["license1"]
+        assert parsed_df.loc[0, "q_id_16"][0]["data"] == ["en"]
+        assert parsed_df.loc[0, "q_id_17"][0]["data"] == ["pytorch"]
+        assert parsed_df.loc[1, "q_id_3"][0]["data"] == ["image feature extraction", "text to text"]
+        assert parsed_df.loc[1, "q_id_4"][0]["data"] == ["dataset2"]
+        assert parsed_df.loc[1, "q_id_13"][0]["data"] == ["paper2"]
+        assert parsed_df.loc[1, "q_id_15"][0]["data"] == ["license2"]
+        assert parsed_df.loc[1, "q_id_16"][0]["data"] == ["sv"]
+        assert parsed_df.loc[1, "q_id_17"][0]["data"] == ["peft"]
 
 
     def test_parse_fields_from_tags_no_correct_tags(self, parser: MetadataParser) -> None:
@@ -274,12 +274,12 @@ class TestMetadataParser:
         
         # Assert the output (check for existence of new columns and data types)
         assert all(col in parsed_df.columns for col in ["q_id_3", "q_id_4", "q_id_13", "q_id_15", "q_id_16", "q_id_17"])
-        assert pd.isna(parsed_df.loc[0, "q_id_3"]["data"])
-        assert pd.isna(parsed_df.loc[0, "q_id_4"]["data"])
-        assert pd.isna(parsed_df.loc[0, "q_id_13"]["data"])
-        assert pd.isna(parsed_df.loc[0, "q_id_15"]["data"])
-        assert pd.isna(parsed_df.loc[0, "q_id_16"]["data"])
-        assert pd.isna(parsed_df.loc[0, "q_id_17"]["data"])
+        assert pd.isna(parsed_df.loc[0, "q_id_3"][0]["data"])
+        assert pd.isna(parsed_df.loc[0, "q_id_4"][0]["data"])
+        assert pd.isna(parsed_df.loc[0, "q_id_13"][0]["data"])
+        assert pd.isna(parsed_df.loc[0, "q_id_15"][0]["data"])
+        assert pd.isna(parsed_df.loc[0, "q_id_16"][0]["data"])
+        assert pd.isna(parsed_df.loc[0, "q_id_17"][0]["data"])
         
     def test_answer_question(self, parser: MetadataParser):
         """

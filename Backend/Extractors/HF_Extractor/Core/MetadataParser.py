@@ -54,8 +54,8 @@ class MetadataParser:
     def parse_known_fields_HF(self, HF_df: pd.DataFrame) -> pd.DataFrame:
         HF_df.loc[:,"q_id_0"] = HF_df.loc[:, ("modelId")]
         HF_df.loc[:,"q_id_1"] = HF_df.loc[:, ("author")]
-        HF_df.loc[:,"q_id_2"] = HF_df.loc[:, ("createdAt")]
-        HF_df.loc[:,"q_id_26"] = HF_df.loc[:, ("last_modified")]
+        HF_df.loc[:,"q_id_2"] = HF_df.loc[:, ("createdAt")].apply(lambda x: str(x))
+        HF_df.loc[:,"q_id_26"] = HF_df.loc[:, ("last_modified")].apply(lambda x: str(x))
         
         # Check if the model was finetuned or retrained
         # q_id_8 asks What model is used as the base model? 
@@ -71,7 +71,6 @@ class MetadataParser:
         for index in range(len(HF_df)):
             for id in ['q_id_0', 'q_id_1','q_id_2','q_id_6','q_id_7','q_id_26']:
                 HF_df.loc[index, id] = [self.add_default_extraction_info(HF_df.loc[index, id],"Parsed_from_HF_dataset",1.0)]
-                print("CHECKING STRUCTURE",id,HF_df.loc[:, id])
                 
         for id in ['q_id_0', 'q_id_1','q_id_2','q_id_6','q_id_7','q_id_26']:
             self.available_questions.discard(id)
@@ -132,8 +131,11 @@ class MetadataParser:
                     if(tag_for_q3 not in HF_df["q_id_3"][index]):
                         HF_df.loc[index, "q_id_3"].append(tag_for_q3)
         
+        for index in range(len(HF_df)):
+            for id in ['q_id_3', 'q_id_4','q_id_13','q_id_15','q_id_16','q_id_17']:
+                HF_df.loc[index, id] = [self.add_default_extraction_info(HF_df.loc[index, id],"Parsed_from_HF_dataset",1.0)]
+                
         for id in ['q_id_3', 'q_id_4','q_id_13','q_id_15','q_id_16','q_id_17']:
-            HF_df.loc[:, id] = [self.add_default_extraction_info(x,"Parsed_from_HF_dataset",1.0) for x in HF_df.loc[:, id]]
             self.available_questions.discard(id)
 
         return HF_df
