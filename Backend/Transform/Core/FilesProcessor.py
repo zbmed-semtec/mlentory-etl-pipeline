@@ -116,7 +116,7 @@ class FilesProcessor:
             for index, row in df.iterrows():
                 m4ml_model_data = self.field_processor_HF.process_row(row)
                 
-            print(m4ml_model_data)
+            print(m4ml_model_data.head())
                 
             self.processed_files_in_last_batch.append(filename)
             logger.info(f"Finished processing: {filename}")

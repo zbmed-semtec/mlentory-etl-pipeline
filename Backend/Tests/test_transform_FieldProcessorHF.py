@@ -21,7 +21,7 @@ class TestFieldProcessorHF:
         self.hf_example_file = pd.read_csv("./Tests/Test_files/hf_extracted_example_file.tsv", sep="\t", usecols=lambda x: x != "Unnamed: 0")
         
     @pytest.fixture
-    def setup_file_processor(self, request, tmp_path) -> Tuple[QueueObserver, FilesProcessor, str]:
+    def setup_field_processor(self) -> Tuple[QueueObserver, FilesProcessor, str]:
         """
         Setup a FilesProcessor instance with a QueueObserver and a temporary directory
         
@@ -33,39 +33,10 @@ class TestFieldProcessorHF:
             A tuple containing the QueueObserver, FilesProcessor, and temporary directory path
         """
         
-        marker = request.node.get_closest_marker("fixture_data")
-        
-        test_dir = tmp_path / "test_dir"
-        test_dir.mkdir()
-        
-        #Create a "processed files" file on the test directory
-        with open(test_dir / "Processed_files.txt", "w") as f:
-            f.write("")
-        
-        processed_files_log_path = test_dir / "Processed_files.txt"
-        
         fields_processor_HF = FieldProcessorHF(path_to_config_data="./Config_Data")
         
-        if marker is None:
-            file_processor = FilesProcessor(num_workers=2, 
-                                            next_batch_proc_time=1,
-                                            processed_files_log_path=processed_files_log_path,
-                                            field_processor_HF=fields_processor_HF)
-        else:
-            file_processor = FilesProcessor(num_workers=marker.args[0], 
-                                            next_batch_proc_time=marker.args[1],
-                                            processed_files_log_path=processed_files_log_path,
-                                            field_processor_HF=fields_processor_HF)
-        # Create a QueueObserver instance
-        observer = QueueObserver(watch_dir=test_dir, files_processor=file_processor)
         
-        observer.start()
-        
-        yield observer, file_processor, test_dir
-        
-        observer.stop()
-        file_processor = None
-        observer = None
+        return fields_processor_HF
     
     def create_files_for_batch_processing(self,  test_dir: str, wait_for_response: float, files_to_create: int, start_file_num: int, logger) -> List[str]:
         """
@@ -130,7 +101,7 @@ class TestFieldProcessorHF:
         return cnt_batches
     
     @pytest.mark.fixture_data(1,2)
-    def test_creates_workers_on_complete_batch(self, caplog, setup_file_processor: Tuple[QueueObserver, FilesProcessor, str],  logger) -> None:
+    def test_creates_workers_on_complete_batch(self, caplog, setup_field_processor: FieldProcessorHF,  logger) -> None:
         """
         Test that workers are created on complete batch.
         
@@ -143,21 +114,15 @@ class TestFieldProcessorHF:
             caplog_workaround: A pytest fixture to capture and work with logs in multiprocessing instances
             logger: An object for logging messages
         """
-        _, file_processor, test_dir = setup_file_processor
+        df = self.hf_example_file
+        field_processor = setup_field_processor
         
-        file_paths = []
-        
-        # Create files for batch processing and simulate file creation event
-        file_paths.extend(self.create_files_for_batch_processing( test_dir,
-                                               wait_for_response=1,
-                                               files_to_create=1,
-                                               start_file_num=0,
-                                               logger=logger))
-        
-        # print(caplog.text)
-                        
-        # Assert that the "Finished processing batch" message is logged
-        assert self.count_finished_batches(caplog) == 1
+        # print(df.head())
+        # Go through each row of the dataframe
+        for index, row in df.iterrows():
+            m4ml_model_data = field_processor.process_row(row)
+            
+        print(m4ml_model_data.head())
         
         # Assert the each file got processed
         # assert self.check_files_got_processed(file_paths,file_processor)

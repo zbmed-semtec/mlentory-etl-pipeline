@@ -21,7 +21,7 @@ class FieldProcessorHF:
         This method processes a row of the incoming tsv file and maps it to the M4ML schema.
         """
         df_M4ML = pd.DataFrame(columns=self.M4ML_schema['Property'].tolist())
-        row = row.apply(lambda x: [print(x),ast.literal_eval(x)] if isinstance(x, str) else x)
+        row = row.apply(lambda x: ast.literal_eval(x) if isinstance(x, str) else x)
                 
         #Go through each row of the M4ML_schema
         for index, row_M4ML in self.M4ML_schema.iterrows():
@@ -32,7 +32,7 @@ class FieldProcessorHF:
             #Get the column type in the M4ML_schema
             property_range = row_M4ML['Range']
             new_property = self.process_property(property_description_M4ML = row_M4ML, info_HF = row)
-            df_M4ML[property_name] = new_property
+            df_M4ML.loc[index,property_name] = new_property
         
         # print("Data line: \n", row)
         
@@ -180,7 +180,7 @@ class FieldProcessorHF:
         processed_values.extend(q6_values)
         processed_values.extend(q7_values)
         
-        print(processed_values)
+        # print("\ntrainedOn:",processed_values)
         
         return processed_values
 
@@ -189,7 +189,10 @@ class FieldProcessorHF:
         Build the distribution link of a HF object.
         """
         
-        return "LOL"
+        user = self.find_value_in_HF(info_HF,"q_id_1")["data"]
+        model_name = self.find_value_in_HF(info_HF,"q_id_2")["data"]
+        distribution_link = "https://huggingface.co/" + user + "/" + model_name + ".py"
+        return self.add_default_extraction_info(distribution_link,"Built in transform stage",1.0)
     
     def find_value_in_HF (self,info_HF,property_name):
         """
