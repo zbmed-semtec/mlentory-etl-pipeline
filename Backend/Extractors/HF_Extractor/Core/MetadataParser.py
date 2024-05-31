@@ -2,6 +2,10 @@ import pandas as pd
 from transformers import pipeline
 from typing import Any, Dict, List, Set, Union
 
+from huggingface_hub import HfApi
+from huggingface_hub.hf_api import RepoFile, RepoFolder
+import math
+
 class MetadataParser:
 
     def __init__(self, qa_model: str, path_to_config_data: str = "./../Config_Data") -> None:
@@ -26,8 +30,10 @@ class MetadataParser:
         self.available_questions = set()
         for id in range(len(self.questions)):
             self.available_questions.add("q_id_"+str(id)) 
-        # print("len available questions", len(self.available_questions))
-        # print("QUESTIONS AVAILABLE", self.available_questions)
+        
+        # Initializing HF API
+        self.hf_api = HfApi() 
+        
         #Assigning the question answering pipeline
         self.qa_model = qa_model
         if self.device != None:
@@ -51,6 +57,15 @@ class MetadataParser:
                     "extraction_method":extraction_method,
                     "confidence":confidence}
     
+    def get_repository_weight_HF(self, model_name:str) -> str:
+        model_repo_weight = 0
+        model_tree_file_information = self.hf_api.list_repo_tree(f"{model_name}", recursive=True)
+        for x in list(model_tree_file_information):
+            if isinstance(x,RepoFile):
+                #The weight of each file is in Bytes.
+                model_repo_weight += x.size
+        return f"{model_repo_weight/(math.pow(10,9)):.3f} Gbytes"
+    
     def parse_known_fields_HF(self, HF_df: pd.DataFrame) -> pd.DataFrame:
         HF_df.loc[:,"q_id_0"] = HF_df.loc[:, ("modelId")]
         HF_df.loc[:,"q_id_1"] = HF_df.loc[:, ("author")]
@@ -67,12 +82,15 @@ class MetadataParser:
                 q_4_answer = HF_df.loc[index:index,"q_id_4"]
                 HF_df.loc[index:index,"q_id_6"] = q_4_answer
                 HF_df.loc[index:index,"q_id_7"] = q_4_answer
+        
+        for index, row in HF_df.iterrows():
+            HF_df.loc[index,"q_id_29"] = self.get_repository_weight_HF(HF_df.loc[index,"q_id_0"])
                 
         for index in range(len(HF_df)):
-            for id in ['q_id_0', 'q_id_1','q_id_2','q_id_6','q_id_7','q_id_26']:
+            for id in ['q_id_0', 'q_id_1','q_id_2','q_id_6','q_id_7','q_id_26','q_id_29']:
                 HF_df.loc[index, id] = [self.add_default_extraction_info(HF_df.loc[index, id],"Parsed_from_HF_dataset",1.0)]
                 
-        for id in ['q_id_0', 'q_id_1','q_id_2','q_id_6','q_id_7','q_id_26']:
+        for id in ['q_id_0', 'q_id_1','q_id_2','q_id_6','q_id_7','q_id_26','q_id_29']:
             self.available_questions.discard(id)
         
         return HF_df
