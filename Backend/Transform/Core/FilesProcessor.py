@@ -1,5 +1,6 @@
 from multiprocessing import Process, Pool,set_start_method,get_context
 from typing import Callable, List
+import traceback
 import logging
 import time
 import pandas as pd
@@ -84,7 +85,7 @@ class FilesProcessor:
         for worker in workers:
             worker.terminate()  # Best practice to terminate even if join() finishes first
 
-        print("GOT HEREEEEEEEEEEEEEEE", self.processed_files_in_last_batch)
+        # print("GOT HEREEEEEEEEEEEEEEE", self.processed_files_in_last_batch)
         for filename in self.processed_files_in_last_batch:
             self.processed_files[filename] = 1
             #Write the file to the log file
@@ -115,14 +116,14 @@ class FilesProcessor:
             for index, row in df.iterrows():
                 m4ml_model_data = self.field_processor_HF.process_row(row)
                 
-            # print(m4ml_model_data)
+            print(m4ml_model_data)
                 
             self.processed_files_in_last_batch.append(filename)
             logger.info(f"Finished processing: {filename}")
             #When the file is being processed you need to keep in mind 
         except Exception as e:
-            # print(f"Error processing file: {e}")
-            logger.exception(f"Error processing file: {e}")
+            print(f"Error processing file: {traceback.format_exc()}")
+            logger.exception(f"Error processing file: {traceback.format_exc()}")
 
     def add_file(self, filename: str) -> None:
         """

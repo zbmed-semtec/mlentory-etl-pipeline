@@ -6,3 +6,4 @@ matplotlib
 numpy
 pandas
 seaborn
+demjson3

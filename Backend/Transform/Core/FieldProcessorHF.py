@@ -2,6 +2,8 @@ from typing import Callable, List, Dict
 import logging
 import time
 import pandas as pd
+import json
+import ast
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -14,12 +16,12 @@ class FieldProcessorHF:
         self.M4ML_schema = pd.read_csv(path_to_config_data+"/M4ML_schema.tsv", sep="\t")
         # print(self.M4ML_schema.head())
     
-    def process_row(self, row):
+    def process_row(self, row : pd.Series) -> pd.DataFrame:
         """
         This method processes a row of the incoming tsv file and maps it to the M4ML schema.
         """
         df_M4ML = pd.DataFrame(columns=self.M4ML_schema['Property'].tolist())
-        
+        row = row.apply(lambda x: [print(x),ast.literal_eval(x)] if isinstance(x, str) else x)
                 
         #Go through each row of the M4ML_schema
         for index, row_M4ML in self.M4ML_schema.iterrows():
@@ -67,24 +69,24 @@ class FieldProcessorHF:
                                                                confidence=1.0)
         elif property_name == 'fair4ml:intendedUse':
              processed_value = self.find_value_in_HF(info_HF, "q_id_20")
-        # elif property_name == 'fair4ml:mlTask':
-        #     processed_value = process_ml_task(info_HF[property_source])
+        elif property_name == 'fair4ml:mlTask':
+            processed_value = self.find_value_in_HF(info_HF, "q_id_3")
         # elif property_name == 'fair4ml:modelCategory':
         #     processed_value = process_model_category(info_HF[property_source])
-        # elif property_name == 'fair4ml:modelRisks':
-        #     processed_value = info_HF[property_source]
-        # elif property_name == 'fair4ml:sharedBy':
-        #     processed_value = process_person_or_org(info_HF[property_source])
-        # elif property_name == 'fair4ml:testedOn':
-        #     processed_value = process_dataset(info_HF[property_source])
-        # elif property_name == 'fair4ml:trainedOn':
-        #     processed_value = process_dataset(info_HF[property_source])
-        # elif property_name == 'fair4ml:usageInstructions':
-        #     processed_value = info_HF[property_source]
+        elif property_name == 'fair4ml:modelRisks':
+            processed_value = self.find_value_in_HF(info_HF, "q_id_21")
+        elif property_name == 'fair4ml:sharedBy':
+            processed_value = self.find_value_in_HF(info_HF, "q_id_1")
+        elif property_name == 'fair4ml:testedOn':
+            processed_value = self.find_value_in_HF(info_HF, "q_id_4")
+        elif property_name == 'fair4ml:trainedOn':
+            processed_value = self.process_trainedOn(info_HF)
+        elif property_name == 'fair4ml:usageInstructions':
+            processed_value = self.find_value_in_HF(info_HF, "q_id_22")
+        elif property_name == 'schema.org:distribution':
+            processed_value = self.build_distribution_link(info_HF)
         # elif property_name == 'fair4ml:validatedOn':
         #     processed_value = process_dataset(info_HF[property_source])
-        # elif property_name == 'schema.org:distribution':
-        #     processed_value = process_media_object(info_HF[property_source])
         # elif property_name == 'schema.org:memoryRequirements':
         #     processed_value = process_text_or_url(info_HF[property_source])
         # elif property_name == 'schema.org:operatingSystem':
@@ -151,9 +153,44 @@ class FieldProcessorHF:
         #     processed_value = info_HF[property_source]
         # elif property_name == 'schema.org:url':
         #     processed_value = process_url(info_HF[property_source])
-        
+        # print("Processed value: ",processed_value)
         return processed_value
+    
+    def process_trainedOn(self,info_HF: pd.DataFrame) -> List:
+        """
+        Process the trainedOn property of a HF object.
+        To process this proper we take into account 3 different values.
+        1. Q4 What datasets was the model trained on?
+        2. Q6 What datasets were used to finetune the model?
+        3. Q7 What datasets were used to retrain the model?
+        
+        Args:
+            info_HF -- The HF object to process
 
+        Return:
+            str -- A string representing the list of datasets used to train the model.
+        """
+        q4_values = self.find_value_in_HF(info_HF,"q_id_4")
+        q6_values = self.find_value_in_HF(info_HF,"q_id_6")
+        q7_values = self.find_value_in_HF(info_HF,"q_id_7")
+        
+        processed_values = []
+        
+        processed_values.extend(q4_values)
+        processed_values.extend(q6_values)
+        processed_values.extend(q7_values)
+        
+        print(processed_values)
+        
+        return processed_values
+
+    def build_distribution_link(self,info_HF: pd.DataFrame) -> str:
+        """
+        Build the distribution link of a HF object.
+        """
+        
+        return "LOL"
+    
     def find_value_in_HF (self,info_HF,property_name):
         """
         Find the value of a property in a HF object.
@@ -161,13 +198,10 @@ class FieldProcessorHF:
         
         prefix = property_name
         column_with_prefix = list(filter(lambda x: x.startswith(prefix), info_HF.index))
-        print("name: ",column_with_prefix[0])
-        print("value: ",info_HF[column_with_prefix[0]])
-        print()
         processed_value = info_HF[column_with_prefix[0]]
         return processed_value
     
     def add_default_extraction_info(self,data:str,extraction_method:str,confidence:float) -> Dict:
-        return {"data":data,
+        return str({"data":data,
                     "extraction_method":extraction_method,
-                    "confidence":confidence}
+                    "confidence":confidence})
