@@ -16,11 +16,11 @@ class FieldProcessorHF:
         self.M4ML_schema = pd.read_csv(path_to_config_data+"/M4ML_schema.tsv", sep="\t")
         # print(self.M4ML_schema.head())
     
-    def process_row(self, row : pd.Series) -> pd.DataFrame:
+    def process_row(self, row : pd.Series) -> pd.Series:
         """
         This method processes a row of the incoming tsv file and maps it to the M4ML schema.
         """
-        df_M4ML = pd.DataFrame(columns=self.M4ML_schema['Property'].tolist())
+        df_M4ML = pd.Series(index=self.M4ML_schema['Property'].tolist())
         row = row.apply(lambda x: ast.literal_eval(x) if isinstance(x, str) else x)
                 
         #Go through each row of the M4ML_schema
@@ -32,7 +32,7 @@ class FieldProcessorHF:
             #Get the column type in the M4ML_schema
             property_range = row_M4ML['Range']
             new_property = self.process_property(property_description_M4ML = row_M4ML, info_HF = row)
-            df_M4ML.loc[index,property_name] = new_property
+            df_M4ML[property_name] = new_property
         
         # print("Data line: \n", row)
         
@@ -85,76 +85,86 @@ class FieldProcessorHF:
             processed_value = self.find_value_in_HF(info_HF, "q_id_22")
         elif property_name == 'fair4ml:validatedOn':
             processed_value = self.find_value_in_HF(info_HF, "q_id_4")
-        elif property_name == 'schema.org:distribution':
-            processed_value = self.build_distribution_link(info_HF)
-        # elif property_name == 'schema.org:memoryRequirements':
-        #     processed_value = process_text_or_url(info_HF[property_source])
-        # elif property_name == 'schema.org:operatingSystem':
+        elif property_name == 'distribution':
+            processed_value = self.build_HF_link(info_HF,tail_info=".py")
+        elif property_name == 'memoryRequirements':
+            processed_value = self.find_value_in_HF(info_HF, "q_id_29")
+        # elif property_name == 'operatingSystem':
         #     processed_value = info_HF[property_source]
-        # elif property_name == 'schema.org:processorRequirements':
-        #     processed_value = info_HF[property_source]
-        # elif property_name == 'schema.org:releaseNotes':
-        #     processed_value = process_text_or_url(info_HF[property_source])
-        # elif property_name == 'schema.org:softwareHelp':
+        elif property_name == 'processorRequirements':
+            processed_value = self.find_value_in_HF(info_HF, "q_id_23")
+        # elif property_name == 'releaseNotes':
+        #     processed_value = self.find_value_in_HF(info_HF, "q_id_30")
+        # elif property_name == 'softwareHelp':
         #     processed_value = process_creative_work(info_HF[property_source])
-        # elif property_name == 'schema.org:softwareRequirements':
-        #     processed_value = process_text_or_url(info_HF[property_source])
-        # elif property_name == 'schema.org:storageRequirements':
-        #     processed_value = info_HF[property_source]
+        elif property_name == 'softwareRequirements':
+            processed_value = self.process_softwareRequirements(info_HF)
+        elif property_name == 'storageRequirements':
+            processed_value = self.find_value_in_HF(info_HF, "q_id_29")
         # elif property_name == 'codemeta:buildInstructions':
         #     processed_value = process_url(info_HF[property_source])
         # elif property_name == 'codemeta:developmentStatus':
         #     processed_value = info_HF[property_source]
-        # elif property_name == 'codemeta:issueTracker':
-        #     processed_value = process_url(info_HF[property_source])
-        # elif property_name == 'codemeta:readme':
-        #     processed_value = process_url(info_HF[property_source])
-        # elif property_name == 'codemeta:referencePublication':
-        #     processed_value = process_scholarly_article(info_HF[property_source])
-        # elif property_name == 'schema.org:archivedAt':
+        elif property_name == 'codemeta:issueTracker':
+            processed_value = self.build_HF_link(info_HF,tail_info="/discussions")
+        elif property_name == 'codemeta:readme':
+            processed_value = self.build_HF_link(info_HF,tail_info="/blob/main/README.md")
+        elif property_name == 'codemeta:referencePublication':
+            processed_value = self.find_value_in_HF(info_HF, "q_id_13")
+        # elif property_name == 'archivedAt':
         #     processed_value = process_url_or_webpage(info_HF[property_source])
-        # elif property_name == 'schema.org:author':
-        #     processed_value = process_person_or_org(info_HF[property_source])
-        # elif property_name == 'schema.org:citation':
+        elif property_name == 'author':
+            processed_value = self.find_value_in_HF(info_HF, "q_id_24")
+        # elif property_name == 'citation':
         #     processed_value = process_creative_work_or_text(info_HF[property_source])
-        # elif property_name == 'schema.org:conditionsOfAccess':
+        # elif property_name == 'conditionsOfAccess':
         #     processed_value = info_HF[property_source]
-        # elif property_name == 'schema.org:contributor':
+        # elif property_name == 'contributor':
         #     processed_value = process_person_or_org(info_HF[property_source])
-        # elif property_name == 'schema.org:copyrightHolder':
+        # elif property_name == 'copyrightHolder':
         #     processed_value = process_person_or_org(info_HF[property_source])
-        # elif property_name == 'schema.org:dateCreated':
-        #     processed_value = process_date_or_datetime(info_HF[property_source])
-        # elif property_name == 'schema.org:dateModified':
-        #     processed_value = process_date_or_datetime(info_HF[property_source])
-        # elif property_name == 'schema.org:datePublished':
-        #     processed_value = process_date_or_datetime(info_HF[property_source])
-        # elif property_name == 'schema.org:discussionUrl':
-        #     processed_value = process_url(info_HF[property_source])
-        # elif property_name == 'schema.org:funding':
-        #     processed_value = process_grant(info_HF[property_source])
-        # elif property_name == 'schema.org:inLanguage':
+        elif property_name == 'dateCreated':
+            processed_value = self.find_value_in_HF(info_HF, "q_id_2")
+        elif property_name == 'dateModified':
+            processed_value = self.find_value_in_HF(info_HF, "q_id_26")
+        elif property_name == 'datePublished':
+            processed_value = self.find_value_in_HF(info_HF, "q_id_2")
+        elif property_name == 'discussionUrl':
+            processed_value = self.build_HF_link(info_HF,tail_info="/discussions")
+        elif property_name == 'funding':
+            processed_value = self.find_value_in_HF(info_HF, "q_id_27")
+        # elif property_name == 'inLanguage':
         #     processed_value = process_language_or_text(info_HF[property_source])
-        # elif property_name == 'schema.org:isAccessibleForFree':
+        # elif property_name == 'isAccessibleForFree':
         #     processed_value = process_boolean(info_HF[property_source])
-        # elif property_name == 'schema.org:keywords':
+        # elif property_name == 'keywords':
         #     processed_value = process_defined_term_or_text_or_url(info_HF[property_source])
-        # elif property_name == 'schema.org:license':
-        #     processed_value = process_creative_work_or_url(info_HF[property_source])
-        # elif property_name == 'schema.org:maintainer':
-        #     processed_value = process_person_or_org(info_HF[property_source])
-        # elif property_name == 'schema.org:version':
-        #     processed_value = info_HF[property_source]
-        # elif property_name == 'schema.org:description':
+        elif property_name == 'license':
+            processed_value = self.find_value_in_HF(info_HF, "q_id_15")
+        elif property_name == 'maintainer':
+            processed_value = self.find_value_in_HF(info_HF, "q_id_1")
+        elif property_name == 'version':
+            processed_value = self.find_value_in_HF(info_HF, "q_id_28")
+        # elif property_name == 'description':
         #     processed_value = process_text_or_text_object(info_HF[property_source])
-        # elif property_name == 'schema.org:identifier':
-        #     processed_value = process_property_value_or_text_or_url(info_HF[property_source])
-        # elif property_name == 'schema.org:name':
-        #     processed_value = info_HF[property_source]
-        # elif property_name == 'schema.org:url':
-        #     processed_value = process_url(info_HF[property_source])
+        elif property_name == 'identifier':
+            processed_value = self.build_HF_link(info_HF,tail_info="")
+        elif property_name == 'name':
+            processed_value = self.find_value_in_HF(info_HF, "q_id_0")
+        elif property_name == 'url':
+            processed_value = self.build_HF_link(info_HF,tail_info="")
         # print("Processed value: ",processed_value)
         return processed_value
+    
+    def process_softwareRequirements(self,info_HF: pd.DataFrame) -> List:
+        
+        q17_values = self.find_value_in_HF(info_HF,"q_id_17")
+        
+        values = [q17_values]
+        
+        values.append(self.add_default_extraction_info(data="Python",extraction_method="Added in transform stage",confidence=1.0))
+        
+        return values
     
     def process_trainedOn(self,info_HF: pd.DataFrame) -> List:
         """
@@ -180,19 +190,18 @@ class FieldProcessorHF:
         processed_values.extend(q6_values)
         processed_values.extend(q7_values)
         
-        # print("\ntrainedOn:",processed_values)
-        
         return processed_values
 
-    def build_distribution_link(self,info_HF: pd.DataFrame) -> str:
+    def build_HF_link(self,info_HF: pd.DataFrame,tail_info: str) -> str:
         """
-        Build the distribution link of a HF object.
+        Build the distribution link of a HF model.
         """
         
-        user = self.find_value_in_HF(info_HF,"q_id_1")["data"]
-        model_name = self.find_value_in_HF(info_HF,"q_id_2")["data"]
-        distribution_link = "https://huggingface.co/" + user + "/" + model_name + ".py"
-        return self.add_default_extraction_info(distribution_link,"Built in transform stage",1.0)
+        model_name = self.find_value_in_HF(info_HF,"q_id_0")[0]["data"]
+        # model_name = self.find_value_in_HF(info_HF,"q_id_2")[0]["data"]
+        link = "https://huggingface.co/" + model_name + tail_info
+        print("Link: ",link)
+        return [self.add_default_extraction_info(link,"Built in transform stage",1.0)]
     
     def find_value_in_HF (self,info_HF,property_name):
         """

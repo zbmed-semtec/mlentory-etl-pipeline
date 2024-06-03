@@ -58,9 +58,12 @@ class TestFieldProcessorHF:
         # print(df.head())
         # Go through each row of the dataframe
         for index, row in df.iterrows():
+            # print(row)
             m4ml_model_data = field_processor.process_row(row)
+            print("m4ml new row: \n",m4ml_model_data)
+            break
             
-        print(m4ml_model_data.head())
+        
         
         # Assert the each file got processed
         # assert self.check_files_got_processed(file_paths,file_processor)
