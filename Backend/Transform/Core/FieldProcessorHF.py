@@ -20,7 +20,22 @@ class FieldProcessorHF:
         """
         This method processes a row of the incoming tsv file and maps it to the M4ML schema.
         """
-        df_M4ML = pd.Series(index=self.M4ML_schema['Property'].tolist())
+        col_names = []
+        
+        for index, row_M4ML in self.M4ML_schema.iterrows():
+            #Get the property source from the 
+            property_source = row_M4ML['Source']
+            #Get the column type in the M4ML_schema
+            property_name = row_M4ML['Property']
+            
+            if(":" not in property_name):
+                col_names.append(property_source+":"+property_name)
+            else:
+                col_names.append(property_name)
+                
+        
+        df_M4ML = pd.Series(index=col_names)
+        
         row = row.apply(lambda x: ast.literal_eval(x) if isinstance(x, str) else x)
                 
         #Go through each row of the M4ML_schema
@@ -29,8 +44,7 @@ class FieldProcessorHF:
             property_source = row_M4ML['Source']
             #Get the column type in the M4ML_schema
             property_name = row_M4ML['Property']
-            #Get the column type in the M4ML_schema
-            property_range = row_M4ML['Range']
+                
             new_property = self.process_property(property_description_M4ML = row_M4ML, info_HF = row)
             df_M4ML[property_name] = new_property
         
@@ -200,7 +214,7 @@ class FieldProcessorHF:
         model_name = self.find_value_in_HF(info_HF,"q_id_0")[0]["data"]
         # model_name = self.find_value_in_HF(info_HF,"q_id_2")[0]["data"]
         link = "https://huggingface.co/" + model_name + tail_info
-        print("Link: ",link)
+        # print("Link: ",link)
         return [self.add_default_extraction_info(link,"Built in transform stage",1.0)]
     
     def find_value_in_HF (self,info_HF,property_name):
