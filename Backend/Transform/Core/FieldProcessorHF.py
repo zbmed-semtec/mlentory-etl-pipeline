@@ -86,15 +86,15 @@ class FieldProcessorHF:
         elif property_name == 'fair4ml:validatedOn':
             processed_value = self.find_value_in_HF(info_HF, "q_id_4")
         elif property_name == 'distribution':
-            processed_value = self.build_HF_link(info_HF,tail_info=".py")
+            processed_value = self.build_HF_link(info_HF,tail_info="")
         elif property_name == 'memoryRequirements':
             processed_value = self.find_value_in_HF(info_HF, "q_id_29")
         # elif property_name == 'operatingSystem':
         #     processed_value = info_HF[property_source]
         elif property_name == 'processorRequirements':
             processed_value = self.find_value_in_HF(info_HF, "q_id_23")
-        # elif property_name == 'releaseNotes':
-        #     processed_value = self.find_value_in_HF(info_HF, "q_id_30")
+        elif property_name == 'releaseNotes':
+            processed_value = self.find_value_in_HF(info_HF, "q_id_30")
         # elif property_name == 'softwareHelp':
         #     processed_value = process_creative_work(info_HF[property_source])
         elif property_name == 'softwareRequirements':

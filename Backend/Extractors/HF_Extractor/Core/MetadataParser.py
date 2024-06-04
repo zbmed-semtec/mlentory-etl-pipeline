@@ -71,6 +71,7 @@ class MetadataParser:
         HF_df.loc[:,"q_id_1"] = HF_df.loc[:, ("author")]
         HF_df.loc[:,"q_id_2"] = HF_df.loc[:, ("createdAt")].apply(lambda x: str(x))
         HF_df.loc[:,"q_id_26"] = HF_df.loc[:, ("last_modified")].apply(lambda x: str(x))
+        HF_df.loc[:,"q_id_30"] = HF_df.loc[:, ("card")]
         
         # Check if the model was finetuned or retrained
         # q_id_8 asks What model is used as the base model? 
@@ -87,10 +88,10 @@ class MetadataParser:
             HF_df.loc[index,"q_id_29"] = self.get_repository_weight_HF(HF_df.loc[index,"q_id_0"])
                 
         for index in range(len(HF_df)):
-            for id in ['q_id_0', 'q_id_1','q_id_2','q_id_6','q_id_7','q_id_26','q_id_29']:
+            for id in ['q_id_0', 'q_id_1','q_id_2','q_id_6','q_id_7','q_id_26','q_id_29','q_id_30']:
                 HF_df.loc[index, id] = [self.add_default_extraction_info(HF_df.loc[index, id],"Parsed_from_HF_dataset",1.0)]
                 
-        for id in ['q_id_0', 'q_id_1','q_id_2','q_id_6','q_id_7','q_id_26','q_id_29']:
+        for id in ['q_id_0', 'q_id_1','q_id_2','q_id_6','q_id_7','q_id_26','q_id_29','q_id_30']:
             self.available_questions.discard(id)
         
         return HF_df
