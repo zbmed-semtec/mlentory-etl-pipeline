@@ -98,7 +98,7 @@ services:
       - ./Transform:/app_test/Transform
       - ./Extractors:/app_test/Extractors
       - ./Transform_Queue:/Transform_Queue
-      - ./Config_Data:/Config_Data
+      - ./Config_Data:/app_test/Config_Data
     dns:
       - 1.1.1.1
     # command: ["./Tests/validate_tests.sh"]
