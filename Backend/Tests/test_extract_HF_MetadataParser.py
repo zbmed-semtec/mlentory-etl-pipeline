@@ -76,7 +76,8 @@ class TestMetadataParser:
         data = {"modelId": ["nelson2424/gptj6b-FAQ-NelsMarketplace","nelson2424/gptj6b-FAQ-NelsMarketplace"], 
                 "author": ["a1","a2"],
                 "createdAt": ["c1","c2"],
-                "last_modified": ["lm1","lm2"]}
+                "last_modified": ["lm1","lm2"],
+                "card":["c1","c2"]}
         
         mock_df = pd.DataFrame(data)
         
@@ -86,12 +87,13 @@ class TestMetadataParser:
         parsed_df = parser.parse_known_fields_HF(HF_df=mock_df.copy())
         
         # Assert the output (check for existence of new columns and data types)
-        assert all(col in parsed_df.columns for col in ["q_id_0", "q_id_1", "q_id_2", "q_id_26", "q_id_29"])
+        assert all(col in parsed_df.columns for col in ["q_id_0", "q_id_1", "q_id_2", "q_id_26", "q_id_29","q_id_30"])
         assert parsed_df["q_id_0"].dtype == object
         assert parsed_df["q_id_1"].dtype == object
         assert parsed_df["q_id_2"].dtype == object
         assert parsed_df["q_id_26"].dtype == object
         assert parsed_df["q_id_29"].dtype == object
+        assert parsed_df["q_id_30"].dtype == object
     
     def test_parse_known_fields_HF_empty_dataframe_fails(self, parser: MetadataParser) -> None:
         """
@@ -133,7 +135,8 @@ class TestMetadataParser:
         data = {"modelId": ["EleutherAI/gpt-j-6b", "EleutherAI/gpt-j-6b", "EleutherAI/gpt-j-6b"],
                 "author": ["a1", "a2", "a3"],
                 "createdAt": ["c1", "c2", "c3"], 
-                "last_modified": ["lm1","lm2", "lm3"]}
+                "last_modified": ["lm1","lm2", "lm3"],
+                "card":["c1","c2","c3"]}
         
         mock_df = pd.DataFrame(data)
         mock_df = self.add_base_questions(mock_df, parser)
@@ -167,13 +170,17 @@ class TestMetadataParser:
         Args:
             parser (MetadataParser): The MetadataParser object
         """
-        data = {"modelId": ["nelson2424/gptj6b-FAQ-NelsMarketplace"], "author": ["a1"], "createdAt": ["c1"], "last_modified": ["lm1"]}
+        data = {"modelId": ["nelson2424/gptj6b-FAQ-NelsMarketplace"],
+                "author": ["a1"], 
+                "createdAt": ["c1"],
+                "last_modified": ["lm1"],
+                "card":["c1"]}
         mock_df = pd.DataFrame(data)
         mock_df = self.add_base_questions(mock_df, parser)
         parsed_df = parser.parse_known_fields_HF(HF_df=mock_df.copy())
         
         # Assert that all new columns have the expected info dictionary
-        for col in ["q_id_0", "q_id_1", "q_id_2", "q_id_26","q_id_29"]:
+        for col in ["q_id_0", "q_id_1", "q_id_2", "q_id_26","q_id_29","q_id_30"]:
             assert parsed_df.loc[0, col][0]["extraction_method"] == "Parsed_from_HF_dataset"
             assert parsed_df.loc[0, col][0]["confidence"] == 1.0
 

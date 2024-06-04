@@ -38,19 +38,13 @@ class TestFieldProcessorHF:
         
         return fields_processor_HF
     
-    @pytest.mark.fixture_data(1,2)
     def test_creates_workers_on_complete_batch(self, caplog, setup_field_processor: FieldProcessorHF,  logger) -> None:
         """
         Test that workers are created on complete batch.
         
         Args:
-            pytest.mark.fixture_data(num_workers,next_batch_proc_time): Is a decorator to send data to the pytest fixtures.
-                num_workers: The number of threads the file_processor will use.
-                next_batch_proc_time: Waiting period for next batch processing.
-            caplog: A pytest fixture to capture and work with logs.
-            setup_file_processor: A tuple containing the QueueObserver, FilesProcessor, and test directory
-            caplog_workaround: A pytest fixture to capture and work with logs in multiprocessing instances
-            logger: An object for logging messages
+            caplog: pytest caplog fixture for capturing logs
+            setup_field_processor: fixture for setting up the FieldProcessorHF instance
         """
         df = self.hf_example_file
         field_processor = setup_field_processor
@@ -61,7 +55,6 @@ class TestFieldProcessorHF:
             # print(row)
             m4ml_model_data = field_processor.process_row(row)
             print("m4ml new row: \n",m4ml_model_data)
-            break
             
         
         
