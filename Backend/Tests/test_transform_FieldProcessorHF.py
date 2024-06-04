@@ -1,3 +1,4 @@
+from multiprocessing import Process, Pool,set_start_method,get_context
 import pytest
 import sys
 import os
@@ -38,7 +39,7 @@ class TestFieldProcessorHF:
         
         return fields_processor_HF
     
-    def test_creates_workers_on_complete_batch(self, caplog, setup_field_processor: FieldProcessorHF,  logger) -> None:
+    def test_conversion(self, caplog, setup_field_processor: FieldProcessorHF,  logger) -> None:
         """
         Test that workers are created on complete batch.
         
@@ -49,14 +50,17 @@ class TestFieldProcessorHF:
         df = self.hf_example_file
         field_processor = setup_field_processor
         
-        # print(df.head())
-        # Go through each row of the dataframe
+        manager = get_context('spawn').Manager()
+        model_list = manager.list()
         for index, row in df.iterrows():
             # print(row)
             m4ml_model_data = field_processor.process_row(row)
+            model_list.append(m4ml_model_data)
             print("m4ml new row: \n",m4ml_model_data)
             
+        models_m4ml_df = pd.DataFrame(list(model_list))
         
+        print(models_m4ml_df.head())
         
         # Assert the each file got processed
         # assert self.check_files_got_processed(file_paths,file_processor)

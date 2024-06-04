@@ -57,6 +57,7 @@ services:
     volumes:
       - ./Transform:/app
       - ./Transform_Queue:/Transform_Queue
+      - ./Load_Queue:/Load_Queue
       - ./Config_Data:/Config_Data
     dns:
       - 1.1.1.1
@@ -78,6 +79,7 @@ services:
       - ./Transform:/app_test/Transform
       - ./Extractors:/app_test/Extractors
       - ./Transform_Queue:/app_test/Transform_Queue
+      - ./Load_Queue:/app_test/Load_Queue
       - ./Config_Data:/app_test/Config_Data
     dns:
       - 1.1.1.1
@@ -97,7 +99,8 @@ services:
       - ./Tests:/app_test/Tests
       - ./Transform:/app_test/Transform
       - ./Extractors:/app_test/Extractors
-      - ./Transform_Queue:/Transform_Queue
+      - ./Transform_Queue:/app_test/Transform_Queue
+      - ./Load_Queue:/app_test/Load_Queue
       - ./Config_Data:/app_test/Config_Data
     dns:
       - 1.1.1.1

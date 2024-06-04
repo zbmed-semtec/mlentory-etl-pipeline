@@ -1,7 +1,8 @@
 from multiprocessing import Process, Pool,set_start_method,get_context
-from typing import Callable, List
+from typing import Callable, List, Dict
 import traceback
 import logging
+from datetime import datetime
 import time
 import pandas as pd
 import os
@@ -42,13 +43,14 @@ class FilesProcessor:
         # set_start_method("spawn", force=True)
         manager = get_context('spawn').Manager()
         self.files_to_proc: List[str] = []
-        self.num_workers = num_workers
-        self.next_batch_proc_time = next_batch_proc_time
-        self.curr_waiting_time = next_batch_proc_time
-        self.processed_files_log_path = processed_files_log_path
-        self.processed_files = manager.dict()
-        self.processed_files_in_last_batch = manager.list()
-        self.field_processor_HF = field_processor_HF
+        self.num_workers: int = num_workers
+        self.next_batch_proc_time: int = next_batch_proc_time
+        self.curr_waiting_time: int = next_batch_proc_time
+        self.processed_files_log_path: str = processed_files_log_path
+        self.processed_files: Dict = manager.dict()
+        self.processed_files_in_last_batch: List = manager.list()
+        self.processed_models: List = manager.list()
+        self.field_processor_HF: FieldProcessorHF = field_processor_HF
         #Getting current processed files
         with open(self.processed_files_log_path, 'r') as file:
             for line in file:
@@ -85,12 +87,18 @@ class FilesProcessor:
         for worker in workers:
             worker.terminate()  # Best practice to terminate even if join() finishes first
 
-        # print("GOT HEREEEEEEEEEEEEEEE", self.processed_files_in_last_batch)
         for filename in self.processed_files_in_last_batch:
             self.processed_files[filename] = 1
-            #Write the file to the log file
             with open(self.processed_files_log_path, 'a') as file:
                 file.write(filename + '\n')
+        
+        m4ml_models_df =  pd.DataFrame(list(self.processed_models))
+        
+        now = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")  # Get current date and time
+
+        filename = f"./../Load_Queue/{now}_Transformed_HF_Dataframe.tsv"  # Create new filename
+        
+        m4ml_models_df.to_csv(filename,sep="\t")
         
         end_time = time.perf_counter()-start_time
         
@@ -111,18 +119,19 @@ class FilesProcessor:
         try:
             logger.info(f"Processing file: {filename}")
             df = pd.read_csv(filename, sep="\t", usecols=lambda x: x != 0)
-            # print(df.head())
+            
             # Go through each row of the dataframe
             for index, row in df.iterrows():
-                m4ml_model_data = self.field_processor_HF.process_row(row)
-                
-            print(m4ml_model_data.head())
+                model_data = self.field_processor_HF.process_row(row)
+                self.processed_models.append(model_data)
+            
+            print(model_data.head())
                 
             self.processed_files_in_last_batch.append(filename)
             logger.info(f"Finished processing: {filename}")
             #When the file is being processed you need to keep in mind 
         except Exception as e:
-            print(f"Error processing file: {traceback.format_exc()}")
+            # print(f"Error processing file: {traceback.format_exc()}")
             logger.exception(f"Error processing file: {traceback.format_exc()}")
 
     def add_file(self, filename: str) -> None:
@@ -136,7 +145,7 @@ class FilesProcessor:
         # print(self.processed_files)
         if(filename not in self.processed_files):
             self.files_to_proc.append(filename)
-
+            
             if len(self.files_to_proc) == self.num_workers:
                 self.create_workers()
 
