@@ -81,7 +81,7 @@ class MyQueueEventHandler(PatternMatchingEventHandler):
             event (watchdog.events.FileSystemEvent): The file system event object.
         """
         logger.info(f"{event.src_path} has been added to the processing queue")
-        
+        print(f"{event.src_path} has been added to the processing queue")
         self.file_processor.add_file(event.src_path)
 
     def on_deleted(self, event) -> None:

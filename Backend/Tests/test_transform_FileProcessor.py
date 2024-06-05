@@ -16,7 +16,7 @@ STOP_SIGNAL = "Stop Read"
 
         
 # Modify this variable depending on the average time to process one file in the system.
-AVRG_TIME_TO_PROCESS_FILE = 0.35
+AVRG_TIME_TO_PROCESS_FILE = 0.15
 
 class TestFileProcessor:
     """
@@ -24,7 +24,7 @@ class TestFileProcessor:
     """
     
     @pytest.fixture
-    def setup_file_processor(self, request, tmp_path) -> Tuple[QueueObserver, FilesProcessor, str]:
+    def setup_file_processor(self,mocker, request, tmp_path) -> Tuple[QueueObserver, FilesProcessor, str]:
         """
         Setup a FilesProcessor instance with a QueueObserver and a temporary directory
         
@@ -41,6 +41,9 @@ class TestFileProcessor:
         test_dir = tmp_path / "test_dir"
         test_dir.mkdir()
         
+        load_queue_dir = test_dir / "load_queue"
+        load_queue_dir.mkdir()
+        
         #Create a "processed files" file on the test directory
         with open(test_dir / "Processed_files.txt", "w") as f:
             f.write("")
@@ -54,13 +57,16 @@ class TestFileProcessor:
             file_processor = FilesProcessor(num_workers=2, 
                                             next_batch_proc_time=1,
                                             processed_files_log_path=processed_files_log_path,
+                                            load_queue_path=load_queue_dir,
                                             field_processor_HF=mock_field_processor_hf)
         else:
             file_processor = FilesProcessor(num_workers=marker.args[0], 
                                             next_batch_proc_time=marker.args[1],
                                             processed_files_log_path=processed_files_log_path,
+                                            load_queue_path=load_queue_dir,
                                             field_processor_HF=mock_field_processor_hf) 
         
+        file_processor.processed_models = []
         # Create a QueueObserver instance
         observer = QueueObserver(watch_dir=test_dir, files_processor=file_processor)
         
@@ -90,6 +96,9 @@ class TestFileProcessor:
         test_dir = tmp_path / "test_dir"
         test_dir.mkdir()
         
+        load_queue_dir = test_dir / "load_queue"
+        load_queue_dir.mkdir()
+        
         #Dummy file that has already been processed
         file_already_processed_path = os.path.join(test_dir, "new_file_0.tsv")
         with open(file_already_processed_path, "w") as f:
@@ -108,12 +117,16 @@ class TestFileProcessor:
             file_processor = FilesProcessor(num_workers=2, 
                                             next_batch_proc_time=1,
                                             processed_files_log_path=processed_files_log_path,
+                                            load_queue_path=load_queue_dir,
                                             field_processor_HF=mock_field_processor_hf)
         else:
             file_processor = FilesProcessor(num_workers=marker.args[0], 
                                             next_batch_proc_time=marker.args[1],
                                             processed_files_log_path=processed_files_log_path,
+                                            load_queue_path=load_queue_dir,
                                             field_processor_HF=mock_field_processor_hf)
+        
+        file_processor.processed_models = []
         
         # Create a QueueObserver instance
         observer = QueueObserver(watch_dir=test_dir, files_processor=file_processor)

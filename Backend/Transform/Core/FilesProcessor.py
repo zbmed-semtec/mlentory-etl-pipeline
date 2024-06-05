@@ -33,6 +33,7 @@ class FilesProcessor:
     def __init__(self, num_workers: int, 
                  next_batch_proc_time: int,
                  processed_files_log_path: str,
+                 load_queue_path: str,
                  field_processor_HF: FieldProcessorHF):
         """
         Initializes a new FilesProcessor instance.
@@ -51,6 +52,7 @@ class FilesProcessor:
         self.processed_files_in_last_batch: List = manager.list()
         self.processed_models: List = manager.list()
         self.field_processor_HF: FieldProcessorHF = field_processor_HF
+        self.load_queue_path: str = load_queue_path
         #Getting current processed files
         with open(self.processed_files_log_path, 'r') as file:
             for line in file:
@@ -96,7 +98,7 @@ class FilesProcessor:
         
         now = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")  # Get current date and time
 
-        filename = f"./../Load_Queue/{now}_Transformed_HF_Dataframe.tsv"  # Create new filename
+        filename = f"{self.load_queue_path}/{now}_Transformed_HF_Dataframe.tsv"  # Create new filename
         
         m4ml_models_df.to_csv(filename,sep="\t")
         
@@ -118,8 +120,9 @@ class FilesProcessor:
         """
         try:
             logger.info(f"Processing file: {filename}")
+            # print(f"Processing file: {filename}")
             df = pd.read_csv(filename, sep="\t", usecols=lambda x: x != 0)
-            
+
             # Go through each row of the dataframe
             for index, row in df.iterrows():
                 model_data = self.field_processor_HF.process_row(row)
@@ -131,7 +134,7 @@ class FilesProcessor:
             logger.info(f"Finished processing: {filename}")
             #When the file is being processed you need to keep in mind 
         except Exception as e:
-            # print(f"Error processing file: {traceback.format_exc()}")
+            print(f"Error processing file: {traceback.format_exc()}")
             logger.exception(f"Error processing file: {traceback.format_exc()}")
 
     def add_file(self, filename: str) -> None:
@@ -141,7 +144,7 @@ class FilesProcessor:
         Args:
             filename (str): The name of the file to be added.
         """
-        # print(filename)
+        # print("Are we good? ",filename)
         # print(self.processed_files)
         if(filename not in self.processed_files):
             self.files_to_proc.append(filename)
@@ -156,7 +159,7 @@ class FilesProcessor:
         Also triggers processing if the timer reaches zero or there are no jobs left.
         """
         self.curr_waiting_time -= 1
-
+        print(self.curr_waiting_time)
         if (len(self.files_to_proc) == 0) or (self.curr_waiting_time == 0):
             self.curr_waiting_time = self.next_batch_proc_time  # Reset timer
             if self.files_to_proc:
