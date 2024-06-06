@@ -9,8 +9,10 @@ import os
 
 if("app_test" in os.getcwd()):
     from Transform.Core.FieldProcessorHF import FieldProcessorHF
+    from Transform.Core.GraphCreator import GraphCreator
 else:
     from Core.FieldProcessorHF import FieldProcessorHF
+    from Core.GraphCreator import GraphCreator
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
