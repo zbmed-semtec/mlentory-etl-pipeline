@@ -78,9 +78,9 @@ class FieldProcessorHF:
         elif property_name == 'fair4ml:fineTunedFrom':
             processed_value = self.find_value_in_HF(info_HF, "q_id_8")
         elif property_name == 'fair4ml:hasCO2eEmissions':
-            processed_value = self.add_default_extraction_info(data="Not extracted",
+            processed_value = [self.add_default_extraction_info(data="Not extracted",
                                                                extraction_method="None",
-                                                               confidence=1.0)
+                                                               confidence=1.0)]
         elif property_name == 'fair4ml:intendedUse':
              processed_value = self.find_value_in_HF(info_HF, "q_id_20")
         elif property_name == 'fair4ml:mlTask':
@@ -174,7 +174,7 @@ class FieldProcessorHF:
         
         q17_values = self.find_value_in_HF(info_HF,"q_id_17")
         
-        values = [q17_values]
+        values = [q17_values[0]]
         
         values.append(self.add_default_extraction_info(data="Python",extraction_method="Added in transform stage",confidence=1.0))
         
@@ -228,6 +228,6 @@ class FieldProcessorHF:
         return processed_value
     
     def add_default_extraction_info(self,data:str,extraction_method:str,confidence:float) -> Dict:
-        return str({"data":data,
+        return {"data":data,
                     "extraction_method":extraction_method,
-                    "confidence":confidence})
+                    "confidence":confidence}
