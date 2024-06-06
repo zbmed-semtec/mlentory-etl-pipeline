@@ -29,14 +29,14 @@ jobs:
       - run:
           name: Check docker-compose version 
           command: docker-compose --version
-          working_directory: ./Backend
+          working_directory: ./code
       - run:
           name: Build the container architecture
           command: docker-compose --profile test build
-          working_directory: ./Backend
+          working_directory: ./code
       - run:
           name: Run the container architecture
-          working_directory: ./Backend
+          working_directory: ./code
           command: sh Tests/validate_tests.sh
       # - docker-compose logs -f
 
