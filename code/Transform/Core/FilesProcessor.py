@@ -36,7 +36,8 @@ class FilesProcessor:
                  next_batch_proc_time: int,
                  processed_files_log_path: str,
                  load_queue_path: str,
-                 field_processor_HF: FieldProcessorHF):
+                 field_processor_HF: FieldProcessorHF,
+                 graph_creator: GraphCreator):
         """
         Initializes a new FilesProcessor instance.
 
@@ -55,6 +56,7 @@ class FilesProcessor:
         self.processed_models: List = manager.list()
         self.field_processor_HF: FieldProcessorHF = field_processor_HF
         self.load_queue_path: str = load_queue_path
+        self.graph_creator: GraphCreator = graph_creator
         #Getting current processed files
         with open(self.processed_files_log_path, 'r') as file:
             for line in file:
@@ -161,7 +163,7 @@ class FilesProcessor:
         Also triggers processing if the timer reaches zero or there are no jobs left.
         """
         self.curr_waiting_time -= 1
-        print(self.curr_waiting_time)
+        # print(self.curr_waiting_time)
         if (len(self.files_to_proc) == 0) or (self.curr_waiting_time == 0):
             self.curr_waiting_time = self.next_batch_proc_time  # Reset timer
             if self.files_to_proc:

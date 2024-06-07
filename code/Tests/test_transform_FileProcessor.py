@@ -10,6 +10,7 @@ sys.path.append('.')
 from Transform.Core.FilesProcessor import FilesProcessor
 from Transform.Core.QueueObserver import QueueObserver, MyQueueEventHandler
 from Transform.Core.FieldProcessorHF import FieldProcessorHF
+from Transform.Core.GraphCreator import GraphCreator
 
 
 STOP_SIGNAL = "Stop Read"
