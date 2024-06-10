@@ -31,9 +31,9 @@ class TestGraphCreator:
     def test_basic_conversion(self, setup_graph_creator: GraphCreator):
         graph_creator = setup_graph_creator
         graph_creator.create_graph()
-        serialized_graph = graph_creator.graph.serialize(format="ttl")
-        # Print the serialized TTL data
-        print("\n This is the KG ",serialized_graph.decode("utf-8"))
+        # serialized_graph = graph_creator.graph.serialize(format="ttl")
+        # # Print the serialized TTL data
+        # print("\n This is the KG ",serialized_graph.decode("utf-8"))
         
         
     

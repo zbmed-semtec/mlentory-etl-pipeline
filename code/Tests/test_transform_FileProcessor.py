@@ -53,19 +53,22 @@ class TestFileProcessor:
         
         # fields_processor_HF = FieldProcessorHF(path_to_config_data="./Config_Data")
         mock_field_processor_hf = Mock(spec=FieldProcessorHF)
+        mock_graph_creator = Mock(spec=GraphCreator)
         
         if marker is None:
             file_processor = FilesProcessor(num_workers=2, 
                                             next_batch_proc_time=1,
                                             processed_files_log_path=processed_files_log_path,
                                             load_queue_path=load_queue_dir,
-                                            field_processor_HF=mock_field_processor_hf)
+                                            field_processor_HF=mock_field_processor_hf,
+                                            graph_creator=mock_graph_creator)
         else:
             file_processor = FilesProcessor(num_workers=marker.args[0], 
                                             next_batch_proc_time=marker.args[1],
                                             processed_files_log_path=processed_files_log_path,
                                             load_queue_path=load_queue_dir,
-                                            field_processor_HF=mock_field_processor_hf) 
+                                            field_processor_HF=mock_field_processor_hf,
+                                            graph_creator=mock_graph_creator) 
         
         file_processor.processed_models = []
         # Create a QueueObserver instance
@@ -113,19 +116,22 @@ class TestFileProcessor:
         processed_files_log_path = test_dir / "Processed_files.txt"
         
         mock_field_processor_hf = Mock(spec=FieldProcessorHF)
+        mock_graph_creator = Mock(spec=GraphCreator)
         
         if marker is None:
             file_processor = FilesProcessor(num_workers=2, 
                                             next_batch_proc_time=1,
                                             processed_files_log_path=processed_files_log_path,
                                             load_queue_path=load_queue_dir,
-                                            field_processor_HF=mock_field_processor_hf)
+                                            field_processor_HF=mock_field_processor_hf,
+                                            graph_creator=mock_graph_creator)
         else:
             file_processor = FilesProcessor(num_workers=marker.args[0], 
                                             next_batch_proc_time=marker.args[1],
                                             processed_files_log_path=processed_files_log_path,
                                             load_queue_path=load_queue_dir,
-                                            field_processor_HF=mock_field_processor_hf)
+                                            field_processor_HF=mock_field_processor_hf,
+                                            graph_creator=mock_graph_creator)
         
         file_processor.processed_models = []
         
