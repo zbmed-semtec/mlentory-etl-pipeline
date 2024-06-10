@@ -5,11 +5,12 @@
         "pytest"
     ],
     "circleci.persistedProjectSelection": [
-        "circleci/4KKqYGJto5paz4jMn8Pj6L/3aFYT1RGGfVMB6T7GeLEKA"
+        "circleci/EsAWGjezQiG4eYxgSY9rbQ/NR6Q7115GE98DGDj4rb12t"
     ],
     "python.testing.pytestArgs": [
         "Backend"
     ],
     "python.testing.unittestEnabled": false,
-    "python.testing.pytestEnabled": true
+    "python.testing.pytestEnabled": true,
+    "circleci.filters.branchFilter": "allBranches"
 }
