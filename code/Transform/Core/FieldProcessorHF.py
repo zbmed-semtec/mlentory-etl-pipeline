@@ -43,7 +43,7 @@ class FieldProcessorHF:
             #Get the property source from the 
             property_source = row_M4ML['Source']
             #Get the column type in the M4ML_schema
-            property_name = row_M4ML['Property']
+            property_name = col_names[index]
                 
             new_property = self.process_property(property_description_M4ML = row_M4ML, info_HF = row)
             df_M4ML[property_name] = new_property
@@ -154,6 +154,7 @@ class FieldProcessorHF:
         # elif property_name == 'keywords':
         #     processed_value = process_defined_term_or_text_or_url(info_HF[property_source])
         elif property_name == 'license':
+            print("Getting here")
             processed_value = self.find_value_in_HF(info_HF, "q_id_15")
         elif property_name == 'maintainer':
             processed_value = self.find_value_in_HF(info_HF, "q_id_1")
