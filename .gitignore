@@ -1,8 +1,8 @@
 Playground/HF_API/Downloaded_files/
 
-Backend/Transform_Queue/*.tsv
+code/Transform_Queue/*.tsv
 
-Backend/Load_Queue/*.tsv
+code/Load_Queue/*.tsv
 
 *.log
 
