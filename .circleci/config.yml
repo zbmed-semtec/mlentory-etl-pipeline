@@ -35,7 +35,7 @@ jobs:
           command: docker-compose --profile test build
           working_directory: ./code
       - run:
-          name: Run the container architecture
+          name: Run the project tests.
           working_directory: ./code
           command: sh Tests/validate_tests.sh
       # - docker-compose logs -f

@@ -2,6 +2,11 @@
 
 In this backend folder you will find the code that is use to build and run the MLentory data extraction pipeline.
 
+<img src="../docs/Readme_images/MLentory Backend TDD Diagrams-Main_component_interaction_Diagram.jpg"/>
+<p style=" text-align: center; font-size: 0.8em; color: #cccccc">MLentory Pipeline</p>
+
+
+
 ## Run the project
 
 We use a docker based tools to run the project.
@@ -106,6 +111,8 @@ If you don't have CUDA drivers installed to use your GPU for ML development you 
 https://developer.nvidia.com/cuda-downloads
 
 ### Run the project
+
+If you only want to check that everything runs you can execute the Test script that will build the whole architecture, you can execute *validate_tests.sh* script in the Test folder. Otherwise follow the instructions below:
 
 1. You need to build the images for the containers in the project, if you have a Nvidia gpu configured use the profile 'gpu' otherwise use the profile 'no_gpu':
 

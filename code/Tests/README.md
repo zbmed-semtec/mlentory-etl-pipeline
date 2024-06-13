@@ -2,6 +2,19 @@
 
 This folder contains all the files needed to test the whole backend of the ETL-pipeline.
 
+<img src="../../docs/Readme_images/MLentory Backend TDD Diagrams-Main_component_interaction_Diagram.jpg"/>
+<p style=" text-align: center; font-size: 0.8em; color: #cccccc">MLentory Pipeline</p>
+
+The order on which each component is executed in the normal program behavior is the following:
+
+- test_extract_HF_MetadataParser.py
+- test_transform_QueueObserver.py
+- test_transform_FileProcessor.py
+- test_transform_FieldProcessor.py
+- test_transform_GraphCreator.py
+
+So you can follow that order to understand the codebase.
+
 ## How to use it
 
 ### Using shell script
@@ -33,13 +46,21 @@ docker-compose --profile test up
 3. If you want to access any of the running containers:
 
 ```
-docker exec -it <container_name> /bin/bash
+docker ps #Check the containers that are running
+docker exec -it <test_container_name> /bin/bash
 ```
+
 4. To run the tests inside the container:
 
 ```
 pytest
 ```
 
-To learn more about how to run specific tests check the [pytest documentation](https://docs.pytest.org/en/6.2.x/usage.html).
+To learn more about how to run specific tests check the [pytest documentation](https://docs.pytest.org/en/6.2.x/usage.html). If for example you want to run just the tests for the class *test_transform_FieldProcessor.py* you can do the following:
+
+5. Run:
+```
+pytest Test/test_transform_FieldProcessor.py
+```
+
 
