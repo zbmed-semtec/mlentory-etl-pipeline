@@ -1,7 +1,7 @@
-from Core.QueueObserver import QueueObserver
-from Core.FilesProcessor import FilesProcessor
-from Core.FieldProcessorHF import FieldProcessorHF
-from Core.GraphCreator import GraphCreator
+from core.QueueObserver import QueueObserver
+from core.FilesProcessor import FilesProcessor
+from core.FieldProcessorHF import FieldProcessorHF
+from core.GraphCreator import GraphCreator
 import argparse
 import datetime
 import logging
@@ -11,8 +11,8 @@ import time
 def main():
   #Handling script arguments
   parser = argparse.ArgumentParser(description="Queue Observer Script")
-  parser.add_argument("--folder", "-f", type=str, required=False, default="./../Transform_Queue/",
-                      help="Path to the folder to observe (default: ./../Transform_Queue/)")
+  parser.add_argument("--folder", "-f", type=str, required=False, default="./../transform_queue/",
+                      help="Path to the folder to observe (default: ./../transform_queue/)")
   args = parser.parse_args()
 
   #Setting up logging system
@@ -25,12 +25,12 @@ def main():
   
   try:
     #Initializing the updater
-    fields_processor_HF = FieldProcessorHF(path_to_config_data="./../Config_Data")
+    fields_processor_HF = FieldProcessorHF(path_to_config_data="./../config_data")
     graph_creator = GraphCreator()
     files_processor = FilesProcessor(num_workers=4,
                                      next_batch_proc_time=30, 
                                      processed_files_log_path="./Processing_Logs/Processed_files.txt",
-                                     load_queue_path="./../Load_Queue",
+                                     load_queue_path="./../load_queue",
                                      field_processor_HF=fields_processor_HF,
                                      graph_creator=graph_creator
                                      )

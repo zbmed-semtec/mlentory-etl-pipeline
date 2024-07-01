@@ -1,4 +1,4 @@
-from Core.MetadataParser import MetadataParser
+from core.MetadataParser import MetadataParser
 from datasets import load_dataset
 from datetime import datetime
 import pandas as pd
@@ -47,7 +47,7 @@ if __name__ == "__main__":
 
     now = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")  # Get current date and time
 
-    filename = f"./../Transform_Queue/{now}_Parsed_HF_Dataframe.tsv"  # Create new filename
+    filename = f"./../transform_queue/{now}_Parsed_HF_Dataframe.tsv"  # Create new filename
 
     HF_df.to_csv(filename,sep="\t")
     print(HF_df.head())
