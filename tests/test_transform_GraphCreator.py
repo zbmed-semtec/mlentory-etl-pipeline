@@ -8,10 +8,10 @@ from typing import List, Tuple
 
 
 sys.path.append('.')
-from Transform.Core.GraphCreator import GraphCreator
-from Transform.Core.FilesProcessor import FilesProcessor
-from Transform.Core.QueueObserver import QueueObserver, MyQueueEventHandler
-from Transform.Core.FieldProcessorHF import FieldProcessorHF
+from transform.core.GraphCreator import GraphCreator
+from transform.core.FilesProcessor import FilesProcessor
+from transform.core.QueueObserver import QueueObserver, MyQueueEventHandler
+from transform.core.FieldProcessorHF import FieldProcessorHF
 
 class TestGraphCreator:
     """
@@ -20,7 +20,7 @@ class TestGraphCreator:
     
     @classmethod 
     def setup_class(self):
-        self.m4ml_example_dataframe = pd.read_csv("./Tests/Test_files/hf_transformed_example_file.tsv", sep="\t", usecols=lambda x: x != "Unnamed: 0")
+        self.m4ml_example_dataframe = pd.read_csv("./tests/Test_files/hf_transformed_example_file.tsv", sep="\t", usecols=lambda x: x != "Unnamed: 0")
     
     @pytest.fixture
     def setup_graph_creator(self) -> GraphCreator:
