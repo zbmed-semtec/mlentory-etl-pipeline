@@ -10,7 +10,7 @@ services:
     # Define volumes to mount extractor scripts or dependencies
     volumes:
       - ./extractors/hf_extractor:/app
-      - ./transform_queue:/transform_queue
+      - ../data/transform_queue:/transform_queue
       - ./config_data:/config_data
     deploy:
       resources:
@@ -35,16 +35,16 @@ services:
     # Define volumes to mount extractor scripts or dependencies
     volumes:
       - ./extractors/hf_extractor:/app
-      - ./transform_queue:/transform_queue
+      - ../data/transform_queue:/transform_queue
       - ./config_data:/config_data
     dns:
       - 1.1.1.1
     # depends_on:
     #   - mysql
     # Uncomment this line to test the script
-    command: ["python3", "ExtractFromDataset.py"]
+    # command: ["python3", "main.py"]
     # Uncomment this line to develop on the container
-    # command: ["tail", "-f", "/dev/null"]
+    command: ["tail", "-f", "/dev/null"]
 
   transform:
     profiles:
@@ -56,8 +56,8 @@ services:
     # Define volumes to mount extractor scripts or dependencies
     volumes:
       - ./transform:/app
-      - ./transform_queue:/transform_queue
-      - ./load_queue:/load_queue
+      - ../data/transform_queue:/transform_queue
+      - ../data/load_queue:/load_queue
       - ./config_data:/config_data
     dns:
       - 1.1.1.1
