@@ -8,9 +8,9 @@ import sys
 # Here we ask if the container is being executed in the app_test dir
 # In case it is we need to import files differently for the testing environment
 if("app_test" in os.getcwd()):
-    from Transform.Core.FilesProcessor import FilesProcessor
+    from transform.core.FilesProcessor import FilesProcessor
 else:
-    from Core.FilesProcessor import FilesProcessor
+    from core.FilesProcessor import FilesProcessor
 
 import logging
 logger = logging.getLogger(__name__)

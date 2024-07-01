@@ -7,10 +7,10 @@ from unittest.mock import Mock
 
 
 sys.path.append('.')
-from Transform.Core.FilesProcessor import FilesProcessor
-from Transform.Core.QueueObserver import QueueObserver, MyQueueEventHandler
-from Transform.Core.FieldProcessorHF import FieldProcessorHF
-from Transform.Core.GraphCreator import GraphCreator
+from transform.core.FilesProcessor import FilesProcessor
+from transform.core.QueueObserver import QueueObserver, MyQueueEventHandler
+from transform.core.FieldProcessorHF import FieldProcessorHF
+from transform.core.GraphCreator import GraphCreator
 
 
 STOP_SIGNAL = "Stop Read"

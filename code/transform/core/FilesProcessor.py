@@ -8,11 +8,11 @@ import pandas as pd
 import os
 
 if("app_test" in os.getcwd()):
-    from Transform.Core.FieldProcessorHF import FieldProcessorHF
-    from Transform.Core.GraphCreator import GraphCreator
+    from transform.core.FieldProcessorHF import FieldProcessorHF
+    from transform.core.GraphCreator import GraphCreator
 else:
-    from Core.FieldProcessorHF import FieldProcessorHF
-    from Core.GraphCreator import GraphCreator
+    from core.FieldProcessorHF import FieldProcessorHF
+    from core.GraphCreator import GraphCreator
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
