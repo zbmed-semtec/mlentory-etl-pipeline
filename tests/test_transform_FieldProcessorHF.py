@@ -8,9 +8,9 @@ from typing import List, Tuple
 
 
 sys.path.append('.')
-from Transform.Core.FilesProcessor import FilesProcessor
-from Transform.Core.QueueObserver import QueueObserver, MyQueueEventHandler
-from Transform.Core.FieldProcessorHF import FieldProcessorHF
+from transform.core.FilesProcessor import FilesProcessor
+from transform.core.QueueObserver import QueueObserver, MyQueueEventHandler
+from transform.core.FieldProcessorHF import FieldProcessorHF
 
 class TestFieldProcessorHF:
     """
@@ -19,11 +19,11 @@ class TestFieldProcessorHF:
     
     @classmethod 
     def setup_class(self):
-        self.hf_example_file = pd.read_csv("./Tests/Test_files/hf_extracted_example_file.tsv", sep="\t", usecols=lambda x: x != "Unnamed: 0")
+        self.hf_example_file = pd.read_csv("./tests/Test_files/hf_extracted_example_file.tsv", sep="\t", usecols=lambda x: x != "Unnamed: 0")
         
     @pytest.fixture
     def setup_field_processor(self) -> FieldProcessorHF:
-        fields_processor_HF = FieldProcessorHF(path_to_config_data="./Config_Data")
+        fields_processor_HF = FieldProcessorHF(path_to_config_data="./config_data")
         return fields_processor_HF
     
     def test_conversion(self, caplog, setup_field_processor: FieldProcessorHF,  logger) -> None:

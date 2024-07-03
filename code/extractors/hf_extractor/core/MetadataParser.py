@@ -8,7 +8,7 @@ import math
 
 class MetadataParser:
 
-    def __init__(self, qa_model: str, path_to_config_data: str = "./../Config_Data") -> None:
+    def __init__(self, qa_model: str, path_to_config_data: str = "./../config_data") -> None:
         # Check for GPU availability
         try:
             import torch  # Import torch to check for cuda availability

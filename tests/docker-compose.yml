@@ -1,0 +1,79 @@
+version: "3.8" 
+
+services:
+  test:
+    profiles:
+      - test
+    build: 
+      context: .
+      dockerfile: ./Dockerfile  # Path to tests Dockerfile
+    # Define volumes to mount extractor scripts or dependencies
+    volumes:
+      - .:/app_test/tests
+      - ../code/transform:/app_test/transform
+      - ../code/extractors:/app_test/extractors
+      - ../data/transform_queue:/app_test/transform_queue
+      - ../data/load_queue:/app_test/load_queue
+      - ../code/config_data:/app_test/config_data
+    dns:
+      - 1.1.1.1
+
+    # Uncomment this line to test the script
+    command: ["tail", "-f", "/dev/null"]
+
+
+  ci_test:
+    profiles:
+      - ci_test
+    build: 
+      context: .
+      dockerfile: ./Dockerfile  # Path to test Dockerfile
+    # Define volumes to mount extractor scripts or dependencies
+    volumes:
+      - .:/app_test/tests
+      - ../code/transform:/app_test/transform
+      - ../code/extractors:/app_test/extractors
+      - ../data/transform_queue:/app_test/transform_queue
+      - ../data/load_queue:/app_test/load_queue
+      - ../code/config_data:/app_test/config_data
+    dns:
+      - 1.1.1.1
+    # command: ["./tests/validate_tests.sh"]
+    command: ["pytest"] 
+    # command: ["tail", "-f", "/dev/null"]
+
+
+  # mysql:
+  #   image: mysql:latest
+  #   environment:
+  #     MYSQL_ROOT_PASSWORD: password123
+  #     MYSQL_DATABASE: Extraction_Results
+  #     MYSQL_USER: user
+  #     MYSQL_PASSWORD: password123
+  #   ports:
+  #     - "3306:3306"
+  # transformer service
+  # transformer:
+  #   build: ./transformer  # Path to your transformer Dockerfile
+  #   # Define volumes to mount transformation logic
+  #   volumes:
+  #     - ./transformer:/app/transformer  # Example volume mapping for transformation code
+  #   depends_on:
+  #     - extractor  # Wait for extractor to finish before starting transformer
+
+  # Loader service
+  # loader:
+  #   build: ./loader  # Path to your loader Dockerfile
+  #   # Optional: Define volumes for output data or database connection details
+  #   volumes:
+  #     - ./loader:/app/loader  # Example volume mapping for loader code
+  #   depends_on:
+  #     - transformer  # Wait for transformer to finish before starting loader
+
+# networks:
+#   my-macvlan-net:
+#     external: true
+#     name: my-macvlan-net
+#   host:
+#     external: true
+
