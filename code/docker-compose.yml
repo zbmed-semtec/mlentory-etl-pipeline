@@ -6,12 +6,12 @@ services:
     profiles: [gpu]
     build: 
       context: .
-      dockerfile: ./Extractors/HF_Extractor/Dockerfile.gpu  # Path to extractor Dockerfile
+      dockerfile: ./extractors/hf_extractor/Dockerfile.gpu  # Path to extractor Dockerfile
     # Define volumes to mount extractor scripts or dependencies
     volumes:
-      - ./Extractors/HF_Extractor:/app
-      - ./Transform_Queue:/Transform_Queue
-      - ./Config_Data:/Config_Data
+      - ./extractors/hf_extractor:/app
+      - ../data/transform_queue:/transform_queue
+      - ./config_data:/config_data
     deploy:
       resources:
         reservations:
@@ -31,20 +31,20 @@ services:
     profiles: [no_gpu]
     build: 
       context: .
-      dockerfile: ./Extractors/HF_Extractor/Dockerfile.no_gpu  # Path to extractor Dockerfile
+      dockerfile: ./extractors/hf_extractor/Dockerfile.no_gpu  # Path to extractor Dockerfile
     # Define volumes to mount extractor scripts or dependencies
     volumes:
-      - ./Extractors/HF_Extractor:/app
-      - ./Transform_Queue:/Transform_Queue
-      - ./Config_Data:/Config_Data
+      - ./extractors/hf_extractor:/app
+      - ../data/transform_queue:/transform_queue
+      - ./config_data:/config_data
     dns:
       - 1.1.1.1
     # depends_on:
     #   - mysql
     # Uncomment this line to test the script
-    command: ["python3", "ExtractFromDataset.py"]
+    # command: ["python3", "main.py"]
     # Uncomment this line to develop on the container
-    # command: ["tail", "-f", "/dev/null"]
+    command: ["tail", "-f", "/dev/null"]
 
   transform:
     profiles:
@@ -52,13 +52,13 @@ services:
       - no_gpu
     build: 
       context: .
-      dockerfile: ./Transform/Dockerfile  # Path to extractor Dockerfile
+      dockerfile: ./transform/Dockerfile  # Path to extractor Dockerfile
     # Define volumes to mount extractor scripts or dependencies
     volumes:
-      - ./Transform:/app
-      - ./Transform_Queue:/Transform_Queue
-      - ./Load_Queue:/Load_Queue
-      - ./Config_Data:/Config_Data
+      - ./transform:/app
+      - ../data/transform_queue:/transform_queue
+      - ../data/load_queue:/load_queue
+      - ./config_data:/config_data
     dns:
       - 1.1.1.1
 
@@ -66,48 +66,6 @@ services:
     command: ["tail", "-f", "/dev/null"]
     # Uncomment for production
     #command: ["python3", "ExtractFromDataset.py"]
-
-  test:
-    profiles:
-      - test
-    build: 
-      context: .
-      dockerfile: ./Tests/Dockerfile  # Path to extractor Dockerfile
-    # Define volumes to mount extractor scripts or dependencies
-    volumes:
-      - ./Tests:/app_test/Tests
-      - ./Transform:/app_test/Transform
-      - ./Extractors:/app_test/Extractors
-      - ./Transform_Queue:/app_test/Transform_Queue
-      - ./Load_Queue:/app_test/Load_Queue
-      - ./Config_Data:/app_test/Config_Data
-    dns:
-      - 1.1.1.1
-
-    # Uncomment this line to test the script
-    command: ["tail", "-f", "/dev/null"]
-
-
-  ci_test:
-    profiles:
-      - ci_test
-    build: 
-      context: .
-      dockerfile: ./Tests/Dockerfile  # Path to extractor Dockerfile
-    # Define volumes to mount extractor scripts or dependencies
-    volumes:
-      - ./Tests:/app_test/Tests
-      - ./Transform:/app_test/Transform
-      - ./Extractors:/app_test/Extractors
-      - ./Transform_Queue:/app_test/Transform_Queue
-      - ./Load_Queue:/app_test/Load_Queue
-      - ./Config_Data:/app_test/Config_Data
-    dns:
-      - 1.1.1.1
-    # command: ["./Tests/validate_tests.sh"]
-    command: ["pytest"] 
-    # command: ["tail", "-f", "/dev/null"]
-
 
   # mysql:
   #   image: mysql:latest
@@ -118,7 +76,7 @@ services:
   #     MYSQL_PASSWORD: password123
   #   ports:
   #     - "3306:3306"
-  # Transformer service
+  # transformer service
   # transformer:
   #   build: ./transformer  # Path to your transformer Dockerfile
   #   # Define volumes to mount transformation logic

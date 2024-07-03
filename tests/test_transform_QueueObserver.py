@@ -7,8 +7,8 @@ import logging
 
 print(os.getcwd())
 sys.path.append('.')
-from Transform.Core.QueueObserver import QueueObserver,MyQueueEventHandler
-from Transform.Core.FilesProcessor import FilesProcessor
+from transform.core.QueueObserver import QueueObserver,MyQueueEventHandler
+from transform.core.FilesProcessor import FilesProcessor
 
 from unittest.mock import Mock
 
@@ -26,7 +26,7 @@ class TestQueueObserver:
         mock_processor = Mock(FilesProcessor)
         
         # Mock MyEventHandler to inject mock_processor
-        mocker.patch('Transform.Core.QueueObserver.MyQueueEventHandler', return_value=MyQueueEventHandler(mock_processor))
+        mocker.patch('transform.core.QueueObserver.MyQueueEventHandler', return_value=MyQueueEventHandler(mock_processor))
 
         # Create a QueueObserver instance
         observer = QueueObserver(watch_dir=test_dir, files_processor=mock_processor)
@@ -76,7 +76,7 @@ class TestQueueObserver:
         mock_processor = Mock(FilesProcessor)
         
         # Mock MyEventHandler to inject mock_processor
-        mocker.patch('Transform.Core.QueueObserver.MyQueueEventHandler', return_value=MyQueueEventHandler(mock_processor))
+        mocker.patch('transform.core.QueueObserver.MyQueueEventHandler', return_value=MyQueueEventHandler(mock_processor))
         
         # Create a QueueObserver instance
         observer = QueueObserver(watch_dir=test_dir, files_processor = mock_processor)
