@@ -12,7 +12,7 @@ if __name__ == "__main__":
     parser = MetadataParser(qa_model="Intel/dynamic_tinybert")
 
     #Create new columns to answer each question in the dataframe
-    HF_df = HF_df.iloc[0:10] 
+    HF_df = HF_df.iloc[0:15] 
 
     new_columns = {}
 
@@ -47,7 +47,7 @@ if __name__ == "__main__":
 
     now = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")  # Get current date and time
 
-    filename = f"./../transform_queue/{now}_Parsed_HF_Dataframe.tsv"  # Create new filename
+    filename = f"./../transform_queue/{now}_Parsed_HF_Dataframe.json"  # Create new filename
 
-    HF_df.to_csv(filename,sep="\t")
+    HF_df.to_json(path_or_buf=filename,orient='records',indent=4)
     print(HF_df.head())

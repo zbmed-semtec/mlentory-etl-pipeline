@@ -20,7 +20,7 @@ class TestGraphCreator:
     
     @classmethod 
     def setup_class(self):
-        self.m4ml_example_dataframe = pd.read_csv("./tests/Test_files/hf_transformed_example_file.tsv", sep="\t", usecols=lambda x: x != "Unnamed: 0")
+        self.m4ml_example_dataframe = pd.read_json("./tests/Test_files/hf_transformed_fair4ml_example.json")
     
     @pytest.fixture
     def setup_graph_creator(self) -> GraphCreator:
@@ -31,6 +31,7 @@ class TestGraphCreator:
     def test_basic_conversion(self, setup_graph_creator: GraphCreator):
         graph_creator = setup_graph_creator
         graph_creator.create_graph()
+        print(graph_creator.graph.serialize(format="ttl"))
         # serialized_graph = graph_creator.graph.serialize(format="ttl")
         # # Print the serialized TTL data
         # print("\n This is the KG ",serialized_graph.decode("utf-8"))
