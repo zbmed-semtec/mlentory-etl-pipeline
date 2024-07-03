@@ -214,7 +214,7 @@ class TestFileProcessor:
         
 
     @pytest.mark.fixture_data(3,2)
-    def test_add_file_adds_files(self, setup_file_processor: Tuple[QueueObserver, FilesProcessor, str]) -> None:
+    def test_add_file_adds_tsv_files(self, setup_file_processor: Tuple[QueueObserver, FilesProcessor, str]) -> None:
         """
         Test that adding a file adds it to the files_to_proc list
         
@@ -235,6 +235,36 @@ class TestFileProcessor:
             f.write("Test content")
         # Simulate another file creation event
         file_path = os.path.join(test_dir, "new_file_2.tsv")
+        with open(file_path, "w") as f:
+            f.write("Test content")
+        # Wait for 0.1 seconds
+        time.sleep(0.1)
+        
+        # Assert that the files_to_proc list has 2 files
+        assert len(file_processor.files_to_proc) == 2
+    
+    @pytest.mark.fixture_data(3,2)
+    def test_add_file_adds_json_files(self, setup_file_processor: Tuple[QueueObserver, FilesProcessor, str]) -> None:
+        """
+        Test that adding a file adds it to the files_to_proc list
+        
+        
+        Args:
+            pytest.mark.fixture_data(num_workers,next_batch_proc_time): Is a decorator to send data to the pytest fixtures.
+                num_workers: The number of threads the file_processor will use.
+                next_batch_proc_time: Waiting period for next batch processing.
+            setup_file_processor: A tuple containing the QueueObserver, FilesProcessor, and test directory.
+        """
+        _, file_processor, test_dir = setup_file_processor
+        
+        # Wait for 0.1 seconds
+        time.sleep(0.1)
+        # Simulate file creation event
+        file_path = os.path.join(test_dir, "new_file.json")
+        with open(file_path, "w") as f:
+            f.write("Test content")
+        # Simulate another file creation event
+        file_path = os.path.join(test_dir, "new_file_2.json")
         with open(file_path, "w") as f:
             f.write("Test content")
         # Wait for 0.1 seconds
@@ -270,8 +300,24 @@ class TestFileProcessor:
         # Wait for 0.1 seconds
         time.sleep(0.1)
         
-        # Assert that the files_to_proc list has 2 files
+        # Assert that the files_to_proc list has 1 file
         assert len(file_processor.files_to_proc) == 1
+        
+        time.sleep(0.1)
+        # Simulate file creation event
+        file_path = os.path.join(test_dir, "new_file.json")
+        with open(file_path, "w") as f:
+            f.write("Test content")
+        
+        # Simulate another file creation event
+        file_path = os.path.join(test_dir, "new_file.json")
+        with open(file_path, "w") as f:
+            f.write("Test content")
+        # Wait for 0.1 seconds
+        time.sleep(0.1)
+        
+        # Assert that the files_to_proc list has 2 files
+        assert len(file_processor.files_to_proc) == 2
     
     
     @pytest.mark.fixture_data(2,2)
@@ -508,7 +554,6 @@ class TestFileProcessor:
 
 
     @pytest.mark.fixture_data(2,10)
-    # @pytest.mark.skip
     def test_no_workers_if_no_new_files(self, caplog, setup_file_processor: Tuple[QueueObserver, FilesProcessor, str],  logger) -> None:
         """
         Test that no workers are created if no new files are present
@@ -545,7 +590,6 @@ class TestFileProcessor:
         assert self.count_finished_batches(caplog) == 0
     
     @pytest.mark.fixture_data(2,10)
-    # @pytest.mark.skip
     def test_waiting_time_goes_down(self, caplog, setup_file_processor: Tuple[QueueObserver, FilesProcessor, str],  logger) -> None:
         """
         Test that the waiting time goes down

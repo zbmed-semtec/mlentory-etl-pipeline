@@ -65,7 +65,7 @@ class FilesProcessor:
         # print(self.processed_files)
         
 
-    def create_workers(self) -> None:
+    def process_batch(self) -> None:
         """
         Creates and starts worker processes to process the files in the queue.
 
@@ -102,9 +102,11 @@ class FilesProcessor:
         
         now = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")  # Get current date and time
 
-        filename = f"{self.load_queue_path}/{now}_Transformed_HF_Dataframe.tsv"  # Create new filename
+        filename_tsv = f"{self.load_queue_path}/{now}_Transformed_HF_fair4ml_schema_Dataframe.tsv"  # Create new filename
+        filename_json = f"{self.load_queue_path}/{now}_Transformed_HF_fair4ml_schema_Dataframe.json"  # Create new filename
         
-        m4ml_models_df.to_csv(filename,sep="\t")
+        m4ml_models_df.to_csv(filename_tsv,sep="\t")
+        m4ml_models_df.to_json(filename_json,orient="records",indent=4)
         
         end_time = time.perf_counter()-start_time
         
@@ -125,7 +127,12 @@ class FilesProcessor:
         try:
             logger.info(f"Processing file: {filename}")
             # print(f"Processing file: {filename}")
-            df = pd.read_csv(filename, sep="\t", usecols=lambda x: x != 0)
+            if filename.endswith(".tsv"):
+                df = pd.read_csv(filename, sep="\t", usecols=lambda x: x != 0)
+            elif filename.endswith(".json"):
+                df = pd.read_json(filename)
+            else:
+                raise ValueError("Unsupported file type")
 
             # Go through each row of the dataframe
             for index, row in df.iterrows():
@@ -154,7 +161,7 @@ class FilesProcessor:
             self.files_to_proc.append(filename)
             
             if len(self.files_to_proc) == self.num_workers:
-                self.create_workers()
+                self.process_batch()
 
     def update_time_to_process(self) -> None:
         """
@@ -167,4 +174,4 @@ class FilesProcessor:
         if (len(self.files_to_proc) == 0) or (self.curr_waiting_time == 0):
             self.curr_waiting_time = self.next_batch_proc_time  # Reset timer
             if self.files_to_proc:
-                self.create_workers()
+                self.process_batch()

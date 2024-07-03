@@ -70,7 +70,7 @@ class MyQueueEventHandler(PatternMatchingEventHandler):
         Args:
             files_processor (FilesProcessor): An instance of the FilesProcessor class.
         """
-        super().__init__(patterns=["*.tsv"])
+        super().__init__(patterns=["*.tsv", "*.json"])
         self.file_processor = files_processor
 
     def on_created(self, event) -> None:
