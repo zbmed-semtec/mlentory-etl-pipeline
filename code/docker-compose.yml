@@ -11,6 +11,7 @@ services:
     volumes:
       - ./extractors/hf_extractor:/app
       - ../data/transform_queue:/transform_queue
+      - ../data/datasets:/datasets
       - ./config_data:/config_data
     deploy:
       resources:
@@ -36,6 +37,7 @@ services:
     volumes:
       - ./extractors/hf_extractor:/app
       - ../data/transform_queue:/transform_queue
+      - ../data/datasets:/datasets
       - ./config_data:/config_data
     dns:
       - 1.1.1.1
@@ -58,6 +60,7 @@ services:
       - ./transform:/app
       - ../data/transform_queue:/transform_queue
       - ../data/load_queue:/load_queue
+      - ../data/datasets:/datasets
       - ./config_data:/config_data
     dns:
       - 1.1.1.1
