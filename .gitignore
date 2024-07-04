@@ -6,6 +6,7 @@ data/transform_queue/*.json
 data/load_queue/*.tsv
 data/load_queue/*.json
 
+data/datasets/*.json
 *.log
 
 # Byte-compiled / optimized / DLL files

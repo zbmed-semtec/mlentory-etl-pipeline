@@ -63,7 +63,7 @@ class TestMetadataParser:
         info_dict = parser.add_default_extraction_info(data, extraction_method, confidence)
         
         # Assert the output
-        assert info_dict == {"data": data, "extraction_method": extraction_method, "confidence": confidence}
+        assert info_dict == {"data": data, "extraction_method": extraction_method, "confidence": confidence, "extraction_time":info_dict["extraction_time"]}
 
     def test_parse_known_fields_HF(self, parser: MetadataParser) -> None:
         """
