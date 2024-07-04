@@ -6,13 +6,14 @@ import os
 
 if __name__ == "__main__":
     dataset_models = load_dataset("librarian-bots/model_cards_with_metadata")['train']
-    HF_df = dataset_models.to_pandas()
+    original_HF_df = dataset_models.to_pandas()
+    
 
     #Creating the parser object that will perform the transformations on the raw data 
     parser = MetadataParser(qa_model="Intel/dynamic_tinybert")
 
     #Create new columns to answer each question in the dataframe
-    HF_df = HF_df.iloc[0:15] 
+    HF_df = original_HF_df.iloc[0:15] 
 
     new_columns = {}
 
@@ -47,7 +48,9 @@ if __name__ == "__main__":
 
     now = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")  # Get current date and time
 
-    filename = f"./../transform_queue/{now}_Parsed_HF_Dataframe.json"  # Create new filename
+    modified_hf_filename = f"./../transform_queue/{now}_Parsed_HF_Dataframe.json"
+    original_hf_filename = f"./../datasets/{now}_Parsed_HF_Dataframe.json"
 
-    HF_df.to_json(path_or_buf=filename,orient='records',indent=4)
+    original_HF_df.to_csv(original_hf_filename,sep="\t")
+    HF_df.to_json(path_or_buf=modified_hf_filename,orient='records',indent=4)
     print(HF_df.head())
