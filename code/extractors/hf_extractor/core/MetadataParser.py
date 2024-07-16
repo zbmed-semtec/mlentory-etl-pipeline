@@ -51,7 +51,8 @@ class MetadataParser:
         answer = self.qa_pipeline({"question": question, "context": context})
         return [{"data":answer['answer']+'',
                     "extraction_method":self.qa_model,
-                    "confidence":answer['score']}]
+                    "confidence":answer['score'],
+                    "extraction_time": datetime.now().strftime("%Y-%m-%d_%H-%M-%S")}]
     
     def add_default_extraction_info(self,data:str,extraction_method:str,confidence:float) -> Dict:
         return {"data":data,

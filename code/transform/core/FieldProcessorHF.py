@@ -4,6 +4,7 @@ import time
 import pandas as pd
 import json
 import ast
+from datetime import datetime
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -231,4 +232,5 @@ class FieldProcessorHF:
     def add_default_extraction_info(self,data:str,extraction_method:str,confidence:float) -> Dict:
         return {"data":data,
                     "extraction_method":extraction_method,
-                    "confidence":confidence}
+                    "confidence":confidence,
+                    "extraction_time": datetime.now().strftime("%Y-%m-%d_%H-%M-%S")}
