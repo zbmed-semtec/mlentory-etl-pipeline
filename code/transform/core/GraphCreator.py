@@ -25,21 +25,41 @@ class GraphCreator:
         for index, row in self.df.iterrows():
             #For each row we first create an m4ml:MLModel instance
             model_uri = URIRef(f"mlentory:hugging_face:{str(row['schema.org:name'][0]['data'])}")
-            self.create_triplet(subject=model_uri, predicate=RDF.type, object=URIRef("fair4ml:MLModel"))
-            self.create_triplet(subject=model_uri, predicate="fair4ml:evaluatedOn", object=row['fair4ml:evaluatedOn'][0]["data"], extraction_info=row['fair4ml:evaluatedOn'][0])
-            self.create_triplet(subject=model_uri, predicate="fair4ml:mlTask", object=row['fair4ml:mlTask'][0]["data"],extraction_info=row['fair4ml:evaluatedOn'][0])
-            self.create_triplet(subject=model_uri, predicate="fair4ml:sharedBy", object=row['fair4ml:sharedBy'][0]["data"],extraction_info=row['fair4ml:evaluatedOn'][0])
-            self.create_triplet(subject=model_uri, predicate="fair4ml:testedOn", object=row['fair4ml:testedOn'][0]["data"], extraction_info=row['fair4ml:testedOn'][0])
-            self.create_triplet(subject=model_uri, predicate="codemeta:referencePublication", object=row['codemeta:referencePublication'][0]["data"], extraction_info=row['codemeta:referencePublication'][0])
+            
+            self.create_triplet(subject=model_uri, 
+                                predicate=RDF.type, 
+                                object=URIRef("fair4ml:MLModel"))
+            
+            #Go through all the columns and add the triplets
+            for column in self.df.columns:
+                if(column == 'schema.org:name'):
+                    continue
+                #Handle the cases where a new entity has to be created
+                if(column in ["fair4ml:mlTask", "fair4ml:sharedBy", "fair4ml:testedOn", "fair4ml:trainedOn","codemeta:referencePublication"]):
+                    # Go through the different sources that can create information about the entity
+                    for source in row[column]:
+                        if source["data"] == None:
+                            self.create_triplet(subject=model_uri,
+                                                        predicate= rdflib.URIRef(column),
+                                                        object=Literal("None"),
+                                                        extraction_info=source)
+                        elif type(source["data"]) == str:
+                            data = source["data"]
+                            self.create_triplet(subject=model_uri,
+                                                        predicate=rdflib.URIRef(column),
+                                                        object=URIRef(f"mlentory:hugging_face:{data.replace(' ','_')}"),
+                                                        extraction_info=source)
+                        elif type(source["data"]) == list:
+                            for entity in source["data"]:
+                                self.create_triplet(subject=model_uri,
+                                                            predicate=rdflib.URIRef(column),
+                                                            object=URIRef(f"mlentory:hugging_face:{entity.replace(' ','_')}"),
+                                                            extraction_info=source)
             
             
             
-
     def create_triplet(self, subject, predicate, object, extraction_info=None):
-        rdf_subject = rdflib.URIRef(subject)
-        rdf_predicate = rdflib.URIRef(predicate)
-        rdf_object = rdflib.Literal(object)
-        self.graph.add((rdf_subject, rdf_predicate, rdf_object))
+        self.graph.add((subject, predicate, object))
         
         if(extraction_info != None):
             # Create a new blank node to represent the extraction activity
@@ -48,10 +68,15 @@ class GraphCreator:
             self.graph.add((extraction_activity, RDF.type, URIRef('prov:Activity')))
             # self.graph.add((extraction_activity, URIRef('prov:endedAtTime'), Literal(extraction_info['ended_at'])))
             print("HERREEEEE ",extraction_info)
+            
             extraction_method = extraction_info["extraction_method"]
             self.graph.add((extraction_activity, URIRef('prov:wasAssociatedWith'), URIRef(f"mlentory:extraction_methods:{extraction_method}")))
             self.graph.add((extraction_activity, URIRef('mlentory:extraction_confidence'), Literal(extraction_info['confidence'])))
-            self.graph.add((rdf_object, URIRef('prov:wasGeneratedBy'), extraction_activity))
+            self.graph.add((extraction_activity, URIRef('prov:atTime'), Literal(extraction_info['extraction_time'])))
+            self.graph.add((extraction_activity, URIRef('prov:generated'), subject))
+            self.graph.add((extraction_activity, URIRef('prov:generated'), object))
+            self.graph.add((extraction_activity, URIRef('prov:generated'), predicate))
+
             
 
     
