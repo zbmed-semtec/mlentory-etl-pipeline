@@ -28,15 +28,12 @@ class TestGraphCreator:
         graph_creator.load_df(self.m4ml_example_dataframe)
         return graph_creator
     
-    def test_basic_conversion(self, setup_graph_creator: GraphCreator):
+    def test_basic_creation(self, setup_graph_creator: GraphCreator):
         graph_creator = setup_graph_creator
         graph_creator.create_graph()
-        # print(graph_creator.graph.serialize(format="ttl"))
-        #Save the graph in a file
         graph_creator.store_graph("tests/Test_files/test_graph.ttl")
-        # serialized_graph = graph_creator.graph.serialize(format="ttl")
-        # # Print the serialized TTL data
-        # print("\n This is the KG ",serialized_graph.decode("utf-8"))
+        #Check if the file exists
+        assert os.path.isfile("tests/Test_files/test_graph.ttl")
         
         
     
