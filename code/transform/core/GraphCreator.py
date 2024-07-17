@@ -1,6 +1,6 @@
 import rdflib
 from rdflib import Graph, URIRef, Literal, BNode
-from rdflib.namespace import RDF
+from rdflib.namespace import RDF, XSD, FOAF
 import uuid
 import json
 import pandas as pd
@@ -24,7 +24,7 @@ class GraphCreator:
         #Add default values from the text files
         for index, row in self.df.iterrows():
             #For each row we first create an m4ml:MLModel instance
-            model_uri = URIRef(f"mlentory:hugging_face:{str(row['schema.org:name'][0]['data'])}")
+            model_uri = URIRef(f"mlentory:/hugging_face/{str(row['schema.org:name'][0]['data'])}")
             
             self.create_triplet(subject=model_uri, 
                                 predicate=RDF.type, 
@@ -47,14 +47,22 @@ class GraphCreator:
                             data = source["data"]
                             self.create_triplet(subject=model_uri,
                                                         predicate=rdflib.URIRef(column),
-                                                        object=URIRef(f"mlentory:hugging_face:{data.replace(' ','_')}"),
+                                                        object=URIRef(f"mlentory:/hugging_face/{data.replace(' ','_')}"),
                                                         extraction_info=source)
                         elif type(source["data"]) == list:
                             for entity in source["data"]:
                                 self.create_triplet(subject=model_uri,
                                                             predicate=rdflib.URIRef(column),
-                                                            object=URIRef(f"mlentory:hugging_face:{entity.replace(' ','_')}"),
+                                                            object=URIRef(f"mlentory:/hugging_face/{entity.replace(' ','_')}"),
                                                             extraction_info=source)
+                if(column in ["dateCreated", "dateModified"]):
+                    self.create_triplet(subject=model_uri,
+                                        predicate=rdflib.URIRef(column),
+                                        object=Literal(row[column]["data"], datatype=XSD.date))
+                if(column in ["storageRequirements","name"]):
+                    self.create_triplet(subject=model_uri,
+                                        predicate=rdflib.URIRef(column),
+                                        object=Literal(row[column]["data"], datatype=XSD.string))
             
             
             
@@ -67,13 +75,12 @@ class GraphCreator:
             # Add triplets to describe the extraction activity
             self.graph.add((extraction_activity, RDF.type, URIRef('prov:Activity')))
             # self.graph.add((extraction_activity, URIRef('prov:endedAtTime'), Literal(extraction_info['ended_at'])))
-            print("HERREEEEE ",extraction_info)
             
             extraction_method = extraction_info["extraction_method"]
+            self.graph.add((subject, URIRef('prov:wasGeneratedBy'), extraction_activity))
             self.graph.add((extraction_activity, URIRef('prov:wasAssociatedWith'), URIRef(f"mlentory:extraction_methods:{extraction_method}")))
-            self.graph.add((extraction_activity, URIRef('mlentory:extraction_confidence'), Literal(extraction_info['confidence'])))
-            self.graph.add((extraction_activity, URIRef('prov:atTime'), Literal(extraction_info['extraction_time'])))
-            self.graph.add((extraction_activity, URIRef('prov:generated'), subject))
+            self.graph.add((extraction_activity, URIRef('mlentory:extraction_confidence'), Literal(extraction_info['confidence'], datatype=XSD.float)))
+            self.graph.add((extraction_activity, URIRef('prov:atTime'), Literal(extraction_info['extraction_time'], datatype=XSD.dateTime)))            
             self.graph.add((extraction_activity, URIRef('prov:generated'), object))
             self.graph.add((extraction_activity, URIRef('prov:generated'), predicate))
 
