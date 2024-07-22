@@ -70,15 +70,42 @@ services:
     # Uncomment for production
     #command: ["python3", "ExtractFromDataset.py"]
 
-  # mysql:
-  #   image: mysql:latest
-  #   environment:
-  #     MYSQL_ROOT_PASSWORD: password123
-  #     MYSQL_DATABASE: Extraction_Results
-  #     MYSQL_USER: user
-  #     MYSQL_PASSWORD: password123
-  #   ports:
-  #     - "3306:3306"
+  load:
+    profiles:
+      - gpu
+      - no_gpu
+    build: 
+      context: .
+      dockerfile: ./load/Dockerfile  # Path to extractor Dockerfile
+    # Define volumes to mount extractor scripts or dependencies
+    volumes:
+      - ./load:/app
+      - ../data/load_queue:/load_queue
+      - ./config_data:/config_data
+    dns:
+      - 1.1.1.1
+
+    # Uncomment this line to test the script
+    command: ["tail", "-f", "/dev/null"]
+  
+  mysql:
+    image: mysql:latest
+    profiles:
+      - gpu
+      - no_gpu
+    hostname: mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: password123
+      MYSQL_DATABASE: Extraction_Results
+      MYSQL_USER: user
+      MYSQL_PASSWORD: password123
+    ports:
+      - "3306:3306"
+    volumes:
+    - ./load/sql_files/init.sql:/docker-entrypoint-initdb.d/init.sql
+    - ../data/mysql_data:/var/lib/mysql
+    command: --init-file /docker-entrypoint-initdb.d/init.sql
+
   # transformer service
   # transformer:
   #   build: ./transformer  # Path to your transformer Dockerfile

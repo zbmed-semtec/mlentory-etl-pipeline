@@ -9,6 +9,8 @@ data/load_queue/*.json
 data/datasets/*.json
 *.log
 
+data/mysql_data
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

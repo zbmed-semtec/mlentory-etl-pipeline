@@ -1,5 +1,6 @@
 from multiprocessing import Process, Pool,set_start_method,get_context
 from typing import Callable, List, Dict
+from rdflib.graph import Graph
 import traceback
 import logging
 from datetime import datetime
@@ -104,9 +105,15 @@ class FilesProcessor:
 
         filename_tsv = f"{self.load_queue_path}/{now}_Transformed_HF_fair4ml_schema_Dataframe.tsv"  # Create new filename
         filename_json = f"{self.load_queue_path}/{now}_Transformed_HF_fair4ml_schema_Dataframe.json"  # Create new filename
+        filename_ttl = f"{self.load_queue_path}/{now}_Transformed_HF_fair4ml_schema_KG.ttl"  # Create new filename
         
         m4ml_models_df.to_csv(filename_tsv,sep="\t")
         m4ml_models_df.to_json(filename_json,orient="records",indent=4)
+        
+        self.graph_creator.load_df(m4ml_models_df)
+        self.graph_creator.create_graph()
+        self.graph_creator.store_graph(filename_ttl)
+        
         
         end_time = time.perf_counter()-start_time
         
@@ -155,8 +162,7 @@ class FilesProcessor:
         Args:
             filename (str): The name of the file to be added.
         """
-        # print("Are we good? ",filename)
-        # print(self.processed_files)
+        
         if(filename not in self.processed_files):
             self.files_to_proc.append(filename)
             
@@ -170,7 +176,6 @@ class FilesProcessor:
         Also triggers processing if the timer reaches zero or there are no jobs left.
         """
         self.curr_waiting_time -= 1
-        # print(self.curr_waiting_time)
         if (len(self.files_to_proc) == 0) or (self.curr_waiting_time == 0):
             self.curr_waiting_time = self.next_batch_proc_time  # Reset timer
             if self.files_to_proc:
