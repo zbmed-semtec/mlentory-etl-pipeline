@@ -10,7 +10,7 @@ class TestLoadProcessor:
 
     @pytest.fixture(scope="class")
     def load_processor(self):
-        return LoadProcessor(host='mysql', user='test_user', password='test_pass', database='test_db', port=33061)
+        return LoadProcessor(host='mysql', user='test_user', password='test_pass', database='test_db', port=3306)
 
     @pytest.fixture(scope="function")
     def setup_and_teardown_sql_db(self, load_processor):
