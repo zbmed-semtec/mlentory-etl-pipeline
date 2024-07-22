@@ -31,14 +31,14 @@ class LoadProcessor:
             database=self.database
         )
     
-    def load_graph_to_mysql(self, graph: Graph):
+    def load_graph_to_mysql(self, graph: Graph, table_name: str = "triples") -> None:
         if not self.connection:
             self.connect_to_mysql()
         
         cursor = self.connection.cursor()
         
         for subject, predicate, obj in graph:
-            query = "INSERT INTO triples (subject, predicate, object) VALUES (%s, %s, %s)"
+            query = f"INSERT INTO {table_name} (subject, predicate, object) VALUES (%s, %s, %s)"
             values = (str(subject), str(predicate), str(obj))
             cursor.execute(query, values)
         

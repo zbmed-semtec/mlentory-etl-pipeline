@@ -8,3 +8,4 @@ pytest
 pytest-mock
 demjson3
 rdflib
+mysql-connector-python

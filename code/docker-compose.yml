@@ -49,6 +49,9 @@ services:
     command: ["tail", "-f", "/dev/null"]
 
   transform:
+    depends_on:
+      - hf_extractor_with_gpu
+      - hf_extractor_with_no_gpu
     profiles:
       - gpu
       - no_gpu
@@ -70,7 +73,10 @@ services:
     # Uncomment for production
     #command: ["python3", "ExtractFromDataset.py"]
 
-  load:
+  load:    
+    depends_on:
+      - transform
+      - mysql
     profiles:
       - gpu
       - no_gpu
@@ -100,7 +106,8 @@ services:
       MYSQL_USER: user
       MYSQL_PASSWORD: password123
     ports:
-      - "3306:3306"
+      - "42333:3306"
+      - "33060:33060"
     volumes:
     - ./load/sql_files/init.sql:/docker-entrypoint-initdb.d/init.sql
     - ../data/mysql_data:/var/lib/mysql
