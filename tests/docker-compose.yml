@@ -45,7 +45,15 @@ services:
     dns:
       - 1.1.1.1
     # command: ["./tests/validate_tests.sh"]
-    command: ["pytest"] 
+    command: ["/bin/bash"]
+    # command:
+    #   - /bin/sh 
+    #   - -c
+    #   - |
+    #     ls
+    #     ./tests/wait-for-it.sh mysql:3306 --
+    #     pytest
+     
     # command: ["tail", "-f", "/dev/null"]
 
   mysql:
@@ -53,6 +61,7 @@ services:
       - ci_test
       - test
     image: mysql:latest
+    hostname: mysql
     environment:
       MYSQL_ROOT_PASSWORD: test_pass
       MYSQL_DATABASE: test_db
