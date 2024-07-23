@@ -8,6 +8,14 @@ RUN mkdir Transform_Queue
 RUN mkdir Load_Queue
 
 WORKDIR /app_test
+COPY ./wait-for-it.sh ./tests/wait-for-it.sh
+RUN chmod +x ./tests/wait-for-it.sh
+ENTRYPOINT ["/bin/bash","-c", "\
+    ./tests/wait-for-it.sh mysql:3306 -- && \
+    echo 'HELLOOOOOOOO' && \
+    pytest \
+"]
+# ENTRYPOINT []
 # RUN mkdir tests
 # COPY ./transform ./Transform
 # COPY ./Extractors ./Extractors
