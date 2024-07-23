@@ -49,9 +49,6 @@ services:
     command: ["tail", "-f", "/dev/null"]
 
   transform:
-    depends_on:
-      - hf_extractor_with_gpu
-      - hf_extractor_with_no_gpu
     profiles:
       - gpu
       - no_gpu
@@ -88,6 +85,7 @@ services:
       - ./load:/app
       - ../data/load_queue:/load_queue
       - ./config_data:/config_data
+      - /var/run/docker.sock:/var/run/docker.sock 
     dns:
       - 1.1.1.1
 
@@ -112,6 +110,29 @@ services:
     - ./load/sql_files/init.sql:/docker-entrypoint-initdb.d/init.sql
     - ../data/mysql_data:/var/lib/mysql
     command: --init-file /docker-entrypoint-initdb.d/init.sql
+
+  # anzograph:
+  #   image: cambridgesemantics/anzograph:latest
+  #   ports:
+  #     - "8085:8080"
+  #     - "8443:8443"
+  #   volumes:
+  #     - /DB/anzograph-data:/opt/anzograph-data
+
+  virtuoso:
+    image: openlink/virtuoso-opensource-7:latest
+    hostname: virtuoso
+    profiles:
+      - gpu
+      - no_gpu
+    ports:
+      - "1111:1111"
+      - "8890:8890"
+    environment:
+      DBA_PASSWORD: my_strong_password
+    volumes:
+      - ../data/load_queue:/opt/virtuoso-opensource/database/data
+      - ../data/load_queue:./opt/load_queue
 
   # transformer service
   # transformer:
