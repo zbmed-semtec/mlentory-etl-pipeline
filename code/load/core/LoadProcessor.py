@@ -1,3 +1,5 @@
+import os
+import shutil
 import mysql.connector
 from rdflib.graph import Graph
 import docker
@@ -33,12 +35,13 @@ class LoadProcessor:
             database=self.database
         )
     
-    def load_graph_to_virtuoso(self,container_name,ttl_file_path,virtuoso_user, virtuoso_password):
+    def load_graph_to_virtuoso(self,container_name,ttl_file_path,kg_files_directory,virtuoso_user, virtuoso_password):
         """
         Uploads a TTL file to a Virtuoso instance running in a Docker container.
 
         Args:
             ttl_file_path: Path to the TTL file on the host machine.
+            kg_files_directory: Directory where the TTL file will be located.
             container_name: Name of the Docker container.
             virtuoso_user: Virtuoso username.
             virtuoso_password: Virtuoso password.
@@ -46,13 +49,33 @@ class LoadProcessor:
 
         client = docker.from_env()
         container = client.containers.get(container_name)
+        new_ttl_file_path = f"{kg_files_directory}/{ttl_file_path.split('/')[-1]}"
 
-        # Copy TTL file to container
-        container.exec_run(f"mkdir -p /tmp/data")
-        container.put_archive(ttl_file_path, "/tmp/data")
+        shutil.move(ttl_file_path, new_ttl_file_path)
+        
 
         # Execute Virtuoso command to load data
-        command = f"isql -S localhost:1111 {virtuoso_user} {virtuoso_password} <<EOF\nLOAD_RDF_FILE('/tmp/data/{ttl_file_path.split('/')[-1]}', <graph_uri>);\nEOF"
+        # isql -S 1111 -U dba -P my_strong_password
+        # isql -S 1111 -U dba -P my_strong_password <<EOF LOAD_RDF_FILE('/opt/virtuoso-opensource/database/kg_files/2024-07-17_17-22-59_Transformed_HF_fair4ml_schema_KG copy.ttl', http://example.com/data);EOF"
+        # You have to add the folder to dir in virtuoso.ini
+        # /opt/virtuoso-opensource/database/kg_files
+        # ld_dir('/opt/virtuoso-opensource/database/kg_files','%.ttl','http://example.com/data');
+        # DB.DBA.rdf_loader_run ();
+        # All togethe
+        # isql -S 1111 -U dba -P my_strong_password <<EOF
+        # ld_dir('/opt/virtuoso-opensource/database/kg_files','.ttl','http://example.com/data');
+        # DB.DBA.rdf_loader_run();
+        # EOF
+        # command = f"""isql -S 1111 -U {virtuoso_user} -P {virtuoso_password} <<EOF
+        # ld_dir('/opt/virtuoso-opensource/database/kg_files','{ttl_file_path.split('/')[-1]}','http://example.com/data'); 
+        # DB.DBA.rdf_loader_run ();
+        # EOF"""
+        # 'EXEC=status()'
+        command = """isql -S 1111 -U {virtuoso_user} -P {virtuoso_password} <<EOF
+        SPARQL SELECT DISTINCT ?g WHERE {{ GRAPH ?g {{?s ?p ?t}} }};
+        EOF""".format(virtuoso_user=virtuoso_user, virtuoso_password=virtuoso_password)
+        
+        print("COMMANDDDDDDDD: ", command)
         result = container.exec_run(command)
 
         # Check for errors
