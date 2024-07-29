@@ -63,7 +63,11 @@ class FileProcessor:
                 print("HELLOOOOO ITS ME")
                 print(filename)
                 
-                self.load_processor.load_graph_to_virtuoso(container_name="code_virtuoso_1", ttl_file_path = filename , virtuoso_user="dba", virtuoso_password="my_strong_password")
+                self.load_processor.load_graph_to_virtuoso(container_name="code_virtuoso_1", 
+                                                           ttl_file_path = filename, 
+                                                           kg_files_directory="/../kg_files",
+                                                           virtuoso_user="dba", 
+                                                           virtuoso_password="my_strong_password")
                 self.load_processor.query_virtuoso(sparql_endpoint="http://virtuoso:8890/sparql", query="SELECT * WHERE { ?s ?p ?o } LIMIT 10")
                 
                 # self.load_processor.load_graph_to_mysql(g)

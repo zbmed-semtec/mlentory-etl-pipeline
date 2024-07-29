@@ -84,6 +84,7 @@ services:
     volumes:
       - ./load:/app
       - ../data/load_queue:/load_queue
+      - ../data/virtuoso_data/kg_files:/kg_files
       - ./config_data:/config_data
       - /var/run/docker.sock:/var/run/docker.sock 
     dns:
@@ -131,8 +132,7 @@ services:
     environment:
       DBA_PASSWORD: my_strong_password
     volumes:
-      - ../data/load_queue:/opt/virtuoso-opensource/database/data
-      - ../data/load_queue:./opt/load_queue
+      - ../data/virtuoso_data:/opt/virtuoso-opensource/database
 
   # transformer service
   # transformer:
