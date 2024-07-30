@@ -71,16 +71,23 @@ class LoadProcessor:
         # DB.DBA.rdf_loader_run ();
         # EOF"""
         # 'EXEC=status()'
-        command = """isql -S 1111 -U {virtuoso_user} -P {virtuoso_password} <<EOF
-        SPARQL SELECT DISTINCT ?g WHERE {{ GRAPH ?g {{?s ?p ?t}} }};
-        EOF""".format(virtuoso_user=virtuoso_user, virtuoso_password=virtuoso_password)
+        # command = """isql -S 1111 -U {virtuoso_user} -P {virtuoso_password} 
+        # 'EXEC=SPARQL SELECT DISTINCT ?g WHERE {{ GRAPH ?g {{?s ?p ?t}} }};'""".format(virtuoso_user=virtuoso_user, virtuoso_password=virtuoso_password)
+        # isql -S 1111 -U dba -P my_strong_password exec="ld_dir('/opt/virtuoso-opensource/database/kg_files','2024-07-29_14-31-16_Transformed_HF_fair4ml_schema_KG.ttl','http://example.com/data2');DB.DBA.rdf_loader_run();"
         
-        print("COMMANDDDDDDDD: ", command)
+        sql_command = f" exec=\"ld_dir('/opt/virtuoso-opensource/database/kg_files','{ttl_file_path.split('/')[-1]}', 'http://example.com/data_2');DB.DBA.rdf_loader_run();\""
+        command = """isql -S 1111 -U {virtuoso_user} -P {virtuoso_password} {sql_command}""".format(
+            virtuoso_user=virtuoso_user, 
+            virtuoso_password=virtuoso_password,
+            sql_command=sql_command)
+        
+        print("\nCOMMANDDDDDDDD: ", command)
         result = container.exec_run(command)
+        print("\nRESULTTTTTTTTT: ", result.output)
 
         # Check for errors
-        if result.exit_code != 0:
-            print(f"Error uploading TTL file: {result.output}")
+        # if result.exit_code != 0:
+        
     
     def query_virtuoso(self,sparql_endpoint,query):
         g = Graph()
