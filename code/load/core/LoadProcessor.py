@@ -6,6 +6,7 @@ import docker
 import subprocess
 import logging
 from typing import Callable, List, Dict,Set
+from SPARQLWrapper import SPARQLWrapper, JSON, DIGEST
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -56,20 +57,11 @@ class LoadProcessor:
 
         # Execute Virtuoso command to load data
         # isql -S 1111 -U dba -P my_strong_password
-        # isql -S 1111 -U dba -P my_strong_password <<EOF LOAD_RDF_FILE('/opt/virtuoso-opensource/database/kg_files/2024-07-17_17-22-59_Transformed_HF_fair4ml_schema_KG copy.ttl', http://example.com/data);EOF"
-        # You have to add the folder to dir in virtuoso.ini
-        # /opt/virtuoso-opensource/database/kg_files
-        # ld_dir('/opt/virtuoso-opensource/database/kg_files','%.ttl','http://example.com/data');
-        # DB.DBA.rdf_loader_run ();
-        # All togethe
-        # isql -S 1111 -U dba -P my_strong_password <<EOF
-        # ld_dir('/opt/virtuoso-opensource/database/kg_files','.ttl','http://example.com/data');
-        # DB.DBA.rdf_loader_run();
-        # EOF
-        # command = f"""isql -S 1111 -U {virtuoso_user} -P {virtuoso_password} <<EOF
-        # ld_dir('/opt/virtuoso-opensource/database/kg_files','{ttl_file_path.split('/')[-1]}','http://example.com/data'); 
-        # DB.DBA.rdf_loader_run ();
-        # EOF"""
+        # curl -u dba:my_strong_password \
+        #  -H "Content-Type: application/sparql-query" \
+        #  -H "Accept: application/json" \
+        #  -d 'SELECT * WHERE { ?s ?p ?o } LIMIT 10' \
+        #  http://virtuoso:1111/sparql
         # 'EXEC=status()'
         # command = """isql -S 1111 -U {virtuoso_user} -P {virtuoso_password} 
         # 'EXEC=SPARQL SELECT DISTINCT ?g WHERE {{ GRAPH ?g {{?s ?p ?t}} }};'""".format(virtuoso_user=virtuoso_user, virtuoso_password=virtuoso_password)
@@ -89,13 +81,23 @@ class LoadProcessor:
         # if result.exit_code != 0:
         
     
-    def query_virtuoso(self,sparql_endpoint,query):
-        g = Graph()
-        g.open(sparql_endpoint)
-        results = g.query(query)
-        for row in results:
-            print(row)
-    
+    def query_virtuoso(self,sparql_endpoint,query,user,password):
+        # g = Graph()
+        # g.open(sparql_endpoint)
+        # results = g.query(query)
+        # print("Query results::::::::::::")
+        # for row in results:
+        #     print(row)
+        sparql = SPARQLWrapper(sparql_endpoint)
+        sparql.setHTTPAuth(DIGEST)
+        sparql.setCredentials(user, password)
+        sparql.setQuery(query)
+        sparql.setReturnFormat(JSON)
+        results = sparql.query().convert()
+
+        for result in results["results"]["bindings"]:
+            print(result)
+        
     def load_graph_to_mysql(self, graph: Graph, table_name: str = "triples") -> None:
         if not self.connection:
             self.connect_to_mysql()

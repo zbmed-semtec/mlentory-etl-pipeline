@@ -31,7 +31,7 @@ def main():
         file_processor = FileProcessor(processed_files_log_path="./loading_logs/Processed_files.txt",load_processor=load_processor)
         observer = QueueObserver(watch_dir=args.folder,file_processor=file_processor)
         observer.start()
-        file_processor.process_file("./../load_queue/2024-07-29_14-31-16_Transformed_HF_fair4ml_schema_KG copy.ttl")
+        file_processor.process_file("./../load_queue/test copy 2.ttl")
         
         # Keep the script running to monitor changes
         # while True:
