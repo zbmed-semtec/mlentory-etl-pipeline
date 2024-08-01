@@ -68,8 +68,9 @@ class FileProcessor:
                                                            kg_files_directory="/../kg_files",
                                                            virtuoso_user="dba", 
                                                            virtuoso_password="my_strong_password")
+                
                 self.load_processor.query_virtuoso(sparql_endpoint="http://virtuoso:8890/sparql",
-                                                   query="SELECT * WHERE { ?s ?p ?o } LIMIT 10",
+                                                   query="CONSTRUCT { ?s ?p ?o } WHERE { ?s ?p ?o } LIMIT 10",
                                                    user="dba",
                                                    password="my_strong_password")
                 

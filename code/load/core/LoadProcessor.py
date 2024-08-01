@@ -1,12 +1,12 @@
 import os
 import shutil
 import mysql.connector
-from rdflib.graph import Graph
+from rdflib.graph import Graph,ConjunctiveGraph
 import docker
 import subprocess
 import logging
 from typing import Callable, List, Dict,Set
-from SPARQLWrapper import SPARQLWrapper, JSON, DIGEST
+from SPARQLWrapper import SPARQLWrapper, JSON, DIGEST,TURTLE
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -54,20 +54,11 @@ class LoadProcessor:
 
         shutil.move(ttl_file_path, new_ttl_file_path)
         
-
-        # Execute Virtuoso command to load data
-        # isql -S 1111 -U dba -P my_strong_password
-        # curl -u dba:my_strong_password \
-        #  -H "Content-Type: application/sparql-query" \
-        #  -H "Accept: application/json" \
-        #  -d 'SELECT * WHERE { ?s ?p ?o } LIMIT 10' \
-        #  http://virtuoso:1111/sparql
-        # 'EXEC=status()'
-        # command = """isql -S 1111 -U {virtuoso_user} -P {virtuoso_password} 
-        # 'EXEC=SPARQL SELECT DISTINCT ?g WHERE {{ GRAPH ?g {{?s ?p ?t}} }};'""".format(virtuoso_user=virtuoso_user, virtuoso_password=virtuoso_password)
-        # isql -S 1111 -U dba -P my_strong_password exec="ld_dir('/opt/virtuoso-opensource/database/kg_files','2024-07-29_14-31-16_Transformed_HF_fair4ml_schema_KG.ttl','http://example.com/data2');DB.DBA.rdf_loader_run();"
-        
-        sql_command = f" exec=\"ld_dir('/opt/virtuoso-opensource/database/kg_files','{ttl_file_path.split('/')[-1]}', 'http://example.com/data_2');DB.DBA.rdf_loader_run();\""
+        sql_command = f""" exec=\"DELETE FROM DB.DBA.LOAD_LIST; 
+                                ld_dir('/opt/virtuoso-opensource/database/kg_files',
+                                '{ttl_file_path.split('/')[-1]}',
+                                'http://example.com/data_1');DB.DBA.rdf_loader_run();\""""
+                                
         command = """isql -S 1111 -U {virtuoso_user} -P {virtuoso_password} {sql_command}""".format(
             virtuoso_user=virtuoso_user, 
             virtuoso_password=virtuoso_password,
@@ -82,21 +73,22 @@ class LoadProcessor:
         
     
     def query_virtuoso(self,sparql_endpoint,query,user,password):
-        # g = Graph()
-        # g.open(sparql_endpoint)
-        # results = g.query(query)
-        # print("Query results::::::::::::")
-        # for row in results:
-        #     print(row)
         sparql = SPARQLWrapper(sparql_endpoint)
         sparql.setHTTPAuth(DIGEST)
         sparql.setCredentials(user, password)
         sparql.setQuery(query)
-        sparql.setReturnFormat(JSON)
-        results = sparql.query().convert()
-
-        for result in results["results"]["bindings"]:
-            print(result)
+        # sparql.setReturnFormat(TURTLE)
+        g = sparql.query()._convertRDF()
+        
+        self.print_sample_triples(g)
+        return g
+    
+    def print_sample_triples(self, graph, num_triples=10):
+        print(f"Printing {num_triples} sample triples:")
+        for i, (s, p, o) in enumerate(graph):
+            if i >= num_triples:
+                break
+            print(f"{s} {p} {o}")
         
     def load_graph_to_mysql(self, graph: Graph, table_name: str = "triples") -> None:
         if not self.connection:
