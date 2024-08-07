@@ -1,5 +1,5 @@
 #!/bin/bash
-test_results=$(docker-compose --profile ci_test up)
+test_results=$(docker-compose --profile ci_test up --abort-on-container-exit)
 echo "RUNNING THE TESTS $test_results"
 
 last_three_lines=$(echo "$test_results" | tail -n 3)

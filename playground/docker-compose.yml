@@ -71,6 +71,9 @@ services:
   #     MYSQL_PASSWORD: password123
   #   ports:
   #     - "3306:3306"
+  #   volumes:
+  #   - ./path/to/your/init.sql:/docker-entrypoint-initdb.d/init.sql
+  #   - ./mysql_data:/var/lib/mysql
   
   # phpmyadmin:
   #   image: phpmyadmin:latest

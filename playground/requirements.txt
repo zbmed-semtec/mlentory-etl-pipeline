@@ -11,3 +11,4 @@ seaborn
 jupyter 
 notebook
 mysql-connector-python
+rich
