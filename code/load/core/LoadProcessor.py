@@ -7,6 +7,8 @@ import subprocess
 import logging
 from typing import Callable, List, Dict,Set
 from SPARQLWrapper import SPARQLWrapper, JSON, DIGEST,TURTLE
+from core.dbHandler.MySQLHandler import MySQLHandler
+from core.dbHandler.VirtuosoHandler import VirtuosoHandler
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -17,60 +19,47 @@ class LoadProcessor:
     This class is responsible for loading the data into the different databases.
     """
     
-    def __init__(self, host, user, password, database, port):
+    def __init__(self, mySQLHandler:MySQLHandler, virtuosoHandler:VirtuosoHandler):
         """
         Initializes a new LoadProcessor instance.
         """
-        self.host = host
-        self.user = user
-        self.password = password
-        self.database = database
-        self.port = port
-        self.connection = None
+        self.mySQLHandler = mySQLHandler
+        self.mySQLHandler.connect()
+        self.virtuosoHandler = virtuosoHandler
+        
     
-    def connect_to_mysql(self):
-        self.connection = mysql.connector.connect(
-            host=self.host,
-            user=self.user,
-            password=self.password,
-            database=self.database
-        )
+    def load_graph(self,ttl_file_path,kg_files_directory):
+        # Steps to load the graph
+        # First, we need to create the graph that we want to load
+        # Then, we need to create the graph that is currently in production
+        # Then, Identify the triplets that have not been seen in the database before,
+        # for that we need to query the SQL database to check if the specific triplet exists or not 
+        # If the triplet exists, we need to delete from the graph
+        # If the triplet does not exist, we do nothing
+        # Then, all the triplets that remain in the graph are added to the virtuoso graph and to the SQL database.
+        
+        
+        extracted_graph = Graph()
+        extracted_graph.parse(ttl_file_path,format="turtle")
+        
+        # We are comparing the graph we just extracted with the one in the database to identify the triplets that have not been seen before
+        graph_to_load = self.get_difference_graph(extracted_graph)
+        
+        # for subject, predicate, object in graph_to_load:
+        #     print(f"subject: {subject}, predicate: {predicate}, object: {object}")
     
-    def load_graph_to_virtuoso(self,container_name,ttl_file_path,kg_files_directory,virtuoso_user, virtuoso_password):
-        """
-        Uploads a TTL file to a Virtuoso instance running in a Docker container.
-
-        Args:
-            ttl_file_path: Path to the TTL file on the host machine.
-            kg_files_directory: Directory where the TTL file will be located.
-            container_name: Name of the Docker container.
-            virtuoso_user: Virtuoso username.
-            virtuoso_password: Virtuoso password.
-        """
-
-        client = docker.from_env()
-        container = client.containers.get(container_name)
-        new_ttl_file_path = f"{kg_files_directory}/{ttl_file_path.split('/')[-1]}"
-
-        shutil.move(ttl_file_path, new_ttl_file_path)
-        
-        sql_command = f""" exec=\"DELETE FROM DB.DBA.LOAD_LIST; 
-                                ld_dir('/opt/virtuoso-opensource/database/kg_files',
-                                '{ttl_file_path.split('/')[-1]}',
-                                'http://example.com/data_1');DB.DBA.rdf_loader_run();\""""
-                                
-        command = """isql -S 1111 -U {virtuoso_user} -P {virtuoso_password} {sql_command}""".format(
-            virtuoso_user=virtuoso_user, 
-            virtuoso_password=virtuoso_password,
-            sql_command=sql_command)
-        
-        print("\nCOMMANDDDDDDDD: ", command)
-        result = container.exec_run(command)
-        print("\nRESULTTTTTTTTT: ", result.output)
-
-        # Check for errors
-        # if result.exit_code != 0:
-        
+    def get_difference_graph(self,extracted_graph):
+        #There are going to be new triplets never seen before
+        #and triplets seen before that where not valid and now they are valid
+        #I'm pondering on how to extract information on the version
+        for subject, predicate, object in extracted_graph:
+            print(f"subject: {subject}, predicate: {predicate}, object: {object}")
+            result = self.mySQLHandler.query(f"SELECT * FROM Triplet WHERE subject = '{subject}' AND relation = '{predicate}' AND object = '{object}'")
+            if result.empty:
+                print(f"subject: {subject}, relation: {predicate}, object: {object}")
+                print("Triplet not found in the database")
+                # We need to delete the triplet from the graph
+                extracted_graph.remove((subject, predicate, object))
     
     def query_virtuoso(self,sparql_endpoint,query,user,password):
         sparql = SPARQLWrapper(sparql_endpoint)

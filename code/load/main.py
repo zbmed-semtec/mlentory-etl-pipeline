@@ -1,6 +1,8 @@
 from core.QueueObserver import QueueObserver
 from core.FileProcessor import FileProcessor
 from core.LoadProcessor import LoadProcessor
+from core.dbHandler.VirtuosoHandler import VirtuosoHandler
+from core.dbHandler.MySQLHandler import MySQLHandler
 import argparse
 import datetime
 import logging
@@ -22,11 +24,21 @@ def main():
     logger = logging.getLogger(__name__)
     logger.setLevel(logging.INFO)
     
-    
-
     try:
+        #Initializing the database handlers
+        mySQLHandler = MySQLHandler(host="mysql", 
+                                    user="user",
+                                    password="password123",
+                                    database="MLentory_DB")
+        
+        virtuosoHandler = VirtuosoHandler(  container_name="code_virtuoso_1", 
+                                            kg_files_directory="/../kg_files",
+                                            virtuoso_user="dba", 
+                                            virtuoso_password="my_strong_password",
+                                            sparql_endpoint="http://virtuoso:8890/sparql"
+                                            )
         #Initializing the load processor
-        load_processor = LoadProcessor(host="mysql", port=3306, user="user", password="password123", database="Extraction_Results")
+        load_processor = LoadProcessor(mySQLHandler=mySQLHandler,virtuosoHandler=virtuosoHandler)
         
         file_processor = FileProcessor(processed_files_log_path="./loading_logs/Processed_files.txt",load_processor=load_processor)
         observer = QueueObserver(watch_dir=args.folder,file_processor=file_processor)

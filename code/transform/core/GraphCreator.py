@@ -21,6 +21,9 @@ class GraphCreator:
         self.df = df
  
     def create_graph(self):
+        #Get current datestamp with minutes and seconds
+        current_datestamp = pd.Timestamp.now().strftime('%Y-%m-%d %H:%M:%S')
+        
         #Add default values from the text files
         for index, row in self.df.iterrows():
             #For each row we first create an m4ml:MLModel instance
@@ -47,13 +50,13 @@ class GraphCreator:
                             data = source["data"]
                             self.create_triplet(subject=model_uri,
                                                         predicate=rdflib.URIRef(column),
-                                                        object=URIRef(f"mlentory:/hugging_face/{data.replace(' ','_')}"),
+                                                        object=URIRef(f"mlentory:hugging_face/{data.replace(' ','_')}"),
                                                         extraction_info=source)
                         elif type(source["data"]) == list:
                             for entity in source["data"]:
                                 self.create_triplet(subject=model_uri,
                                                             predicate=rdflib.URIRef(column),
-                                                            object=URIRef(f"mlentory:/hugging_face/{entity.replace(' ','_')}"),
+                                                            object=URIRef(f"mlentory:hugging_face/{entity.replace(' ','_')}"),
                                                             extraction_info=source)
                 if(column in ["dateCreated", "dateModified"]):
                     self.create_triplet(subject=model_uri,
@@ -78,7 +81,7 @@ class GraphCreator:
             
             extraction_method = extraction_info["extraction_method"]
             self.graph.add((subject, URIRef('prov:wasGeneratedBy'), extraction_activity))
-            self.graph.add((extraction_activity, URIRef('prov:wasAssociatedWith'), URIRef(f"mlentory:extraction_methods:{extraction_method}")))
+            self.graph.add((extraction_activity, URIRef('prov:wasAssociatedWith'), URIRef(f"mlentory:extraction_methods/{extraction_method}")))
             self.graph.add((extraction_activity, URIRef('mlentory:extraction_confidence'), Literal(extraction_info['confidence'], datatype=XSD.float)))
             self.graph.add((extraction_activity, URIRef('prov:atTime'), Literal(extraction_info['extraction_time'], datatype=XSD.dateTime)))            
             self.graph.add((extraction_activity, URIRef('prov:generated'), object))
