@@ -64,7 +64,7 @@ services:
     hostname: mysql
     environment:
       MYSQL_ROOT_PASSWORD: test_pass
-      MYSQL_DATABASE: test_db
+      MYSQL_DATABASE: test_DB
       MYSQL_USER: test_user
       MYSQL_PASSWORD: test_pass
     ports:

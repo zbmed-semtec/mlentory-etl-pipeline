@@ -7,8 +7,13 @@ import subprocess
 import logging
 from typing import Callable, List, Dict,Set
 from SPARQLWrapper import SPARQLWrapper, JSON, DIGEST,TURTLE
-from core.dbHandler.MySQLHandler import MySQLHandler
-from core.dbHandler.VirtuosoHandler import VirtuosoHandler
+
+if("app_test" in os.getcwd()):
+    from load.core.dbHandler.MySQLHandler import MySQLHandler
+    from load.core.dbHandler.VirtuosoHandler import VirtuosoHandler
+else:
+    from core.dbHandler.MySQLHandler import MySQLHandler
+    from core.dbHandler.VirtuosoHandler import VirtuosoHandler
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
