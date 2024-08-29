@@ -5,13 +5,13 @@ import os
 import time
 import pandas as pd
 from typing import List, Tuple
+from unittest.mock import Mock
 
 
 sys.path.append('.')
-from transform.core.GraphCreator import GraphCreator
-from transform.core.FilesProcessor import FilesProcessor
-from transform.core.QueueObserver import QueueObserver, MyQueueEventHandler
-from transform.core.FieldProcessorHF import FieldProcessorHF
+from load.core.GraphCreator import GraphCreator
+from load.core.dbHandler.MySQLHandler import MySQLHandler
+from load.core.dbHandler.VirtuosoHandler import VirtuosoHandler
 
 class TestGraphCreator:
     """
@@ -24,7 +24,9 @@ class TestGraphCreator:
     
     @pytest.fixture
     def setup_graph_creator(self) -> GraphCreator:
-        graph_creator = GraphCreator()
+        mock_mySQLHandler = Mock(spec=MySQLHandler)
+        mock_virtuosoHandler = Mock(spec=VirtuosoHandler)
+        graph_creator = GraphCreator(mock_mySQLHandler,mock_virtuosoHandler)
         graph_creator.load_df(self.m4ml_example_dataframe)
         return graph_creator
     

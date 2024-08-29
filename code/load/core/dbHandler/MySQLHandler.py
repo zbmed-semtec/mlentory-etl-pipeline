@@ -31,6 +31,9 @@ class MySQLHandler:
         cursor.execute(sql, list(data.values()))
         self.connection.commit()
         cursor.close()
+    
+    def insert_triple(self, subject:str, predicate:str, object:str, extraction_info: Dict):
+        self.insert('triples', {'subject': subject, 'predicate': predicate, 'object': object, 'extraction_info': extraction_info})
 
     def query(self, sql:str, params:Dict = None) -> pd.DataFrame:
         cursor = self.connection.cursor(dictionary=True)
