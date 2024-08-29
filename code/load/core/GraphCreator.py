@@ -5,6 +5,7 @@ import uuid
 import json
 import pandas as pd
 import os
+from typing import Callable, List, Dict,Set
 
 if("app_test" in os.getcwd()):
     from load.core.dbHandler.MySQLHandler import MySQLHandler
@@ -24,8 +25,8 @@ class GraphCreator:
         self.graph.bind('schema', URIRef('https://schema.org/'))
         self.graph.bind('mlentory', URIRef('https://mlentory.com/'))
         self.graph.bind('prov', URIRef('http://www.w3.org/ns/prov#'))
-        #Now I want to create a node that represents the list of models
         
+        self.last_update_date = None
     
     def load_df(self, df):
         self.df = df
@@ -80,18 +81,58 @@ class GraphCreator:
             
             
     def create_triplet(self, subject, predicate, object, extraction_info=None):
-        result_triple_exist = self.mySQLHandler.query(f"SELECT id FROM Triplet WHERE subject = '{subject}' AND relation = '{predicate}' AND object = '{object}'")
+        triplet_id = -1
+        triplet_id_df = self.mySQLHandler.query(f"SELECT id FROM Triplet WHERE subject = '{subject}' 
+                                                                                     AND relation = '{predicate}' 
+                                                                                     AND object = '{object}'")
+        extraction_info_id = -1
+        extraction_info_id_df = self.mySQLHandler.query(f"SELECT id FROM Triplet_Extraction_Info WHERE 
+                                                                    method_description = '{extraction_info["extraction_method"]}' 
+                                                                    AND extraction_confidence = '{extraction_info["confidence"]}'")
         
-        print(f"result_triple_exist: {result_triple_exist}")
+        print(f"result_triple_exist: {triplet_id}")
         
-        if result_triple_exist.empty:
-            #In this case we have a completely new triplet
-            self.mySQLHandler.insert_triple(subject, predicate, object, extraction_info)
-            print(f"subject: {subject}, relation: {predicate}, object: {object}")
+        if triplet_id_df.empty:
+            #We have to create a new triplet
             print("Triplet not found in the database")
+            triplet_id = self.mySQLHandler.insert('triples', {'subject': subject, 'relation': predicate, 'object': object})
         else:
-            #Now we know that the triplet is in the DB
-            result_triple_version = self.mySQLHandler.query(f"SELECT * FROM Triplet WHERE subject = '{subject}' AND relation = '{predicate}' AND object = '{object}'")
+            triplet_id = triplet_id_df.iloc[0]['id']
+        
+        if extraction_info_id_df.empty:
+            #We have to create a new extraction info
+            print("Extraction info not found in the database")
+            extraction_info_id = self.mySQLHandler.insert('Triplet_Extraction_Info', {'method_description': extraction_info["extraction_method"], 'extraction_confidence': extraction_info["confidence"]})
+        else:
+            extraction_info_id = extraction_info_id_df.iloc[0]['id']
+            
+            
+        #We already have the triplet and the extraction info
+        #We need to check the version_extraction_range 
+        version_range_df = self.mySQLHandler.query(f"SELECT id,start,end FROM Version_Range WHERE
+                                                                        triplet_id = '{triplet_id}'
+                                                                        AND extraction_info_id = '{extraction_info_id}'")
+        version_range_id = -1
+        
+        if version_range_df.empty:
+            #We have to create a new version range
+            version_range_id = self.mySQLHandler.insert('Version_Range', {'triplet_id': triplet_id, 'extraction_info_id': extraction_info_id, 'start':extraction_info['extraction_time'], 'end':extraction_info['extraction_time']})
+        else:
+            #Here we need to check if there is a version range that was updated in the last update
+            found_valid_range = False
+            for index, row in version_range_df.iterrows():
+                if row['end'] == self.last_update_date:
+                    #Update the version range
+                    found_valid_range = True
+                    self.mySQLHandler.update('Version_Range', {'end': extraction_info['extraction_time']}, f"id = '{row['id']}'")
+                    break
+            
+            if not found_valid_range:
+                #Create a new version range
+                self.mySQLHandler.insert('Version_Range', {'triplet_id': triplet_id, 'extraction_info_id': extraction_info_id, 'start':extraction_info['extraction_time'], 'end':extraction_info['extraction_time']})
+            
+            
+            
             
         # self.graph.add((subject, predicate, object))
         
@@ -110,7 +151,11 @@ class GraphCreator:
         #     self.graph.add((extraction_activity, URIRef('prov:generated'), object))
         #     self.graph.add((extraction_activity, URIRef('prov:generated'), predicate))
 
-            
+    def insert_new_triplet(self, subject:str, predicate:str, object:str, extraction_info: Dict):
+        triple_id = self.mySQLHandler.insert('triples', {'subject': subject, 'relation': predicate, 'object': object})
+        #check if the extraction_info already exists
+        
+        self.insert('version_extraction_range', {})       
 
     
     def store_graph(self, file_path):
