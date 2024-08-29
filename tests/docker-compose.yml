@@ -67,11 +67,12 @@ services:
       MYSQL_DATABASE: test_DB
       MYSQL_USER: test_user
       MYSQL_PASSWORD: test_pass
+    volumes:
+    - ./load/sql_files/init.sql:/docker-entrypoint-initdb.d/init.sql
     ports:
       - "3306:3306"
       - "33060:33060"
-    # command: --init-file /docker-entrypoint-initdb.d/init.sql
-
+    command: --init-file /docker-entrypoint-initdb.d/init.sql
  
 # networks:
 #   my-macvlan-net:
