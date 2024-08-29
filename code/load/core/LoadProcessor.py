@@ -5,15 +5,18 @@ from rdflib.graph import Graph,ConjunctiveGraph
 import docker
 import subprocess
 import logging
+from datetime import datetime
 from typing import Callable, List, Dict,Set
 from SPARQLWrapper import SPARQLWrapper, JSON, DIGEST,TURTLE
 
 if("app_test" in os.getcwd()):
     from load.core.dbHandler.MySQLHandler import MySQLHandler
     from load.core.dbHandler.VirtuosoHandler import VirtuosoHandler
+    from load.core.GraphCreator import GraphCreator
 else:
     from core.dbHandler.MySQLHandler import MySQLHandler
     from core.dbHandler.VirtuosoHandler import VirtuosoHandler
+    from core.GraphCreator import GraphCreator
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -24,16 +27,18 @@ class LoadProcessor:
     This class is responsible for loading the data into the different databases.
     """
     
-    def __init__(self, mySQLHandler:MySQLHandler, virtuosoHandler:VirtuosoHandler):
+    def __init__(self, mySQLHandler:MySQLHandler, virtuosoHandler:VirtuosoHandler, graphCreator:GraphCreator, kg_files_directory:str):
         """
         Initializes a new LoadProcessor instance.
         """
         self.mySQLHandler = mySQLHandler
         self.mySQLHandler.connect()
         self.virtuosoHandler = virtuosoHandler
-        
+        self.graphCreator = graphCreator
+        self.kg_files_directory = kg_files_directory
     
-    def load_graph(self,ttl_file_path,kg_files_directory):
+    def load_dataframe(self,df):
+        
         # Steps to load the graph
         # First, we need to create the graph that we want to load
         # Then, we need to create the graph that is currently in production
@@ -43,12 +48,30 @@ class LoadProcessor:
         # If the triplet does not exist, we do nothing
         # Then, all the triplets that remain in the graph are added to the virtuoso graph and to the SQL database.
         
+        now = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+        
+        filename_ttl = f"{self.kg_files_directory}/{now}_Transformed_HF_fair4ml_schema_KG.ttl"  # Create new filename
+                
+        self.graphCreator.load_df(df)
+        self.graphCreator.create_graph()
+        self.graphCreator.store_graph(filename_ttl)
+        
+        # extracted_graph = Graph()
+        # extracted_graph.parse(ttl_file_path,format="turtle")
+
+    
+    def load_graph(self,df,kg_files_directory):
+        
+        now = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+        
+        filename_ttl = f"{self.kg_files_directory}/{now}_Transformed_HF_fair4ml_schema_KG.ttl"  # Create new filename
+                
+        self.graph_creator.load_df(df)
+        self.graph_creator.create_graph()
+        self.graph_creator.store_graph(filename_ttl)
         
         extracted_graph = Graph()
-        extracted_graph.parse(ttl_file_path,format="turtle")
-        
-        # We are comparing the graph we just extracted with the one in the database to identify the triplets that have not been seen before
-        graph_to_load = self.get_difference_graph(extracted_graph)
+        # extracted_graph.parse(ttl_file_path,format="turtle")
         
         # for subject, predicate, object in graph_to_load:
         #     print(f"subject: {subject}, predicate: {predicate}, object: {object}")
@@ -97,3 +120,5 @@ class LoadProcessor:
         
         self.connection.commit()
         cursor.close()
+    
+    # def create_graph_

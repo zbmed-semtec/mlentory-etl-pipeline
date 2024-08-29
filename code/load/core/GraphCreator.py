@@ -4,11 +4,21 @@ from rdflib.namespace import RDF, XSD, FOAF
 import uuid
 import json
 import pandas as pd
+import os
+
+if("app_test" in os.getcwd()):
+    from load.core.dbHandler.MySQLHandler import MySQLHandler
+    from load.core.dbHandler.VirtuosoHandler import VirtuosoHandler
+else:
+    from core.dbHandler.MySQLHandler import MySQLHandler
+    from core.dbHandler.VirtuosoHandler import VirtuosoHandler
 
 class GraphCreator:
-    def __init__(self):
+    def __init__(self, mySQLHandler:MySQLHandler, virtuosoHandler:VirtuosoHandler):
         self.df_to_transform = None
         self.graph = rdflib.Graph()
+        self.mySQLHandler = mySQLHandler
+        self.virtuosoHandler = virtuosoHandler
         self.graph.bind('fair4ml', URIRef('http://fair4ml.com/'))
         self.graph.bind('codemeta', URIRef('http://codemeta.com/'))
         self.graph.bind('schema', URIRef('https://schema.org/'))
@@ -70,22 +80,35 @@ class GraphCreator:
             
             
     def create_triplet(self, subject, predicate, object, extraction_info=None):
-        self.graph.add((subject, predicate, object))
+        result_triple_exist = self.mySQLHandler.query(f"SELECT id FROM Triplet WHERE subject = '{subject}' AND relation = '{predicate}' AND object = '{object}'")
         
-        if(extraction_info != None):
-            # Create a new blank node to represent the extraction activity
-            extraction_activity = BNode()
-            # Add triplets to describe the extraction activity
-            self.graph.add((extraction_activity, RDF.type, URIRef('prov:Activity')))
-            # self.graph.add((extraction_activity, URIRef('prov:endedAtTime'), Literal(extraction_info['ended_at'])))
+        print(f"result_triple_exist: {result_triple_exist}")
+        
+        if result_triple_exist.empty:
+            #In this case we have a completely new triplet
+            self.mySQLHandler.insert_triple(subject, predicate, object, extraction_info)
+            print(f"subject: {subject}, relation: {predicate}, object: {object}")
+            print("Triplet not found in the database")
+        else:
+            #Now we know that the triplet is in the DB
+            result_triple_version = self.mySQLHandler.query(f"SELECT * FROM Triplet WHERE subject = '{subject}' AND relation = '{predicate}' AND object = '{object}'")
             
-            extraction_method = extraction_info["extraction_method"]
-            self.graph.add((subject, URIRef('prov:wasGeneratedBy'), extraction_activity))
-            self.graph.add((extraction_activity, URIRef('prov:wasAssociatedWith'), URIRef(f"mlentory:extraction_methods/{extraction_method}")))
-            self.graph.add((extraction_activity, URIRef('mlentory:extraction_confidence'), Literal(extraction_info['confidence'], datatype=XSD.float)))
-            self.graph.add((extraction_activity, URIRef('prov:atTime'), Literal(extraction_info['extraction_time'], datatype=XSD.dateTime)))            
-            self.graph.add((extraction_activity, URIRef('prov:generated'), object))
-            self.graph.add((extraction_activity, URIRef('prov:generated'), predicate))
+        # self.graph.add((subject, predicate, object))
+        
+        # if(extraction_info != None):
+        #     # Create a new blank node to represent the extraction activity
+        #     extraction_activity = BNode()
+        #     # Add triplets to describe the extraction activity
+        #     self.graph.add((extraction_activity, RDF.type, URIRef('prov:Activity')))
+        #     # self.graph.add((extraction_activity, URIRef('prov:endedAtTime'), Literal(extraction_info['ended_at'])))
+            
+        #     extraction_method = extraction_info["extraction_method"]
+        #     self.graph.add((subject, URIRef('prov:wasGeneratedBy'), extraction_activity))
+        #     self.graph.add((extraction_activity, URIRef('prov:wasAssociatedWith'), URIRef(f"mlentory:extraction_methods/{extraction_method}")))
+        #     self.graph.add((extraction_activity, URIRef('mlentory:extraction_confidence'), Literal(extraction_info['confidence'], datatype=XSD.float)))
+        #     self.graph.add((extraction_activity, URIRef('prov:atTime'), Literal(extraction_info['extraction_time'], datatype=XSD.dateTime)))            
+        #     self.graph.add((extraction_activity, URIRef('prov:generated'), object))
+        #     self.graph.add((extraction_activity, URIRef('prov:generated'), predicate))
 
             
 

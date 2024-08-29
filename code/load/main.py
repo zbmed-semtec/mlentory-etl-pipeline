@@ -3,6 +3,7 @@ from core.FileProcessor import FileProcessor
 from core.LoadProcessor import LoadProcessor
 from core.dbHandler.VirtuosoHandler import VirtuosoHandler
 from core.dbHandler.MySQLHandler import MySQLHandler
+from core.GraphCreator import GraphCreator
 import argparse
 import datetime
 import logging
@@ -37,13 +38,16 @@ def main():
                                             virtuoso_password="my_strong_password",
                                             sparql_endpoint="http://virtuoso:8890/sparql"
                                             )
+        #Initializing the graph creator
+        graphCreator = GraphCreator(mySQLHandler=mySQLHandler,virtuosoHandler=virtuosoHandler)
+        
         #Initializing the load processor
-        load_processor = LoadProcessor(mySQLHandler=mySQLHandler,virtuosoHandler=virtuosoHandler)
+        load_processor = LoadProcessor(mySQLHandler=mySQLHandler,virtuosoHandler=virtuosoHandler,graphCreator=graphCreator, kg_files_directory="./../kg_files")
         
         file_processor = FileProcessor(processed_files_log_path="./loading_logs/Processed_files.txt",load_processor=load_processor)
         observer = QueueObserver(watch_dir=args.folder,file_processor=file_processor)
         observer.start()
-        file_processor.process_file("./../load_queue/test copy 2.ttl")
+        file_processor.process_file("./../load_queue/test copy.json")
         
         # Keep the script running to monitor changes
         # while True:

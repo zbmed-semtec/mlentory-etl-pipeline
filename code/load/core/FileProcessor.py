@@ -51,7 +51,7 @@ class FileProcessor:
                 if filename.endswith(".tsv"):
                     df = pd.read_csv(filename, sep="\t", usecols=lambda x: x != 0)
                 elif filename.endswith(".json"):
-                    df = pd.read_json(filename)
+                    m4ml_models_df = pd.read_json(filename)
                 elif filename.endswith(".ttl"):
                     g = Graph()
                     g.parse(filename, format="turtle")
@@ -60,17 +60,7 @@ class FileProcessor:
                 else:
                     raise ValueError("Unsupported file type")
                 
-                print("HELLOOOOO ITS ME")
-                print(filename)
-                
-                self.load_processor.load_graph(ttl_file_path = filename,kg_files_directory="/../kg_files")
-                
-                # self.load_processor.query_virtuoso(sparql_endpoint="http://virtuoso:8890/sparql",
-                #                                    query="CONSTRUCT { ?s ?p ?o } WHERE { ?s ?p ?o } LIMIT 10",
-                #                                    user="dba",
-                #                                    password="my_strong_password")
-                
-                # self.load_processor.load_graph_to_mysql(g)
+                self.load_processor.load_dataframe(df = m4ml_models_df)
                     
                 # self.processed_files_in_last_batch.append(filename)
                 logger.info(f"Finished processing: {filename}")

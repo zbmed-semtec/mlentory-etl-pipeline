@@ -10,10 +10,8 @@ import os
 
 if("app_test" in os.getcwd()):
     from transform.core.FieldProcessorHF import FieldProcessorHF
-    from transform.core.GraphCreator import GraphCreator
 else:
     from core.FieldProcessorHF import FieldProcessorHF
-    from core.GraphCreator import GraphCreator
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -37,8 +35,7 @@ class FilesProcessor:
                  next_batch_proc_time: int,
                  processed_files_log_path: str,
                  load_queue_path: str,
-                 field_processor_HF: FieldProcessorHF,
-                 graph_creator: GraphCreator):
+                 field_processor_HF: FieldProcessorHF):
         """
         Initializes a new FilesProcessor instance.
 
@@ -57,7 +54,6 @@ class FilesProcessor:
         self.processed_models: List = manager.list()
         self.field_processor_HF: FieldProcessorHF = field_processor_HF
         self.load_queue_path: str = load_queue_path
-        self.graph_creator: GraphCreator = graph_creator
         #Getting current processed files
         with open(self.processed_files_log_path, 'r') as file:
             for line in file:
@@ -105,14 +101,11 @@ class FilesProcessor:
 
         filename_tsv = f"{self.load_queue_path}/{now}_Transformed_HF_fair4ml_schema_Dataframe.tsv"  # Create new filename
         filename_json = f"{self.load_queue_path}/{now}_Transformed_HF_fair4ml_schema_Dataframe.json"  # Create new filename
-        filename_ttl = f"{self.load_queue_path}/{now}_Transformed_HF_fair4ml_schema_KG.ttl"  # Create new filename
         
         m4ml_models_df.to_csv(filename_tsv,sep="\t")
         m4ml_models_df.to_json(filename_json,orient="records",indent=4)
         
-        self.graph_creator.load_df(m4ml_models_df)
-        self.graph_creator.create_graph()
-        self.graph_creator.store_graph(filename_ttl)
+        
         
         
         end_time = time.perf_counter()-start_time
