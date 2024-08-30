@@ -67,13 +67,29 @@ services:
       MYSQL_DATABASE: test_DB
       MYSQL_USER: test_user
       MYSQL_PASSWORD: test_pass
+      MYSQL_USER_1: additional_user1
+      MYSQL_PASSWORD_1: password1
+      MYSQL_USER_2: additional_user2
+      MYSQL_PASSWORD_2: password2
     volumes:
-    - ./load/sql_files/init.sql:/docker-entrypoint-initdb.d/init.sql
+    - ../code/load/sql_files/test_init.sql:/docker-entrypoint-initdb.d/init.sql
+    # - ../data/mysql_test_data:/var/lib/mysql
     ports:
-      - "3306:3306"
+      - "42333:3306"
       - "33060:33060"
     command: --init-file /docker-entrypoint-initdb.d/init.sql
- 
+  
+  virtuoso:
+    image: openlink/virtuoso-opensource-7:latest
+    hostname: virtuoso
+    ports:
+      - "1111:1111"
+      - "8890:8890"
+    environment:
+      DBA_PASSWORD: my_strong_password
+    # volumes:
+    #   - ../data/virtuoso_data:/opt/virtuoso-opensource/database
+
 # networks:
 #   my-macvlan-net:
 #     external: true
