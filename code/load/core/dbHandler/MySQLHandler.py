@@ -97,3 +97,29 @@ class MySQLHandler:
         cursor.execute(sql, list(data.values()))
         self.connection.commit()
         cursor.close()
+    
+    def execute_sql(self, sql: str) -> None:
+        """
+        Executes a SQL query without returning any results.
+        
+        Args:
+            sql (str): The SQL query to execute.
+        """
+        cursor = self.connection.cursor()
+        cursor.execute(sql)
+        self.connection.commit()
+        cursor.close()
+        
+    
+    def reset_all_tables(self):
+        cursor = self.connection.cursor()
+        cursor.execute("SHOW TABLES")
+        tables = cursor.fetchall()
+        
+        cursor.execute("SET FOREIGN_KEY_CHECKS = 0")
+        for table in tables:
+            cursor.execute(f"TRUNCATE TABLE {table[0]}")
+        cursor.execute("SET FOREIGN_KEY_CHECKS = 1")
+        
+        self.connection.commit()
+        cursor.close()

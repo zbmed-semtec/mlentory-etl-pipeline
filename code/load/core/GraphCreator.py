@@ -5,6 +5,7 @@ import uuid
 import json
 import pandas as pd
 import os
+from datetime import datetime
 from typing import Callable, List, Dict,Set
 
 if("app_test" in os.getcwd()):
@@ -26,7 +27,10 @@ class GraphCreator:
         self.graph.bind('mlentory', URIRef('https://mlentory.com/'))
         self.graph.bind('prov', URIRef('http://www.w3.org/ns/prov#'))
         
+        self.non_deprecated_ranges = set()
+        
         self.last_update_date = None
+        self.curr_update_date = None
     
     def load_df(self, df):
         self.df = df
@@ -42,7 +46,11 @@ class GraphCreator:
             
             self.create_triplet(subject=model_uri, 
                                 predicate=RDF.type, 
-                                object=URIRef("fair4ml:MLModel"))
+                                object=URIRef("fair4ml:MLModel"),
+                                extraction_info=row['schema.org:name'][0])
+            
+            if(self.curr_update_date == None):
+                self.curr_update_date = row['schema.org:name'][0]["extraction_time"]
             
             #Go through all the columns and add the triplets
             for column in self.df.columns:
@@ -51,6 +59,8 @@ class GraphCreator:
                 #Handle the cases where a new entity has to be created
                 if(column in ["fair4ml:mlTask", "fair4ml:sharedBy", "fair4ml:testedOn", "fair4ml:trainedOn","codemeta:referencePublication"]):
                     # Go through the different sources that can create information about the entity
+                    if(type(row[column])!=list and pd.isna(row[column])):
+                        continue
                     for source in row[column]:
                         if source["data"] == None:
                             self.create_triplet(subject=model_uri,
@@ -78,30 +88,34 @@ class GraphCreator:
                                         predicate=rdflib.URIRef(column),
                                         object=Literal(row[column]["data"], datatype=XSD.string))
             
+            #Deprecate all the triplets that were not created or updated for the current model
+            self.deprecate_old_triplets(model_uri)
             
             
-    def create_triplet(self, subject, predicate, object, extraction_info=None):
+            
+    def create_triplet(self, subject, predicate, object, extraction_info):
         triplet_id = -1
-        triplet_id_df = self.mySQLHandler.query(f"SELECT id FROM Triplet WHERE subject = '{subject}' 
-                                                                                     AND relation = '{predicate}' 
-                                                                                     AND object = '{object}'")
+        triplet_id_df = self.mySQLHandler.query(f"""SELECT id FROM Triplet WHERE subject = '{subject}' 
+                                                                                     AND predicate = '{predicate}' 
+                                                                                     AND object = '{object}'""")
         extraction_info_id = -1
-        extraction_info_id_df = self.mySQLHandler.query(f"SELECT id FROM Triplet_Extraction_Info WHERE 
+        extraction_info_id_df = self.mySQLHandler.query(f"""SELECT id FROM Triplet_Extraction_Info WHERE 
                                                                     method_description = '{extraction_info["extraction_method"]}' 
-                                                                    AND extraction_confidence = '{extraction_info["confidence"]}'")
+                                                                    AND extraction_confidence = '{extraction_info["confidence"]}'""")
         
-        print(f"result_triple_exist: {triplet_id}")
+        
+        # print(f"result_triple_exist: {triplet_id}")
         
         if triplet_id_df.empty:
             #We have to create a new triplet
-            print("Triplet not found in the database")
-            triplet_id = self.mySQLHandler.insert('triples', {'subject': subject, 'relation': predicate, 'object': object})
+            # print("Triplet not found in the database")
+            triplet_id = self.mySQLHandler.insert('Triplet', {'subject': subject, 'predicate': predicate, 'object': object})
         else:
             triplet_id = triplet_id_df.iloc[0]['id']
         
         if extraction_info_id_df.empty:
             #We have to create a new extraction info
-            print("Extraction info not found in the database")
+            # print("Extraction info not found in the database")
             extraction_info_id = self.mySQLHandler.insert('Triplet_Extraction_Info', {'method_description': extraction_info["extraction_method"], 'extraction_confidence': extraction_info["confidence"]})
         else:
             extraction_info_id = extraction_info_id_df.iloc[0]['id']
@@ -109,28 +123,31 @@ class GraphCreator:
             
         #We already have the triplet and the extraction info
         #We need to check the version_extraction_range 
-        version_range_df = self.mySQLHandler.query(f"SELECT id,start,end FROM Version_Range WHERE
+        version_range_df = self.mySQLHandler.query(f"""SELECT id,start,end FROM Version_Range WHERE
                                                                         triplet_id = '{triplet_id}'
-                                                                        AND extraction_info_id = '{extraction_info_id}'")
+                                                                        AND extraction_info_id = '{extraction_info_id}'
+                                                                        AND deprecated = {False}""")
         version_range_id = -1
         
         if version_range_df.empty:
             #We have to create a new version range
-            version_range_id = self.mySQLHandler.insert('Version_Range', {'triplet_id': triplet_id, 'extraction_info_id': extraction_info_id, 'start':extraction_info['extraction_time'], 'end':extraction_info['extraction_time']})
+            version_range_id = self.mySQLHandler.insert('Version_Range', {'triplet_id': str(triplet_id), 'extraction_info_id': str(extraction_info_id), 'start':extraction_info['extraction_time'], 'end':extraction_info['extraction_time'], 'deprecated':False})
         else:
-            #Here we need to check if there is a version range that was updated in the last update
             found_valid_range = False
             for index, row in version_range_df.iterrows():
                 if row['end'] == self.last_update_date:
                     #Update the version range
                     found_valid_range = True
+                    version_range_id = row['id']
                     self.mySQLHandler.update('Version_Range', {'end': extraction_info['extraction_time']}, f"id = '{row['id']}'")
                     break
             
             if not found_valid_range:
                 #Create a new version range
-                self.mySQLHandler.insert('Version_Range', {'triplet_id': triplet_id, 'extraction_info_id': extraction_info_id, 'start':extraction_info['extraction_time'], 'end':extraction_info['extraction_time']})
-            
+                version_range_id = self.mySQLHandler.insert('Version_Range', {'triplet_id': triplet_id, 'extraction_info_id': extraction_info_id, 'start':extraction_info['extraction_time'], 'end':extraction_info['extraction_time'], 'deprecated':False})
+        
+        #All ranges that are not in this set will be deprecated
+        # self.non_deprecated_ranges.add(version_range_id)
             
             
             
@@ -151,12 +168,27 @@ class GraphCreator:
         #     self.graph.add((extraction_activity, URIRef('prov:generated'), object))
         #     self.graph.add((extraction_activity, URIRef('prov:generated'), predicate))
 
-    def insert_new_triplet(self, subject:str, predicate:str, object:str, extraction_info: Dict):
-        triple_id = self.mySQLHandler.insert('triples', {'subject': subject, 'relation': predicate, 'object': object})
-        #check if the extraction_info already exists
+    def deprecate_old_triplets(self, model_uri):
+        #First get the id of all the triplets related to the model
+        update_query = f"""
+            UPDATE Version_Range vr
+            JOIN Triplet t ON t.id = vr.triplet_id
+            SET vr.deprecated = 1, vr.end = '{self.curr_update_date}'
+            WHERE t.subject = '{model_uri}'
+            AND vr.end != '{self.curr_update_date}'
+            AND vr.deprecated = 0
+        """
         
-        self.insert('version_extraction_range', {})       
-
+        self.mySQLHandler.execute_sql(update_query)
+        
+        # model_triplets_with_ranges_df = self.mySQLHandler.query(f"""
+        #     SELECT t.id AS triplet_id, vr.id AS range_id, vr.start, vr.end 
+        #     FROM Triplet t
+        #     JOIN Version_Range vr ON t.id = vr.triplet_id
+        #     WHERE t.subject = '{model_uri}'
+        #     AND vr.end != '{self.curr_update_date}'
+        #     AND vr.deprecated = 0
+        # """)
     
     def store_graph(self, file_path):
         self.graph.serialize(destination=file_path, format='turtle')

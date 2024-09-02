@@ -8,7 +8,7 @@ services:
       - test
     build: 
       context: .
-      dockerfile: ./Dockerfile  # Path to tests Dockerfile
+      dockerfile: ./Dockerfile.local  # Path to tests Dockerfile
     # Define volumes to mount extractor scripts or dependencies
     volumes:
       - .:/app_test/tests
@@ -32,7 +32,7 @@ services:
       - ci_test
     build: 
       context: .
-      dockerfile: ./Dockerfile  # Path to test Dockerfile
+      dockerfile: ./Dockerfile.remote  # Path to test Dockerfile
     # Define volumes to mount extractor scripts or dependencies
     volumes:
       - .:/app_test/tests
