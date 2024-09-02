@@ -31,6 +31,8 @@ class TestGraphCreator:
                                     password="test_pass",
                                     database="test_DB")
         my_sql_handler.connect()
+        my_sql_handler.reset_all_tables()
+        
         yield my_sql_handler
         #disconnect and close the connection
         my_sql_handler.disconnect()
@@ -74,10 +76,10 @@ class TestGraphCreator:
         extraction_info = { "extraction_method":"Parsed_from_HF_dataset",
                             "confidence":1.0,
                             "extraction_time":"2024-08-15_09-08-26"}
-        graph_creator.create_triplet("subject", "relation", "object",extraction_info)
+        graph_creator.create_triplet("subject", "predicate", "object",extraction_info)
         
         #Ensure that the triplet was created
-        new_triplet_df = graph_creator.mySQLHandler.query("SELECT * FROM Triplet WHERE subject = 'subject' AND relation = 'relation' AND object = 'object'")
+        new_triplet_df = graph_creator.mySQLHandler.query("SELECT * FROM Triplet WHERE subject = 'subject' AND predicate = 'predicate' AND object = 'object'")
         assert len(new_triplet_df) == 1
         print(new_triplet_df)
         new_triplet_id = new_triplet_df.iloc[0]["id"]
@@ -95,11 +97,50 @@ class TestGraphCreator:
         assert len(new_version_range_df) == 1
         assert  new_version_range_df.iloc[0]["start"] == Timestamp('2024-08-15 09:08:26')
         assert  new_version_range_df.iloc[0]["end"] == Timestamp('2024-08-15 09:08:26')
+        assert  new_version_range_df.iloc[0]["deprecated"] == False
         print(new_version_range_df)
+    
+    def test_small_graph_creation(self,setup_graph_creator: GraphCreator):
+        graph_creator =  setup_graph_creator
+        #Read dataframe from json file
+        df_example = pd.read_json("./tests/Test_files/hf_transformed_fair4ml_example_small_1.json")
+        graph_creator.load_df(df_example)
+        graph_creator.create_graph()
+        triplets_df = graph_creator.mySQLHandler.query("SELECT * FROM Triplet")
+        assert len(triplets_df) == 12
+        version_ranges_df = graph_creator.mySQLHandler.query("SELECT * FROM Version_Range")
+        assert len(version_ranges_df) == 12
+        
+    def test_small_graph_update(self,setup_graph_creator: GraphCreator):
+        graph_creator =  setup_graph_creator
+        #Read dataframe from json file
+        df_example = pd.read_json("./tests/Test_files/hf_transformed_fair4ml_example_small_1.json")
+        graph_creator.load_df(df_example)
+        graph_creator.create_graph()
+        triplets_df = graph_creator.mySQLHandler.query("SELECT * FROM Triplet")
+        assert len(triplets_df) == 12
+        version_ranges_df = graph_creator.mySQLHandler.query("SELECT * FROM Version_Range")
+        assert len(version_ranges_df) == 12
+        
+        model_uris = triplets_df["subject"].unique()
+        
+        for model_uri in model_uris:
+            
+            model_triplets_with_ranges_df = graph_creator.mySQLHandler.query(f"""
+                SELECT t.id AS triplet_id, vr.id AS range_id, vr.deprecated 
+                FROM Triplet t
+                JOIN Version_Range vr 
+                ON t.id = vr.triplet_id
+                WHERE t.subject = '{model_uri}'
+            """)
+            
+            print("MODELLLL\n",model_triplets_with_ranges_df)
+            # Assert that none of the triplets are deprecated
+            assert not model_triplets_with_ranges_df["deprecated"].any()
+            
+            
         
         
-    
-    
         
     
     

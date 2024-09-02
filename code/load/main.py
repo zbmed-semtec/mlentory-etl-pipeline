@@ -31,7 +31,7 @@ def main():
                                     user="user",
                                     password="password123",
                                     database="MLentory_DB")
-        
+        mySQLHandler.connect()
         virtuosoHandler = VirtuosoHandler(  container_name="code_virtuoso_1", 
                                             kg_files_directory="/../kg_files",
                                             virtuoso_user="dba", 

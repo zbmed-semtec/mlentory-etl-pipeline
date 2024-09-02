@@ -108,7 +108,7 @@ services:
       - "42333:3306"
       - "33060:33060"
     volumes:
-    - ./load/sql_files/init.sql:/docker-entrypoint-initdb.d/init.sql
+    - ../code/load/sql_files/init.sql:/docker-entrypoint-initdb.d/init.sql
     - ../data/mysql_data:/var/lib/mysql
     command: --init-file /docker-entrypoint-initdb.d/init.sql
 

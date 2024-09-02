@@ -6,6 +6,7 @@ CREATE TABLE IF NOT EXISTS `Version_Range`(
     `triplet_id` BIGINT NOT NULL,
     `start` DATETIME NOT NULL,
     `end` DATETIME NOT NULL,
+    `deprecated` BOOLEAN NOT NULL DEFAULT FALSE,
     `extraction_info_id` BIGINT NOT NULL
 );
 CREATE TABLE IF NOT EXISTS `Triplet`(
@@ -20,11 +21,7 @@ CREATE TABLE IF NOT EXISTS `Triplet_Extraction_Info`(
     `method_description` BIGINT NOT NULL,
     `extraction_confidence` FLOAT NOT NULL
 );
-CREATE TABLE IF NOT EXISTS `Method`(
-    `id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
-    `name` TEXT NOT NULL,
-    `description` TEXT NOT NULL
-);
+
 ALTER TABLE
     `Triplet_Extraction_Info` ADD CONSTRAINT `triplet_extraction_info_method_id_foreign` FOREIGN KEY(`method_id`) REFERENCES `Method`(`id`);
 ALTER TABLE
