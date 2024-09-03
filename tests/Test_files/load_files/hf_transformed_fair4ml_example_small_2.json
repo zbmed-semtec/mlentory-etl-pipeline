@@ -12,7 +12,8 @@
         "fair4ml:mlTask":[
             {
                 "data":[
-                    "sound classification"
+                    "Sound classification",
+                    "Sound regression"
                 ],
                 "extraction_method":"Parsed_from_HF_dataset",
                 "confidence":1.0,
@@ -22,9 +23,9 @@
         "fair4ml:sharedBy":[
             {
                 "data":"MIT",
-                "extraction_method":"Parsed_from_HF_dataset",
+                "extraction_method":"New_parsed_from_HF_dataset",
                 "confidence":1.0,
-                "extraction_time":"2024-07-16_09-14-40"
+                "extraction_time":"2025-07-16_09-14-40"
             }
         ],
         "fair4ml:trainedOn":[ {
@@ -33,7 +34,7 @@
                 ],
                 "extraction_method":"Parsed_from_HF_dataset",
                 "confidence":1.0,
-                "extraction_time":"2024-07-16_09-14-40"
+                "extraction_time":"2025-07-16_09-14-40"
             }
         ]
     }
@@ -44,7 +45,7 @@
                 "data":"sentence-transformers\/all-MiniLM-L12-v2",
                 "extraction_method":"Parsed_from_HF_dataset",
                 "confidence":1.0,
-                "extraction_time":"2024-07-16_09-14-40"
+                "extraction_time":"2025-07-16_09-14-40"
             }
         ],
         "fair4ml:mlTask":[
@@ -55,28 +56,28 @@
                 ],
                 "extraction_method":"Parsed_from_HF_dataset",
                 "confidence":1.0,
-                "extraction_time":"2024-07-16_09-14-40"
+                "extraction_time":"2025-07-16_09-14-40"
             }
         ],
         "fair4ml:sharedBy":[
             {
-                "data":"MIT",
+                "data":"MIT 2.0",
                 "extraction_method":"Parsed_from_HF_dataset",
                 "confidence":1.0,
-                "extraction_time":"2024-07-16_09-14-40"
+                "extraction_time":"2025-07-16_09-14-40"
             }
         ],
         "fair4ml:trainedOn":[
             {
                 "data":[
-                    "s2orc",
+                    "s2o",
                     "flax-sentence-embeddings\/stackexchange_xml",
                     "ms_marco",
                     "gooaq"
                 ],
                 "extraction_method":"Parsed_from_HF_dataset",
                 "confidence":0.9,
-                "extraction_time":"2024-07-16_09-14-40"
+                "extraction_time":"2025-07-16_09-14-40"
             }
         ]
     }

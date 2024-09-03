@@ -3,37 +3,39 @@
         
         "schema.org:name":[
             {
-                "data":"MIT\/ast-finetuned-audioset-10-10-0.4593",
+                "data":"distilbert\/distilbert-base-uncased",
                 "extraction_method":"Parsed_from_HF_dataset",
                 "confidence":1.0,
-                "extraction_time":"2024-07-16_09-14-40"
+                "extraction_time":"2026-07-16_09-14-40"
             }
         ],
         "fair4ml:mlTask":[
             {
                 "data":[
-                    "sound classification"
+                    "fill mask"
                 ],
                 "extraction_method":"Parsed_from_HF_dataset",
                 "confidence":1.0,
-                "extraction_time":"2024-07-16_09-14-40"
+                "extraction_time":"2026-07-16_09-14-40"
             }
         ],
         "fair4ml:sharedBy":[
             {
-                "data":"MIT",
+                "data":"distilbert",
                 "extraction_method":"Parsed_from_HF_dataset",
                 "confidence":1.0,
-                "extraction_time":"2024-07-16_09-14-40"
+                "extraction_time":"2026-07-16_09-14-40"
             }
         ],
-        "fair4ml:trainedOn":[ {
-            "data":[
-                    "imagenet-1k"
+        "fair4ml:trainedOn":[
+            {
+                "data":[
+                    "bookcorpus",
+                    "wikipedia"
                 ],
                 "extraction_method":"Parsed_from_HF_dataset",
                 "confidence":1.0,
-                "extraction_time":"2024-07-16_09-14-40"
+                "extraction_time":"2026-07-16_09-14-40"
             }
         ]
     }
@@ -44,7 +46,7 @@
                 "data":"sentence-transformers\/all-MiniLM-L12-v2",
                 "extraction_method":"Parsed_from_HF_dataset",
                 "confidence":1.0,
-                "extraction_time":"2024-07-16_09-14-40"
+                "extraction_time":"2026-07-16_09-14-40"
             }
         ],
         "fair4ml:mlTask":[
@@ -55,7 +57,7 @@
                 ],
                 "extraction_method":"Parsed_from_HF_dataset",
                 "confidence":1.0,
-                "extraction_time":"2024-07-16_09-14-40"
+                "extraction_time":"2026-07-16_09-14-40"
             }
         ],
         "fair4ml:sharedBy":[
@@ -63,7 +65,7 @@
                 "data":"MIT",
                 "extraction_method":"Parsed_from_HF_dataset",
                 "confidence":1.0,
-                "extraction_time":"2024-07-16_09-14-40"
+                "extraction_time":"2026-07-16_09-14-40"
             }
         ],
         "fair4ml:trainedOn":[
@@ -76,7 +78,7 @@
                 ],
                 "extraction_method":"Parsed_from_HF_dataset",
                 "confidence":0.9,
-                "extraction_time":"2024-07-16_09-14-40"
+                "extraction_time":"2026-07-16_09-14-40"
             }
         ]
     }

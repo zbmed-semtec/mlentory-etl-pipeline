@@ -31,7 +31,7 @@ CREATE TABLE IF NOT EXISTS `Triplet`(
 CREATE TABLE IF NOT EXISTS `Triplet_Extraction_Info`(
     `id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
     `method_description` TEXT NOT NULL,
-    `extraction_confidence` FLOAT NOT NULL
+    `extraction_confidence` DECIMAL(6, 5)
 );
 
 -- For the first constraint

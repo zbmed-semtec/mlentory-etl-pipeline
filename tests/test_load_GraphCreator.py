@@ -21,7 +21,7 @@ class TestGraphCreator:
     
     @classmethod 
     def setup_class(self):
-        self.m4ml_example_dataframe = pd.read_json("./tests/Test_files/hf_transformed_fair4ml_example.json")
+        self.m4ml_example_dataframe = pd.read_json("./tests/Test_files/load_files/hf_transformed_fair4ml_example.json")
     
     @pytest.fixture
     def setup_mysql_handler(self) -> MySQLHandler:
@@ -64,6 +64,27 @@ class TestGraphCreator:
         graph_creator = GraphCreator(setup_mysql_handler,setup_mock_graph_creator)
         return graph_creator
     
+    def create_graph(self,source_file_path:str,graph_creator:GraphCreator):
+        df_example = pd.read_json(source_file_path)
+        graph_creator.load_df(df_example)
+        graph_creator.create_graph()
+    
+    def assert_graph_state(self,expected_triplets, expected_models, expected_ranges, expected_extraction_info, graph_creator:GraphCreator, expected_deprecated=0, print_df=False):
+        triplets_df = graph_creator.mySQLHandler.query("SELECT * FROM Triplet")
+        ranges_df = graph_creator.mySQLHandler.query("SELECT * FROM Version_Range")
+        extraction_info_df = graph_creator.mySQLHandler.query("SELECT * FROM Triplet_Extraction_Info")
+        
+        if(print_df):
+            print("TRIPlETS\n",triplets_df)
+            print("RANGES\n",ranges_df)
+            print("EXTRACTION_INFO\n",extraction_info_df)
+        
+        assert len(extraction_info_df) == expected_extraction_info
+        assert len(triplets_df) == expected_triplets
+        assert len(ranges_df) == expected_ranges
+        assert len(triplets_df["subject"].unique()) == expected_models
+        assert len(ranges_df[ranges_df["deprecated"] == True]) == expected_deprecated
+    
     def test_basic_creation(self, setup_mock_graph_creator: GraphCreator):
         graph_creator = setup_mock_graph_creator
         graph_creator.create_graph()
@@ -103,44 +124,123 @@ class TestGraphCreator:
     def test_small_graph_creation(self,setup_graph_creator: GraphCreator):
         graph_creator =  setup_graph_creator
         #Read dataframe from json file
-        df_example = pd.read_json("./tests/Test_files/hf_transformed_fair4ml_example_small_1.json")
-        graph_creator.load_df(df_example)
-        graph_creator.create_graph()
-        triplets_df = graph_creator.mySQLHandler.query("SELECT * FROM Triplet")
-        assert len(triplets_df) == 12
-        version_ranges_df = graph_creator.mySQLHandler.query("SELECT * FROM Version_Range")
-        assert len(version_ranges_df) == 12
+        self.create_graph(source_file_path="./tests/Test_files/load_files/hf_transformed_fair4ml_example_small_1.json",graph_creator=graph_creator)
+        self.assert_graph_state(expected_triplets=12, 
+                                expected_models=2, 
+                                expected_ranges=12, 
+                                expected_extraction_info=2, 
+                                expected_deprecated=0,
+                                graph_creator=graph_creator)
         
-    def test_small_graph_update(self,setup_graph_creator: GraphCreator):
+    def test_small_graph_update_same_models(self,setup_graph_creator: GraphCreator):
         graph_creator =  setup_graph_creator
-        #Read dataframe from json file
-        df_example = pd.read_json("./tests/Test_files/hf_transformed_fair4ml_example_small_1.json")
-        graph_creator.load_df(df_example)
-        graph_creator.create_graph()
-        triplets_df = graph_creator.mySQLHandler.query("SELECT * FROM Triplet")
-        assert len(triplets_df) == 12
-        version_ranges_df = graph_creator.mySQLHandler.query("SELECT * FROM Version_Range")
-        assert len(version_ranges_df) == 12
+        self.create_graph(source_file_path="./tests/Test_files/load_files/hf_transformed_fair4ml_example_small_1.json",graph_creator=graph_creator)
+        self.assert_graph_state(expected_triplets=12, 
+                                expected_models=2, 
+                                expected_ranges=12, 
+                                expected_extraction_info=2, 
+                                expected_deprecated=0,
+                                graph_creator=graph_creator)
         
-        model_uris = triplets_df["subject"].unique()
+        self.create_graph(source_file_path="./tests/Test_files/load_files/hf_transformed_fair4ml_example_small_2.json",graph_creator=graph_creator)
+        self.assert_graph_state(expected_triplets=15, 
+                                expected_models=2, 
+                                expected_ranges=16, 
+                                expected_extraction_info=3, 
+                                expected_deprecated=3,
+                                graph_creator=graph_creator)
+    
+    def test_small_graph_add_new_models(self,setup_graph_creator: GraphCreator):
+        graph_creator =  setup_graph_creator
+        self.create_graph(source_file_path="./tests/Test_files/load_files/hf_transformed_fair4ml_example_small_1.json",graph_creator=graph_creator)
+        self.assert_graph_state(expected_triplets=12, 
+                                expected_models=2, 
+                                expected_ranges=12, 
+                                expected_extraction_info=2, 
+                                expected_deprecated=0,
+                                graph_creator=graph_creator)
         
-        for model_uri in model_uris:
-            
-            model_triplets_with_ranges_df = graph_creator.mySQLHandler.query(f"""
-                SELECT t.id AS triplet_id, vr.id AS range_id, vr.deprecated 
-                FROM Triplet t
-                JOIN Version_Range vr 
-                ON t.id = vr.triplet_id
-                WHERE t.subject = '{model_uri}'
-            """)
-            
-            print("MODELLLL\n",model_triplets_with_ranges_df)
-            # Assert that none of the triplets are deprecated
-            assert not model_triplets_with_ranges_df["deprecated"].any()
-            
-            
+        self.create_graph(source_file_path="./tests/Test_files/load_files/hf_transformed_fair4ml_example_small_3.json",graph_creator=graph_creator)
+        self.assert_graph_state(expected_triplets=17, 
+                                expected_models=3, 
+                                expected_ranges=17, 
+                                expected_extraction_info=2, 
+                                expected_deprecated=0,
+                                graph_creator=graph_creator)
+    
+    def test_small_graph_update_and_add_new_models(self,setup_graph_creator: GraphCreator):
+        graph_creator =  setup_graph_creator
+        self.create_graph(source_file_path="./tests/Test_files/load_files/hf_transformed_fair4ml_example_small_1.json",graph_creator=graph_creator)
+        self.assert_graph_state(expected_triplets=12, 
+                                expected_models=2, 
+                                expected_ranges=12, 
+                                expected_extraction_info=2, 
+                                expected_deprecated=0,
+                                graph_creator=graph_creator)
         
+        self.create_graph(source_file_path="./tests/Test_files/load_files/hf_transformed_fair4ml_example_small_3.json",graph_creator=graph_creator)
+        self.assert_graph_state(expected_triplets=17, 
+                                expected_models=3, 
+                                expected_ranges=17, 
+                                expected_extraction_info=2, 
+                                expected_deprecated=0,
+                                graph_creator=graph_creator)
         
+        self.create_graph(source_file_path="./tests/Test_files/load_files/hf_transformed_fair4ml_example_small_2.json",graph_creator=graph_creator)
+        self.assert_graph_state(expected_triplets=20, 
+                                expected_models=3, 
+                                expected_ranges=21, 
+                                expected_extraction_info=3, 
+                                expected_deprecated=0,
+                                graph_creator=graph_creator)
+        
+    def test_large_dataset(self, setup_graph_creator: GraphCreator):
+        graph_creator = setup_graph_creator
+        self.create_graph("./tests/Test_files/load_files/hf_transformed_fair4ml_example.json", graph_creator)
+    
+    # def test_malformed_input(self, setup_graph_creator: GraphCreator):
+    #     graph_creator = setup_graph_creator
+    #     with pytest.raises(ValueError):
+    #         self.create_graph("./tests/Test_files/load_files/malformed_data.json", graph_creator)
+    
+    def test_triplet_deprecation(self, setup_graph_creator: GraphCreator):
+        graph_creator = setup_graph_creator
+        graph_creator.curr_update_date = "2024-07-16_09-14-40"
+        graph_creator.create_triplet("http://example.com/model1",
+                                     "http://example.com/property1",
+                                     "http://example.com/object1",
+                                     extraction_info= {
+                                        "extraction_method":"Parsed_from_HF_dataset",
+                                        "confidence":1.0,
+                                        "extraction_time":"2024-07-16_09-14-40"
+                                     }
+                                    )
+        
+        self.assert_graph_state(expected_triplets=1,
+                                expected_models=1,
+                                expected_ranges=1,
+                                expected_extraction_info=1,
+                                expected_deprecated=0,
+                                graph_creator=graph_creator)
+        
+        graph_creator.curr_update_date = "2025-07-16_09-14-40"
+        graph_creator.create_triplet("http://example.com/model1",
+                                     "http://example.com/property1",
+                                     "http://example.com/object2",
+                                     extraction_info= {
+                                        "extraction_method":"Parsed_from_HF_dataset",
+                                        "confidence":1.0,
+                                        "extraction_time":"2025-07-16_09-14-40"
+                                     }
+                                     )
+        graph_creator.deprecate_old_triplets("http://example.com/model1")
+        
+        self.assert_graph_state(expected_triplets=2,
+                                expected_models=1,
+                                expected_ranges=2,
+                                expected_extraction_info=1,
+                                expected_deprecated=1,
+                                graph_creator=graph_creator)
         
     
     
