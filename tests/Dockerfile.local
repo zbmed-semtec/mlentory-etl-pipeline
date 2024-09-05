@@ -4,6 +4,11 @@ COPY requirements.txt .
 RUN pip3 install -r requirements.txt
 RUN pip3 install torch -f https://download.pytorch.org/whl/cu113
 
+ENV DOCKER_VERSION=18.09.4
+RUN curl -sfL -o docker.tgz "https://download.docker.com/linux/static/stable/x86_64/docker-${DOCKER_VERSION}.tgz" && \
+  tar -xzf docker.tgz docker/docker --strip=1 --directory /usr/local/bin && \
+  rm docker.tgz
+  
 RUN mkdir Transform_Queue
 RUN mkdir Load_Queue
 
