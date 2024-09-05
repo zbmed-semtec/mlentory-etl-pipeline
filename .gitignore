@@ -13,6 +13,8 @@ data/datasets/*.json
 data/mysql_data
 data/virtuoso_data
 
+tests/Test_files/load_files/virtuoso_data
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

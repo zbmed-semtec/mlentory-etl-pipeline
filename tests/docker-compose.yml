@@ -18,6 +18,7 @@ services:
       - ../data/transform_queue:/app_test/transform_queue
       - ../data/load_queue:/app_test/load_queue
       - ../code/config_data:/app_test/config_data
+      - /var/run/docker.sock:/var/run/docker.sock
     dns:
       - 1.1.1.1
 
@@ -42,6 +43,7 @@ services:
       - ../data/transform_queue:/app_test/transform_queue
       - ../data/load_queue:/app_test/load_queue
       - ../code/config_data:/app_test/config_data
+      - /var/run/docker.sock:/var/run/docker.sock
     dns:
       - 1.1.1.1
     # command: ["./tests/validate_tests.sh"]
@@ -87,8 +89,8 @@ services:
       - "8890:8890"
     environment:
       DBA_PASSWORD: my_strong_password
-    # volumes:
-    #   - ../data/virtuoso_data:/opt/virtuoso-opensource/database
+    volumes:
+      - ./Test_files/load_files/virtuoso_data:/opt/virtuoso-opensource/database
 
 # networks:
 #   my-macvlan-net:

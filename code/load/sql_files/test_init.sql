@@ -23,10 +23,10 @@ CREATE TABLE IF NOT EXISTS `Version_Range`(
 );
 CREATE TABLE IF NOT EXISTS `Triplet`(
     `id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
-    `subject` varchar(512) NOT NULL,
-    `predicate` varchar(512) NOT NULL,
-    `object` TEXT NOT NULL,
-    UNIQUE KEY `unique_triplet` (`subject`(512), `predicate`(512), `object`(512))
+    `subject` varchar(1024) NOT NULL,
+    `predicate` varchar(1024) NOT NULL,
+    `object` TEXT NOT NULL
+    -- UNIQUE KEY `unique_triplet` (`subject`(1024), `predicate`(1024), `object`(1024))
 );
 CREATE TABLE IF NOT EXISTS `Triplet_Extraction_Info`(
     `id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,

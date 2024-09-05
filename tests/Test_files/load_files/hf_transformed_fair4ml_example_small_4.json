@@ -1,0 +1,80 @@
+[
+    {
+        
+        "schema.org:name":[
+            {
+                "data":"MIT\/ast-finetuned-audioset-10-10-0.4593",
+                "extraction_method":"Parsed_from_HF_dataset",
+                "confidence":1.0,
+                "extraction_time":"2027-07-16_09-14-40"
+            }
+        ],
+        "fair4ml:mlTask":[
+            {
+                "data":[
+                    "sound classification"
+                ],
+                "extraction_method":"Parsed_from_HF_dataset",
+                "confidence":1.0,
+                "extraction_time":"2027-07-16_09-14-40"
+            }
+        ],
+        "fair4ml:sharedBy":[
+            {
+                "data":"MIT",
+                "extraction_method":"Parsed_from_HF_dataset",
+                "confidence":1.0,
+                "extraction_time":"2027-07-16_09-14-40"
+            }
+        ],
+        "fair4ml:trainedOn":[ {
+            "data":[
+                    "imagenet-1k"
+                ],
+                "extraction_method":"Parsed_from_HF_dataset",
+                "confidence":1.0,
+                "extraction_time":"2027-07-16_09-14-40"
+            }
+        ]
+    }
+    ,{
+        
+        "schema.org:name":[
+            {
+                "data":"sentence-transformers\/all-MiniLM-L12-v2",
+                "extraction_method":"Parsed_from_HF_dataset",
+                "confidence":1.0,
+                "extraction_time":"2027-07-16_09-14-40"
+            }
+        ],
+        "fair4ml:mlTask":[
+            {
+                "data":[
+                    "feature extraction"
+                ],
+                "extraction_method":"Parsed_from_HF_dataset",
+                "confidence":1.0,
+                "extraction_time":"2027-07-16_09-14-40"
+            }
+        ],
+        "fair4ml:sharedBy":[
+            {
+                "data":"MIT",
+                "extraction_method":"Parsed_from_HF_dataset",
+                "confidence":1.0,
+                "extraction_time":"2027-07-16_09-14-40"
+            }
+        ],
+        "fair4ml:trainedOn":[
+            {
+                "data":[
+                    "s2orc",
+                    "flax-sentence-embeddings\/stackexchange_xml"
+                ],
+                "extraction_method":"Parsed_from_HF_dataset",
+                "confidence":0.9,
+                "extraction_time":"2027-07-16_09-14-40"
+            }
+        ]
+    }
+]
