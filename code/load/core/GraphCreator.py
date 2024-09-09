@@ -131,10 +131,7 @@ class GraphCreator:
         subject_json = str(subject.n3())
         predicate_json = str(predicate.n3())
         object_json = str(object.n3())
-        
-        
-        
-        print("OBJECTTTTTTTT ",object, str(object.n3()),object_json)
+        # print("OBJECTTTTTTTT ",object, str(object.n3()),object_json)
         
         triplet_id = -1
         triplet_id_df = self.mySQLHandler.query(f"""SELECT id FROM Triplet WHERE subject = '{subject_json}'

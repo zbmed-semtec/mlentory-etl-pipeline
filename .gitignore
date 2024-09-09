@@ -13,7 +13,12 @@ data/datasets/*.json
 data/mysql_data
 data/virtuoso_data
 
-tests/Test_files/load_files/virtuoso_data
+tests/Test_files/load_files/virtuoso_data/kg_files/*.ttl
+tests/Test_files/load_files/virtuoso_data/*.db
+tests/Test_files/load_files/virtuoso_data/*.ini
+tests/Test_files/load_files/virtuoso_data/*.pxa
+tests/Test_files/load_files/virtuoso_data/*.trx
+
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
