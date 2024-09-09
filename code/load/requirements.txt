@@ -1,0 +1,8 @@
+watchdog
+matplotlib
+numpy
+pandas
+rdflib
+mysql-connector-python
+docker
+sparqlwrapper

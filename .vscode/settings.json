@@ -2,7 +2,9 @@
     "cSpell.words": [
         "caplog",
         "Dataframe",
-        "pytest"
+        "datestamp",
+        "pytest",
+        "sparql"
     ],
     "circleci.persistedProjectSelection": [
         "circleci/EsAWGjezQiG4eYxgSY9rbQ/NR6Q7115GE98DGDj4rb12t"

@@ -1,7 +1,7 @@
 from core.QueueObserver import QueueObserver
 from core.FilesProcessor import FilesProcessor
 from core.FieldProcessorHF import FieldProcessorHF
-from core.GraphCreator import GraphCreator
+from code.load.core.GraphCreator import GraphCreator
 import argparse
 import datetime
 import logging
@@ -18,7 +18,7 @@ def main():
   #Setting up logging system
   now = datetime.datetime.now()
   timestamp = now.strftime('%Y-%m-%d_%H-%M-%S')
-  filename = f'./Processing_Logs/transform_{timestamp}.log'
+  filename = f'./processing_logs/transform_{timestamp}.log'
   logging.basicConfig(filename=filename, filemode='w', format='%(asctime)s %(name)s - %(levelname)s - %(message)s', datefmt='%d-%b-%y %H:%M:%S')
   logger = logging.getLogger(__name__)
   logger.setLevel(logging.INFO)
@@ -26,13 +26,12 @@ def main():
   try:
     #Initializing the updater
     fields_processor_HF = FieldProcessorHF(path_to_config_data="./../config_data")
-    graph_creator = GraphCreator()
+
     files_processor = FilesProcessor(num_workers=4,
                                      next_batch_proc_time=30, 
-                                     processed_files_log_path="./Processing_Logs/Processed_files.txt",
+                                     processed_files_log_path="./processing_logs/Processed_files.txt",
                                      load_queue_path="./../load_queue",
-                                     field_processor_HF=fields_processor_HF,
-                                     graph_creator=graph_creator
+                                     field_processor_HF=fields_processor_HF
                                      )
     observer = QueueObserver(watch_dir=args.folder,files_processor=files_processor)
     observer.start()

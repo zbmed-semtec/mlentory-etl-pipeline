@@ -5,6 +5,7 @@ from typing import Any, Dict, List, Set, Union
 from huggingface_hub import HfApi
 from huggingface_hub.hf_api import RepoFile, RepoFolder
 import math
+from datetime import datetime
 
 class MetadataParser:
 
@@ -50,13 +51,16 @@ class MetadataParser:
         answer = self.qa_pipeline({"question": question, "context": context})
         return [{"data":answer['answer']+'',
                     "extraction_method":self.qa_model,
-                    "confidence":answer['score']}]
+                    "confidence":answer['score'],
+                    "extraction_time": datetime.now().strftime("%Y-%m-%d_%H-%M-%S")}]
     
     def add_default_extraction_info(self,data:str,extraction_method:str,confidence:float) -> Dict:
         return {"data":data,
-                    "extraction_method":extraction_method,
-                    "confidence":confidence}
-    
+                "extraction_method":extraction_method,
+                "confidence":confidence,
+                "extraction_time": datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+               }
+            
     def get_repository_weight_HF(self, model_name:str) -> str:
         model_repo_weight = 0
         model_tree_file_information = self.hf_api.list_repo_tree(f"{model_name}", recursive=True)

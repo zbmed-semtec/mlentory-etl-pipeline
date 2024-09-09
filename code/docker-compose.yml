@@ -11,6 +11,7 @@ services:
     volumes:
       - ./extractors/hf_extractor:/app
       - ../data/transform_queue:/transform_queue
+      - ../data/datasets:/datasets
       - ./config_data:/config_data
     deploy:
       resources:
@@ -36,6 +37,7 @@ services:
     volumes:
       - ./extractors/hf_extractor:/app
       - ../data/transform_queue:/transform_queue
+      - ../data/datasets:/datasets
       - ./config_data:/config_data
     dns:
       - 1.1.1.1
@@ -58,6 +60,7 @@ services:
       - ./transform:/app
       - ../data/transform_queue:/transform_queue
       - ../data/load_queue:/load_queue
+      - ../data/datasets:/datasets
       - ./config_data:/config_data
     dns:
       - 1.1.1.1
@@ -67,15 +70,70 @@ services:
     # Uncomment for production
     #command: ["python3", "ExtractFromDataset.py"]
 
-  # mysql:
-  #   image: mysql:latest
-  #   environment:
-  #     MYSQL_ROOT_PASSWORD: password123
-  #     MYSQL_DATABASE: Extraction_Results
-  #     MYSQL_USER: user
-  #     MYSQL_PASSWORD: password123
+  load:    
+    depends_on:
+      - transform
+      - mysql
+    profiles:
+      - gpu
+      - no_gpu
+    build: 
+      context: .
+      dockerfile: ./load/Dockerfile  # Path to extractor Dockerfile
+    # Define volumes to mount extractor scripts or dependencies
+    volumes:
+      - ./load:/app
+      - ../data/load_queue:/load_queue
+      - ../data/virtuoso_data/kg_files:/kg_files
+      - ./config_data:/config_data
+      - /var/run/docker.sock:/var/run/docker.sock 
+    dns:
+      - 1.1.1.1
+
+    # Uncomment this line to test the script
+    command: ["tail", "-f", "/dev/null"]
+  
+  mysql:
+    image: mysql:latest
+    profiles:
+      - gpu
+      - no_gpu
+    hostname: mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: password123
+      MYSQL_DATABASE: Extraction_Results
+      MYSQL_USER: user
+      MYSQL_PASSWORD: password123
+    ports:
+      - "42333:3306"
+      - "33060:33060"
+    volumes:
+    - ../code/load/sql_files/init.sql:/docker-entrypoint-initdb.d/init.sql
+    - ../data/mysql_data:/var/lib/mysql
+    command: --init-file /docker-entrypoint-initdb.d/init.sql
+
+  # anzograph:
+  #   image: cambridgesemantics/anzograph:latest
   #   ports:
-  #     - "3306:3306"
+  #     - "8085:8080"
+  #     - "8443:8443"
+  #   volumes:
+  #     - /DB/anzograph-data:/opt/anzograph-data
+
+  virtuoso:
+    image: openlink/virtuoso-opensource-7:latest
+    hostname: virtuoso
+    profiles:
+      - gpu
+      - no_gpu
+    ports:
+      - "1111:1111"
+      - "8890:8890"
+    environment:
+      DBA_PASSWORD: my_strong_password
+    volumes:
+      - ../data/virtuoso_data:/opt/virtuoso-opensource/database
+
   # transformer service
   # transformer:
   #   build: ./transformer  # Path to your transformer Dockerfile

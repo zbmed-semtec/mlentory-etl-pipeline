@@ -5,8 +5,15 @@ data/transform_queue/*.json
 
 data/load_queue/*.tsv
 data/load_queue/*.json
+data/load_queue/*.ttl
 
+data/datasets/*.json
 *.log
+
+data/mysql_data
+data/virtuoso_data
+
+tests/Test_files/load_files/virtuoso_data
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
