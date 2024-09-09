@@ -82,6 +82,9 @@ services:
     command: --init-file /docker-entrypoint-initdb.d/init.sql
   
   virtuoso:
+    profiles:
+        - ci_test
+        - test
     image: openlink/virtuoso-opensource-7:latest
     hostname: virtuoso
     ports:
