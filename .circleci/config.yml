@@ -31,6 +31,12 @@ jobs:
           command: docker-compose --version
           working_directory: ./tests
       - run:
+          name: Add permissions to execution files 
+          command: |
+            chmod +x ./validate_tests.sh
+            chmod +x ./wait-for-it.sh
+          working_directory: ./tests
+      - run:
           name: Build the container architecture
           command: docker-compose --profile test build
           working_directory: ./tests

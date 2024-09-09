@@ -1,5 +1,6 @@
 from multiprocessing import Process, Pool,set_start_method,get_context
 from typing import Callable, List, Dict
+from rdflib.graph import Graph
 import traceback
 import logging
 from datetime import datetime
@@ -9,10 +10,8 @@ import os
 
 if("app_test" in os.getcwd()):
     from transform.core.FieldProcessorHF import FieldProcessorHF
-    from transform.core.GraphCreator import GraphCreator
 else:
     from core.FieldProcessorHF import FieldProcessorHF
-    from core.GraphCreator import GraphCreator
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -36,8 +35,7 @@ class FilesProcessor:
                  next_batch_proc_time: int,
                  processed_files_log_path: str,
                  load_queue_path: str,
-                 field_processor_HF: FieldProcessorHF,
-                 graph_creator: GraphCreator):
+                 field_processor_HF: FieldProcessorHF):
         """
         Initializes a new FilesProcessor instance.
 
@@ -56,7 +54,6 @@ class FilesProcessor:
         self.processed_models: List = manager.list()
         self.field_processor_HF: FieldProcessorHF = field_processor_HF
         self.load_queue_path: str = load_queue_path
-        self.graph_creator: GraphCreator = graph_creator
         #Getting current processed files
         with open(self.processed_files_log_path, 'r') as file:
             for line in file:
@@ -108,6 +105,9 @@ class FilesProcessor:
         m4ml_models_df.to_csv(filename_tsv,sep="\t")
         m4ml_models_df.to_json(filename_json,orient="records",indent=4)
         
+        
+        
+        
         end_time = time.perf_counter()-start_time
         
         print(end_time)
@@ -155,8 +155,7 @@ class FilesProcessor:
         Args:
             filename (str): The name of the file to be added.
         """
-        # print("Are we good? ",filename)
-        # print(self.processed_files)
+        
         if(filename not in self.processed_files):
             self.files_to_proc.append(filename)
             
@@ -170,7 +169,6 @@ class FilesProcessor:
         Also triggers processing if the timer reaches zero or there are no jobs left.
         """
         self.curr_waiting_time -= 1
-        # print(self.curr_waiting_time)
         if (len(self.files_to_proc) == 0) or (self.curr_waiting_time == 0):
             self.curr_waiting_time = self.next_batch_proc_time  # Reset timer
             if self.files_to_proc:
