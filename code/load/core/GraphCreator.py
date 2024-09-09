@@ -23,14 +23,14 @@ class GraphCreator:
         self.mySQLHandler = mySQLHandler
         self.virtuosoHandler = virtuosoHandler
         
-        self.new_triplets_graph = rdflib.Graph()
+        self.new_triplets_graph = rdflib.Graph(identifier="http://example.com/data_1")
         self.new_triplets_graph.bind('fair4ml', URIRef('http://fair4ml.com/'))
         self.new_triplets_graph.bind('codemeta', URIRef('http://codemeta.com/'))
         self.new_triplets_graph.bind('schema', URIRef('https://schema.org/'))
         self.new_triplets_graph.bind('mlentory', URIRef('https://mlentory.com/'))
         self.new_triplets_graph.bind('prov', URIRef('http://www.w3.org/ns/prov#'))
         
-        self.old_triplets_graph = rdflib.Graph()
+        self.old_triplets_graph = rdflib.Graph(identifier="http://example.com/data_2")
         self.old_triplets_graph.bind('fair4ml', URIRef('http://fair4ml.com/'))
         self.old_triplets_graph.bind('codemeta', URIRef('http://codemeta.com/'))
         self.old_triplets_graph.bind('schema', URIRef('https://schema.org/'))
@@ -48,16 +48,18 @@ class GraphCreator:
     def create_rdf_graph(self):
         self.update_sql_db()
         
-        current_date = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+        # current_date = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+        current_date = datetime.now().strftime("%Y-%m-%d")
         path_new_triplets_graph = os.path.join(self.kg_files_directory, f"new_triplets_graph_{current_date}.ttl")
         self.new_triplets_graph.serialize(destination=path_new_triplets_graph, format='turtle')
         
         self.virtuosoHandler.load_graph(ttl_file_path=path_new_triplets_graph)
         
-        # path_old_triplets_graph = os.path.join(self.kg_files_directory, f"old_triplets_graph_{current_date}.ttl")
-        # self.old_triplets_graph.serialize(destination=path_old_triplets_graph, format='turtle')
-        
-        # self.virtuosoHandler.delete_graph(ttl_file_path=path_old_triplets_graph)
+        if(len(self.old_triplets_graph) > 0):
+            path_old_triplets_graph = os.path.join(self.kg_files_directory, f"old_triplets_graph_{current_date}.ttl")
+            self.old_triplets_graph.serialize(destination=path_old_triplets_graph, format='turtle')
+
+            self.virtuosoHandler.delete_graph(ttl_file_path=path_old_triplets_graph)
         
         
         # path_old_triplets_graph = os.path.join(self.kg_files_directory, "old_triplets_graph.ttl")
@@ -100,13 +102,15 @@ class GraphCreator:
                         elif type(source["data"]) == list:
                             for entity in source["data"]:
                                 self.create_triplet_in_SQL(subject=model_uri,
-                                                            predicate=rdflib.URIRef(column),
+                                                            predicate= URIRef(column),
                                                             object=URIRef(f"mlentory:hugging_face/{entity.replace(' ','_')}"),
                                                             extraction_info=source)
-                if(column in ["dateCreated", "dateModified"]):
+                if(column in ["schema.org:datePublished","dateCreated", "dateModified"]):
+                    # print("ROWWWWWWW",row[column])
                     self.create_triplet_in_SQL(subject=model_uri,
                                         predicate=URIRef(column),
-                                        object=Literal(row[column]["data"], datatype=XSD.date))
+                                        object=Literal(row[column][0]["data"], datatype=XSD.date),
+                                        extraction_info=row[column][0])
                 if(column in ["storageRequirements","name"]):
                     self.create_triplet_in_SQL(subject=model_uri,
                                         predicate=URIRef(column),
@@ -124,11 +128,13 @@ class GraphCreator:
         # predicate_json = json.dumps({"datatype":type(predicate).__name__,"data":predicate})
         # object_json = json.dumps({"datatype":type(object).__name__,"data":object})
         
-        subject_json = json.dumps(subject.n3())
-        predicate_json = json.dumps(predicate.n3())
-        object_json = json.dumps(object.n3())
+        subject_json = str(subject.n3())
+        predicate_json = str(predicate.n3())
+        object_json = str(object.n3())
         
-        # print(subject_json,predicate_json,object_json)
+        
+        
+        print("OBJECTTTTTTTT ",object, str(object.n3()),object_json)
         
         triplet_id = -1
         triplet_id_df = self.mySQLHandler.query(f"""SELECT id FROM Triplet WHERE subject = '{subject_json}'
@@ -171,7 +177,7 @@ class GraphCreator:
 
     def deprecate_old_triplets(self, model_uri):
         
-        model_uri_json = json.dumps(model_uri.n3())
+        model_uri_json = str(model_uri.n3())
         
         old_triplets_df = self.mySQLHandler.query(f"""SELECT t.id,t.subject,t.predicate,t.object
                                                   FROM Triplet t 
@@ -184,18 +190,20 @@ class GraphCreator:
         # print("CHECK THIS OUT: \n",old_triplets_df)
         if(not old_triplets_df.empty):
             for index,old_triplet in old_triplets_df.iterrows():
-                self.virtuosoHandler.delete_triple(sparql_endpoint="http://virtuoso:8890/sparql",
-                                                   subject=self.n3_to_term(old_triplet['subject']),
-                                                   predicate=self.n3_to_term(old_triplet['predicate']),
-                                                   object=self.n3_to_term(old_triplet['object']),
-                                                   graph_iri="http://example.com/data_1")
-                self.old_triplets_graph.add(
+                # self.virtuosoHandler.delete_triple(sparql_endpoint="http://virtuoso:8890/sparql",
+                #                                    subject=self.n3_to_term(old_triplet['subject']),
+                #                                    predicate=self.n3_to_term(old_triplet['predicate']),
+                #                                    object=self.n3_to_term(old_triplet['object']),
+                #                                    graph_iri="http://example.com/data_1")
+                # print("TYPEEEEEEEE",type(self.n3_to_term(old_triplet['subject'])))
+               self.old_triplets_graph.add(
                                             (
                                                 self.n3_to_term(old_triplet['subject']), 
                                                 self.n3_to_term(old_triplet['predicate']),
                                                 self.n3_to_term(old_triplet['object'])
                                             )
                                         )
+                
 
         # self.virtuosoHandler.delete_graph()
         
@@ -227,4 +235,5 @@ class GraphCreator:
         self.mySQLHandler.execute_sql(update_query)
 
     def n3_to_term(self, n3):
+        # print("N333333333333, ", n3)
         return from_n3(n3.encode('unicode_escape').decode('unicode_escape'))
