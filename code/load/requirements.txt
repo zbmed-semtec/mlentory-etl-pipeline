@@ -6,3 +6,4 @@ rdflib
 mysql-connector-python
 docker
 sparqlwrapper
+elasticsearch
