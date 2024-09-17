@@ -17,7 +17,57 @@ class TestElasticsearch:
         print(client.info())
         yield client
         # Clean up after tests
-        client.indices.delete(index='test_index', ignore=[400, 404])
+        client.indices.delete(index=['test_index','book_index'], ignore=[400, 404])
+        # client.indices.refresh()
+    
+    @pytest.fixture
+    def book_es_client(self, es_client):
+        # Create an index
+        # Create a mapping
+        body = {"mappings": {
+                "properties": {
+                    "title": {"type": "text"},
+                    "content": {"type": "text"},
+                    "type": {"type": "keyword"},
+                    "number of pages": {"type": "integer"}
+                }
+            }
+        }
+        es_client.indices.create(index="book_index", body= body)
+        
+        docs = [{"_index":"book_index","title": "Book1", "content": "This is the content of book1","number of pages": 100},
+                {"_index":"book_index","title": "Book2", "content": "This is the content of book2","number of pages": 310},
+                {"_index":"book_index","title": "Book3", "content": "This is the content of book3","number of pages": 265},
+                {"_index":"book_index","title": "Book4", "content": "This is the content of book4","number of pages": 97}]
+        
+        bulk(es_client, docs)
+        
+        return es_client
+
+    @pytest.fixture
+    def book_nested_es_client(self, es_client):
+        # Create an index
+        # Create a mapping
+        body = {"mappings": {
+                "properties": {
+                    "title": {"type": "text"},
+                    "content": {"type": "text"},
+                    "type": {"type": "keyword"},
+                    "number of pages": {"type": "integer"}
+                }
+            }
+        }
+        es_client.indices.create(index="book_index", body= body)
+        
+        docs = [{"title": "Book1", "content": "This is the content of book1","number of pages": 100},
+                {"title": "Book2", "content": "This is the content of book2","number of pages": 310},
+                {"title": "Book3", "content": "This is the content of book3","number of pages": 265},
+                {"title": "Book4", "content": "This is the content of book4","number of pages": 97}]
+        
+        bulk(es_client, docs)
+        es_client.indices.refresh(index="book_index")
+        
+        return es_client
 
     def test_add_document(self, es_client):
         doc = {"title": "Test Document", "content": "This is a test"}
@@ -52,6 +102,41 @@ class TestElasticsearch:
         ]
         success, _ = bulk(es_client, docs)
         assert success == 5
+    
+    def test_create_mapping(self, es_client):
+        
+        body = {"mappings": {
+                "properties": {
+                    "title": {"type": "text"},
+                    "content": {"type": "keyword"},
+                }
+            }
+        }
+        es_client.indices.create(index="test_index", body= body, ignore=[400])
+        
+        doc = {"title": "Test Document", "content": "Non-Fiction"}
+        es_client.index(index="test_index", id="3", body=doc)
+        es_client.indices.refresh(index="test_index")
+        
+        result = es_client.search(index="test_index", body={"query": {"match": {"title": "Test Docume"}}})
+        assert result['hits']['total']['value'] == 1
+        
+        result = es_client.search(index="test_index", body={"query": {"term": {"content": "Non-Fictio"}}})
+        assert result['hits']['total']['value'] == 0
+        
+        result = es_client.search(index="test_index", body={"query": {"term": {"content": "Non-Fiction"}}})
+        assert result['hits']['total']['value'] == 1
+    
+    def test_boolean_query(self, book_es_client):
+        
+        result = book_es_client.search(index="test_index", body={"query": 
+                                                                    {"bool":
+                                                                        {"must":
+                                                                            {"match": {"title": "Book1"}}
+                                                                        }
+                                                                    }
+                                                                })
+        assert result['hits']['total']['value'] == 1
 
     def test_delete_document(self, es_client):
         # Add a document to delete
