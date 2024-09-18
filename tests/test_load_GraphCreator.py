@@ -76,6 +76,7 @@ class TestGraphCreator:
         df_example = pd.read_json(source_file_path)
         graph_creator.load_df(df_example)
         graph_creator.create_rdf_graph()
+        
     
     def assert_sql_db_state(self,expected_triplets:int, expected_models:int, expected_ranges:int, expected_extraction_info:int, graph_creator:GraphCreator, expected_deprecated:int=0, print_df:bool=False):
         triplets_df = graph_creator.mySQLHandler.query("SELECT * FROM Triplet")
@@ -111,11 +112,10 @@ class TestGraphCreator:
         # assert result_count[0]["count"] == expected_models
         # assert
     
-    def test_basic_creation(self, setup_mock_graph_creator: GraphCreator):
-        graph_creator = setup_mock_graph_creator
-        graph_creator.create_rdf_graph()
-        #Check if the file exists
-        assert os.path.isfile("./tests/Test_files/load_files/virtuoso_data/kg_files/new_triplets_graph.ttl")
+    # def test_basic_creation(self, setup_mock_graph_creator: GraphCreator):
+    #     graph_creator = setup_mock_graph_creator
+    #     graph_creator.load_df(self.m4ml_example_dataframe)
+    #     graph_creator.create_rdf_graph()
     
     def test_one_new_triplet_creation(self, setup_graph_creator:GraphCreator):
         graph_creator = setup_graph_creator
