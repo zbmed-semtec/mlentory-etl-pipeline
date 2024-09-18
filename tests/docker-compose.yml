@@ -105,6 +105,8 @@ services:
     # privileged: true
     environment:
       - node.name=elastic
+      - "transport.host=localhost"
+      - "bootstrap.system_call_filter=false"
       # - discovery.type=single-node
       - cluster.name=es-docker-cluster
       - cluster.initial_master_nodes=elastic
