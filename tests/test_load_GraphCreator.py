@@ -14,6 +14,7 @@ from load.core.GraphCreator import GraphCreator
 from load.core.dbHandler.MySQLHandler import MySQLHandler
 from load.core.dbHandler.VirtuosoHandler import VirtuosoHandler
 
+
 class TestGraphCreator:
     """
     Test class for GraphCreator
@@ -42,7 +43,7 @@ class TestGraphCreator:
     def setup_virtuoso_handler(self) -> VirtuosoHandler:
         kg_files_directory = "./tests/Test_files/load_files/virtuoso_data/kg_files"
         
-        virtuosoHandler = VirtuosoHandler(  container_name="tests_virtuoso_1", 
+        virtuosoHandler = VirtuosoHandler(  container_name= "virtuoso", 
                                             kg_files_directory=kg_files_directory,
                                             virtuoso_user="dba", 
                                             virtuoso_password="my_strong_password",
