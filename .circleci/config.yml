@@ -6,7 +6,7 @@ version: 2.1
 #     image: ubuntu:20.04
 
 jobs:
-  build:
+  build_and_test:
     machine: # executor type
       image: ubuntu-2204:2024.01.2
     # working_directory: /Backend
@@ -50,6 +50,6 @@ jobs:
 workflows:
   build-and-test:
     jobs:
-      - build
+      - build_and_test
 
       

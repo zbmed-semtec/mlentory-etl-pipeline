@@ -6,7 +6,7 @@ from elasticsearch import Elasticsearch
 from elasticsearch.helpers import bulk
 
 class TestElasticsearch:
-    @pytest.fixture(scope="class")
+    @pytest.fixture
     def es_client(self):
         # Connect to the Elasticsearch container
         # client = Elasticsearch(["http://elastic:9200"])
@@ -14,16 +14,20 @@ class TestElasticsearch:
             [{"host":"elastic", "port":9200, "scheme": "http"}],
             basic_auth=('elastic', 'changeme')
         )
-        print(client.info())
+        
+        # print(client.info())
         yield client
-        # Clean up after tests
-        client.indices.delete(index=['test_index','book_index'], ignore=[400, 404])
+        # Clean up all indexes after test
+        self.clean_indices(client)
+        
+        
         # client.indices.refresh()
     
     @pytest.fixture
     def book_es_client(self, es_client):
         # Create an index
         # Create a mapping
+        
         body = {"mappings": {
                 "properties": {
                     "title": {"type": "text"},
@@ -41,14 +45,17 @@ class TestElasticsearch:
                 {"_index":"book_index","title": "Book4", "content": "This is the content of book4","number of pages": 97}]
         
         bulk(es_client, docs)
+        es_client.indices.refresh(index="book_index")
         
-        return es_client
+        yield es_client
+        
+        self.clean_indices(es_client)
 
     @pytest.fixture
     def book_nested_es_client(self, es_client):
         # Create an index
         # Create a mapping
-        body = {"mappings": {
+        body = {"mapes_client.indices.delete(index=['test_index'], ignore=[400, 404])pings": {
                 "properties": {
                     "title": {"type": "text"},
                     "content": {"type": "text"},
@@ -59,20 +66,29 @@ class TestElasticsearch:
         }
         es_client.indices.create(index="book_index", body= body)
         
-        docs = [{"title": "Book1", "content": "This is the content of book1","number of pages": 100},
-                {"title": "Book2", "content": "This is the content of book2","number of pages": 310},
-                {"title": "Book3", "content": "This is the content of book3","number of pages": 265},
-                {"title": "Book4", "content": "This is the content of book4","number of pages": 97}]
+        docs = [{"_index":"book_index","title": "Book1", "content": "This is the content of book1","number of pages": 100},
+                {"_index":"book_index","title": "Book2", "content": "This is the content of book2","number of pages": 310},
+                {"_index":"book_index","title": "Book3", "content": "This is the content of book3","number of pages": 265},
+                {"_index":"book_index","title": "Book4", "content": "This is the content of book4","number of pages": 97}]
         
         bulk(es_client, docs)
         es_client.indices.refresh(index="book_index")
         
-        return es_client
+        yield es_client
+        
+        self.clean_indices(es_client)
 
+    def clean_indices(self, client):
+        indices_to_delete = list(client.indices.get_alias(index="*").keys())
+        if len(indices_to_delete) > 0:
+            client.indices.delete(index=indices_to_delete, ignore=[400, 404])
+        print("After delete: ",client.indices.get_alias(index="*"))
+        
     def test_add_document(self, es_client):
         doc = {"title": "Test Document", "content": "This is a test"}
         result = es_client.index(index="test_index", body=doc)
         assert result['result'] == 'created'
+        es_client.indices.delete(index=['test_index'], ignore=[400, 404])
 
     def test_modify_document(self, es_client):
         # First, add a document
@@ -105,6 +121,8 @@ class TestElasticsearch:
     
     def test_create_mapping(self, es_client):
         
+        
+        
         body = {"mappings": {
                 "properties": {
                     "title": {"type": "text"},
@@ -112,7 +130,8 @@ class TestElasticsearch:
                 }
             }
         }
-        es_client.indices.create(index="test_index", body= body, ignore=[400])
+        
+        es_client.indices.create(index="test_index", body= body )
         
         doc = {"title": "Test Document", "content": "Non-Fiction"}
         es_client.index(index="test_index", id="3", body=doc)
@@ -129,7 +148,7 @@ class TestElasticsearch:
     
     def test_boolean_query(self, book_es_client):
         
-        result = book_es_client.search(index="test_index", body={"query": 
+        result = book_es_client.search(index="book_index", body={"query": 
                                                                     {"bool":
                                                                         {"must":
                                                                             {"match": {"title": "Book1"}}
