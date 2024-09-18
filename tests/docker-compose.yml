@@ -109,7 +109,8 @@ services:
       - cluster.name=es-docker-cluster
       - cluster.initial_master_nodes=elastic
       - bootstrap.memory_lock=true
-      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+      - node.max_local_storage_nodes=2
+      - "ES_JAVA_OPTS=-Xms256m -Xmx256m"
     ulimits:
       memlock:
         soft: -1
@@ -118,7 +119,7 @@ services:
       - ./Test_files/load_files/elastic:/usr/share/elasticsearch/data
     ports:
       - 9200:9200
-      - 9300:9300
+      # - 9300:9300
     # command: ['sh', '-c', 'sysctl -w vm.max_map_count=262144']
 # networks:
 #   my-macvlan-net:
