@@ -6,6 +6,8 @@ services:
         - mysql
     profiles:
       - test
+    # environment:
+    #   - VIRTUOSO_CONTAINER_NAME=test_virtuoso_1
     build: 
       context: .
       dockerfile: ./Dockerfile.local  # Path to tests Dockerfile
@@ -35,6 +37,8 @@ services:
       context: .
       dockerfile: ./Dockerfile.remote  # Path to test Dockerfile
     # Define volumes to mount extractor scripts or dependencies
+    # environment:
+    #   - VIRTUOSO_CONTAINER_NAME=tests-virtuoso-1
     volumes:
       - .:/app_test/tests
       - ../code/transform:/app_test/transform
@@ -85,6 +89,7 @@ services:
     profiles:
         - ci_test
         - test
+    container_name: virtuoso
     image: openlink/virtuoso-opensource-7:latest
     hostname: virtuoso
     ports:
