@@ -1,7 +1,5 @@
 # MLentory Extraction/Transformation/Loader (ETL) Pipeline 
 
-Short one liner introduction: MLentory enables people to ...
-
 ## Purpose
 MLentory helps building a system that extracts ML model information from different platforms, normalizes that data in a common format, stores it, and shares it in a FAIR Digital Object (FDO) registry to facilitate information retrieval (IR) and comparison/recommendation systems.
 
