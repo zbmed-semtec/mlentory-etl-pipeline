@@ -1,6 +1,6 @@
 import docker
 import shutil
-from SPARQLWrapper import SPARQLWrapper, DIGEST, POST, TURTLE,CSV,JSON,XML
+from SPARQLWrapper import SPARQLWrapper, DIGEST, POST, GET, TURTLE,CSV,JSON,XML
 from rdflib import Graph
 
 class VirtuosoHandler:
@@ -39,7 +39,9 @@ class VirtuosoHandler:
         sql_command = f""" exec=\"DELETE FROM DB.DBA.LOAD_LIST; 
                                 ld_dir('/opt/virtuoso-opensource/database/kg_files',
                                 '{ttl_file_path.split('/')[-1]}',
-                                'http://example.com/data_1');DB.DBA.rdf_loader_run();\""""
+                                'http://example.com/data_1');
+                                DB.DBA.rdf_loader_run();
+                                checkpoint;\""""
                                 
         command = f"""isql -S 1111 -U {self.virtuoso_user} -P {self.virtuoso_password} {sql_command}"""
         
@@ -62,13 +64,22 @@ class VirtuosoHandler:
         new_ttl_file_path = f"{self.kg_files_directory}/{ttl_file_path.split('/')[-1]}"
 
         shutil.move(ttl_file_path, new_ttl_file_path)
-        
-        sql_command = f""" exec=\"log_enable(3,1);
-                                DELETE FROM DB.DBA.LOAD_LIST; 
+        #DELETE from rdf_quad;
+        # select * from rdf_quad a where a.g = iri_to_id('http://example.com/data_1');
+        # select * from rdf_quad a where a.g = iri_to_id('http://example.com/data_2');
+        #DELETE FROM DB.DBA.LOAD_LIST; 
+        #and a.g = iri_to_id('http://example.com/data_1'))
+        sql_command = f""" exec=\"
                                 ld_dir('/opt/virtuoso-opensource/database/kg_files',
                                 '{ttl_file_path.split('/')[-1]}',
-                                'http://example.com/data_1');
-                                Delete from rdf_quad a where exists (select 1 from rdf_quad b where a.s = b.s and a.p = b.p and a.o = b.o and b.g = iri_to_id('http://example.com/data_1') );\"
+                                'http://example.com/data_2');
+                                DB.DBA.rdf_loader_run();
+                                log_enable(3,1);
+                                Delete from rdf_quad a 
+                                where exists (select * from rdf_quad b
+                                where a.s = b.s and a.p = b.p and a.o = b.o 
+                                and b.g = iri_to_id('http://example.com/data_2')
+                                and a.g = iri_to_id('http://example.com/data_1'));\"
                         """
                                 
         command = f"""isql -S 1111 -U {self.virtuoso_user} -P {self.virtuoso_password} {sql_command}"""
@@ -90,7 +101,7 @@ class VirtuosoHandler:
         # query = f"DELETE {{ ?s ?p ?o }} WHERE {{GRAPH <{graph_iri}> {{{subject} {predicate} {object}}}}}"
         query = f"WITH <{graph_iri}> DELETE {{ {subject._value} {predicate._value} {object._value} }}"
         
-        print(("\nQUERY: ", query))
+        print("\nQUERY: ", query)
         
         sparql.setQuery(query)
         # sparql.setReturnFormat(TURTLE)
@@ -98,6 +109,10 @@ class VirtuosoHandler:
         g = sparql.query()
 
         # self.print_sample_triples(g)
+        print("")
+        for row in g:
+            print(row)
+            
         return g
         
 

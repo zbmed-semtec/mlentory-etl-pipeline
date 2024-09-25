@@ -6,6 +6,8 @@ services:
         - mysql
     profiles:
       - test
+    # environment:
+    #   - VIRTUOSO_CONTAINER_NAME=test_virtuoso_1
     build: 
       context: .
       dockerfile: ./Dockerfile.local  # Path to tests Dockerfile
@@ -35,6 +37,8 @@ services:
       context: .
       dockerfile: ./Dockerfile.remote  # Path to test Dockerfile
     # Define volumes to mount extractor scripts or dependencies
+    # environment:
+    #   - VIRTUOSO_CONTAINER_NAME=tests-virtuoso-1
     volumes:
       - .:/app_test/tests
       - ../code/transform:/app_test/transform
@@ -82,6 +86,10 @@ services:
     command: --init-file /docker-entrypoint-initdb.d/init.sql
   
   virtuoso:
+    profiles:
+        - ci_test
+        - test
+    container_name: virtuoso
     image: openlink/virtuoso-opensource-7:latest
     hostname: virtuoso
     ports:
@@ -92,6 +100,34 @@ services:
     volumes:
       - ./Test_files/load_files/virtuoso_data:/opt/virtuoso-opensource/database
 
+  elastic:
+    profiles:
+        - ci_test
+        - test
+    image: docker.elastic.co/elasticsearch/elasticsearch:7.6.0
+    container_name: elastic
+    hostname: elastic
+    # privileged: true
+    environment:
+      - node.name=elastic
+      - "transport.host=localhost"
+      - "bootstrap.system_call_filter=false"
+      # - discovery.type=single-node
+      - cluster.name=es-docker-cluster
+      - cluster.initial_master_nodes=elastic
+      - bootstrap.memory_lock=true
+      # - node.max_local_storage_nodes=2
+      - "ES_JAVA_OPTS=-Xms256m -Xmx256m"
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    volumes:
+      - ./Test_files/load_files/elastic:/var/lib/elasticsearch/data
+    ports:
+      - 9200:9200
+      - 9300:9300
+    # command: ['sh', '-c', 'sysctl -w vm.max_map_count=262144']
 # networks:
 #   my-macvlan-net:
 #     external: true

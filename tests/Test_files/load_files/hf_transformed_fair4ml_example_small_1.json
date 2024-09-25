@@ -27,6 +27,14 @@
                 "extraction_time":"2024-07-16_09-14-40"
             }
         ],
+        "schema.org:datePublished":[
+            {
+                "data":"2022-03-02 23:29:05+00:00",
+                "extraction_method":"Parsed_from_HF_dataset",
+                "confidence":1.0,
+                "extraction_time":"2024-07-16_09-14-40"
+            }
+        ],
         "fair4ml:trainedOn":[ {
             "data":[
                     "imagenet-1k"
@@ -61,6 +69,14 @@
         "fair4ml:sharedBy":[
             {
                 "data":"MIT",
+                "extraction_method":"Parsed_from_HF_dataset",
+                "confidence":1.0,
+                "extraction_time":"2024-07-16_09-14-40"
+            }
+        ],
+        "schema.org:datePublished":[
+            {
+                "data":"2022-03-02 23:29:05+00:00",
                 "extraction_method":"Parsed_from_HF_dataset",
                 "confidence":1.0,
                 "extraction_time":"2024-07-16_09-14-40"
