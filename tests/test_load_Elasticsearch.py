@@ -195,6 +195,7 @@ class TestElasticsearch:
         )
         result = s.execute()
         assert result["hits"]["total"]["value"] == 0
+
     @pytest.mark.skip(reason="Not fully implemented")
     def test_nested_queries(self, book_es_client):
         q = Q("nested", path="author", query=Q("match", author__name="Author1"))

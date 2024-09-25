@@ -12,7 +12,6 @@ from transform.core.QueueObserver import QueueObserver, MyQueueEventHandler
 from transform.core.FilesProcessor import FilesProcessor
 
 
-
 class TestQueueObserver:
     def setup_method(self, method):
         logger = logging.getLogger(__name__)
