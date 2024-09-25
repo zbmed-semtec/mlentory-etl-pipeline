@@ -1,7 +1,7 @@
 #!/bin/bash
 docker-compose --profile=ci_test up -d
 
-sleep 4
+./wait-for-it.sh mysql:3306
 
 docker exec ci_test pytest ./tests/
 
