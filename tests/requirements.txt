@@ -12,3 +12,4 @@ mysql-connector-python
 docker
 rdflib
 sparqlwrapper
+elasticsearch==7.13.4
