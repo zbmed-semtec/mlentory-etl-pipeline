@@ -33,6 +33,7 @@ services:
       - mysql
     profiles:
       - ci_test
+    container_name: ci_test
     build: 
       context: .
       dockerfile: ./Dockerfile.remote  # Path to test Dockerfile
@@ -50,8 +51,9 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock
     dns:
       - 1.1.1.1
+    command: ["tail", "-f", "/dev/null"]
     # command: ["./tests/validate_tests.sh"]
-    command: ["/bin/bash"]
+    # command: ["/bin/bash"]
     # command:
     #   - /bin/sh 
     #   - -c
@@ -60,7 +62,6 @@ services:
     #     ./tests/wait-for-it.sh mysql:3306 --
     #     pytest
      
-    # command: ["tail", "-f", "/dev/null"]
 
   mysql:
     profiles:
