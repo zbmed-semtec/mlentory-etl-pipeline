@@ -37,6 +37,11 @@ jobs:
             chmod +x ./wait-for-it.sh
           working_directory: ./tests
       - run:
+          name: Check linting in the code folder
+          command: |
+            pip install black
+            pip
+      - run:
           name: Build the container architecture
           command: docker-compose --profile test build
           working_directory: ./tests
