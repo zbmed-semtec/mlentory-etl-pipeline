@@ -167,14 +167,9 @@ class GraphCreator:
         self.curr_update_date = None
 
     def create_triplet_in_SQL(self, subject, predicate, object, extraction_info):
-        # subject_json = json.dumps({"datatype":type(subject).__name__,"data":subject})
-        # predicate_json = json.dumps({"datatype":type(predicate).__name__,"data":predicate})
-        # object_json = json.dumps({"datatype":type(object).__name__,"data":object})
-
         subject_json = str(subject.n3())
         predicate_json = str(predicate.n3())
         object_json = str(object.n3())
-        # print("OBJECTTTTTTTT ",object, str(object.n3()),object_json)
 
         triplet_id = -1
         triplet_id_df = self.mySQLHandler.query(
@@ -261,15 +256,9 @@ class GraphCreator:
                                                       AND vr.end < '{self.curr_update_date}'
                                                     """
         )
-        # print("CHECK THIS OUT: \n",old_triplets_df)
+        
         if not old_triplets_df.empty:
             for index, old_triplet in old_triplets_df.iterrows():
-                # self.virtuosoHandler.delete_triple(sparql_endpoint="http://virtuoso:8890/sparql",
-                #                                    subject=self.n3_to_term(old_triplet['subject']),
-                #                                    predicate=self.n3_to_term(old_triplet['predicate']),
-                #                                    object=self.n3_to_term(old_triplet['object']),
-                #                                    graph_iri="http://example.com/data_1")
-                # print("TYPEEEEEEEE",type(self.n3_to_term(old_triplet['subject'])))
                 self.old_triplets_graph.add(
                     (
                         self.n3_to_term(old_triplet["subject"]),
@@ -277,8 +266,6 @@ class GraphCreator:
                         self.n3_to_term(old_triplet["object"]),
                     )
                 )
-
-        # self.virtuosoHandler.delete_graph()
 
         update_query = f"""
             UPDATE Version_Range vr
@@ -306,5 +293,4 @@ class GraphCreator:
         self.mySQLHandler.execute_sql(update_query)
 
     def n3_to_term(self, n3):
-        # print("N333333333333, ", n3)
         return from_n3(n3.encode("unicode_escape").decode("unicode_escape"))
