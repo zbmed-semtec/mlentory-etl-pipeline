@@ -2,6 +2,7 @@ import mysql.connector
 import pandas as pd
 from typing import Callable, List, Dict, Set, Any
 
+
 class MySQLHandler:
     def __init__(self, host: str, user: str, password: str, database: str):
         self.host = host
@@ -18,7 +19,7 @@ class MySQLHandler:
             host=self.host,
             user=self.user,
             password=self.password,
-            database=self.database
+            database=self.database,
         )
 
     def disconnect(self) -> None:
@@ -40,14 +41,13 @@ class MySQLHandler:
             int: The ID of the last inserted row.
         """
         cursor = self.connection.cursor()
-        placeholders = ', '.join(['%s'] * len(data))
-        columns = ', '.join(data.keys())
+        placeholders = ", ".join(["%s"] * len(data))
+        columns = ", ".join(data.keys())
         sql = f"INSERT INTO {table} ({columns}) VALUES ({placeholders})"
         cursor.execute(sql, list(data.values()))
         last_insert_id = cursor.lastrowid
         cursor.close()
         return last_insert_id
-
 
     def query(self, sql: str, params: Dict[str, Any] = None) -> pd.DataFrame:
         """
@@ -65,7 +65,6 @@ class MySQLHandler:
         result = cursor.fetchall()
         cursor.close()
         return pd.DataFrame(result)
-    
 
     def delete(self, table: str, condition: str) -> None:
         """
@@ -81,7 +80,6 @@ class MySQLHandler:
         self.connection.commit()
         cursor.close()
 
-
     def update(self, table: str, data: Dict[str, Any], condition: str) -> None:
         """
         Updates records in the specified table based on the given condition.
@@ -92,16 +90,16 @@ class MySQLHandler:
             condition (str): The WHERE clause specifying which records to update.
         """
         cursor = self.connection.cursor()
-        set_clause = ', '.join([f"{key} = %s" for key in data.keys()])
+        set_clause = ", ".join([f"{key} = %s" for key in data.keys()])
         sql = f"UPDATE {table} SET {set_clause} WHERE {condition}"
         cursor.execute(sql, list(data.values()))
         self.connection.commit()
         cursor.close()
-    
+
     def execute_sql(self, sql: str) -> None:
         """
         Executes a SQL query without returning any results.
-        
+
         Args:
             sql (str): The SQL query to execute.
         """
@@ -109,17 +107,16 @@ class MySQLHandler:
         cursor.execute(sql)
         self.connection.commit()
         cursor.close()
-        
-    
+
     def reset_all_tables(self):
         cursor = self.connection.cursor()
         cursor.execute("SHOW TABLES")
         tables = cursor.fetchall()
-        
+
         cursor.execute("SET FOREIGN_KEY_CHECKS = 0")
         for table in tables:
             cursor.execute(f"TRUNCATE TABLE {table[0]}")
         cursor.execute("SET FOREIGN_KEY_CHECKS = 1")
-        
+
         self.connection.commit()
         cursor.close()

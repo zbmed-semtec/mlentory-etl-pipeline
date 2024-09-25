@@ -13,3 +13,6 @@ docker
 rdflib
 sparqlwrapper
 elasticsearch==7.13.4
+elasticsearch-dsl<8.0.0
+black
+ruff

@@ -1,4 +1,4 @@
-from multiprocessing import Process, Pool,set_start_method,get_context
+from multiprocessing import Process, Pool, set_start_method, get_context
 from typing import Callable, List, Dict
 from rdflib.graph import Graph
 import traceback
@@ -8,13 +8,14 @@ import time
 import pandas as pd
 import os
 
-if("app_test" in os.getcwd()):
+if "app_test" in os.getcwd():
     from transform.core.FieldProcessorHF import FieldProcessorHF
 else:
     from core.FieldProcessorHF import FieldProcessorHF
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
+
 
 class FilesProcessor:
     """
@@ -31,11 +32,14 @@ class FilesProcessor:
         self.processed_files_in_last_batch (list): A list of files that were processed in the last batch.
     """
 
-    def __init__(self, num_workers: int, 
-                 next_batch_proc_time: int,
-                 processed_files_log_path: str,
-                 load_queue_path: str,
-                 field_processor_HF: FieldProcessorHF):
+    def __init__(
+        self,
+        num_workers: int,
+        next_batch_proc_time: int,
+        processed_files_log_path: str,
+        load_queue_path: str,
+        field_processor_HF: FieldProcessorHF,
+    ):
         """
         Initializes a new FilesProcessor instance.
 
@@ -43,7 +47,7 @@ class FilesProcessor:
             num_workers (int): The number of worker processes to use.
         """
         # set_start_method("spawn", force=True)
-        manager = get_context('spawn').Manager()
+        manager = get_context("spawn").Manager()
         self.files_to_proc: List[str] = []
         self.num_workers: int = num_workers
         self.next_batch_proc_time: int = next_batch_proc_time
@@ -54,13 +58,12 @@ class FilesProcessor:
         self.processed_models: List = manager.list()
         self.field_processor_HF: FieldProcessorHF = field_processor_HF
         self.load_queue_path: str = load_queue_path
-        #Getting current processed files
-        with open(self.processed_files_log_path, 'r') as file:
+        # Getting current processed files
+        with open(self.processed_files_log_path, "r") as file:
             for line in file:
                 self.processed_files[line.strip()] = 1
-        
+
         # print(self.processed_files)
-        
 
     def process_batch(self) -> None:
         """
@@ -73,7 +76,9 @@ class FilesProcessor:
             raise ValueError("No files to process")
 
         workers: List[Process] = []
-        files_in_proc = self.files_to_proc.copy()  # Avoid modifying original list during iteration
+        files_in_proc = (
+            self.files_to_proc.copy()
+        )  # Avoid modifying original list during iteration
         self.files_to_proc = []
 
         start_time = time.perf_counter()
@@ -92,26 +97,23 @@ class FilesProcessor:
 
         for filename in self.processed_files_in_last_batch:
             self.processed_files[filename] = 1
-            with open(self.processed_files_log_path, 'a') as file:
-                file.write(filename + '\n')
-        
-        m4ml_models_df =  pd.DataFrame(list(self.processed_models))
-        
+            with open(self.processed_files_log_path, "a") as file:
+                file.write(filename + "\n")
+
+        m4ml_models_df = pd.DataFrame(list(self.processed_models))
+
         now = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")  # Get current date and time
 
         filename_tsv = f"{self.load_queue_path}/{now}_Transformed_HF_fair4ml_schema_Dataframe.tsv"  # Create new filename
         filename_json = f"{self.load_queue_path}/{now}_Transformed_HF_fair4ml_schema_Dataframe.json"  # Create new filename
-        
-        m4ml_models_df.to_csv(filename_tsv,sep="\t")
-        m4ml_models_df.to_json(filename_json,orient="records",indent=4)
-        
-        
-        
-        
-        end_time = time.perf_counter()-start_time
-        
+
+        m4ml_models_df.to_csv(filename_tsv, sep="\t")
+        m4ml_models_df.to_json(filename_json, orient="records", indent=4)
+
+        end_time = time.perf_counter() - start_time
+
         print(end_time)
-        
+
         logger.info("Finished processing batch\n")
 
     def process_file(self, filename: str) -> None:
@@ -138,12 +140,12 @@ class FilesProcessor:
             for index, row in df.iterrows():
                 model_data = self.field_processor_HF.process_row(row)
                 self.processed_models.append(model_data)
-            
+
             print(model_data.head())
-                
+
             self.processed_files_in_last_batch.append(filename)
             logger.info(f"Finished processing: {filename}")
-            #When the file is being processed you need to keep in mind 
+            # When the file is being processed you need to keep in mind
         except Exception as e:
             print(f"Error processing file: {traceback.format_exc()}")
             logger.exception(f"Error processing file: {traceback.format_exc()}")
@@ -155,10 +157,10 @@ class FilesProcessor:
         Args:
             filename (str): The name of the file to be added.
         """
-        
-        if(filename not in self.processed_files):
+
+        if filename not in self.processed_files:
             self.files_to_proc.append(filename)
-            
+
             if len(self.files_to_proc) == self.num_workers:
                 self.process_batch()
 
