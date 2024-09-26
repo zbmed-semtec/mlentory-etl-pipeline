@@ -1,12 +1,19 @@
 # MLentory Extraction/Transformation/Loader (ETL) Pipeline 
 
+MLentory, is centered around information on  ML models, how to harmonize that data, and how to make it available and searchable on an FDO registry.
+
 ## Purpose
 To build a system that extracts ML model information from different platforms, normalizes that data in a common format, stores it, and shares it in a FAIR Digital Object (FDO) registry to facilitate information retrieval (IR) and comparison/recommendation systems.
 
-This TDD will help new contributors understand and old ones remember what decisions were made on the system's design, the motivation behind them, and their impact. The document focuses on the design of the ETL pipeline to collect, transform, and store extracted information.
+This TDD (Technical Design Document) will help new contributors understand and old ones remember what decisions were made on the system's design, the motivation behind them, and their impact. The document focuses on the design of the ETL pipeline to collect, transform, and store extracted information.
+
+## How To Execute The Project
+There are different things you can execute in this project.
+- The first one is the whole ETL pipeline, which is the main component of the project. See instructions here: [ETL Pipeline](code/README.md)
+- The second one is the test component, which is the component that tests the ETL pipeline. See instructions here: [Test Component](test/README.md)
 
 ## Background
-This project is part of the NFDI4DataScience initiative, a German Consortium whose vision is to support all steps of the complex and interdisciplinary research data lifecycle, including collecting/creating, processing, analyzing, publishing, archiving, and reusing resources in Data Science and Artificial Intelligence. Our project, namely MLentory, is centered around information on  ML models, how to harmonize that data, and how to make it available and searchable on an FDO registry.
+This project is part of the NFDI4DataScience initiative, a German Consortium whose vision is to support all steps of the complex and interdisciplinary research data lifecycle, including collecting/creating, processing, analyzing, publishing, archiving, and reusing resources in Data Science and Artificial Intelligence.
 
 
 <img src="docs/Readme_images/NFDI4DataScience_structure.png"/>
@@ -19,11 +26,6 @@ A big effort in this project will be using semantic technologies aligned to the 
 
 In the end, the system and the data it collects will help researchers and other interested parties find and pick ML models from different platforms to solve their particular problems.
 
-## How to execute the project
-There are different things you can execute in this project.
-- The first one is the whole ETL pipeline, which is the main component of the project. See instructions here: [ETL Pipeline](code/README.md)
-- The second one is the test component, which is the component that tests the ETL pipeline. See instructions here: [Test Component](test/README.md)
-
 ## Project architecture
 
 The project architecture is the following:
@@ -33,15 +35,15 @@ The project architecture is the following:
 
 The ETL pipeline is composed of 4 main components:
 
-### The platform extractors
+### The Platform Extractors
 
 The platform extractors are the components that extract information from different platforms. They are implemented as isolated containers that communicate with the rest of the ETL pipeline through a CSV database that is going to be used as a queue to process the information being gather from each platform.
 
-### The Transformation pipeline
+### The Transformation Pipeline
 
 The transformation pipeline will be in charge of transforming the information extracted from the platform extractors into a common format given by the data schema described in Figure 2. The transformation pipeline will be implemented as a container that will be connected to the database used by the platform extractors.
 
-### The Loading pipeline
+### The Loading Pipeline
 
 Will be a container in charge of uploading, updating and resolving conflicts in the information provided by the transformation pipeline, this data will be stored in the RDF database.
 
@@ -49,7 +51,7 @@ Will be a container in charge of uploading, updating and resolving conflicts in 
 
 Will be a container in charge of launching the pipelines in the right order, and of monitoring the status of the pipelines.
 
-## Project structure
+## Project Structure
 
 The project structure is the following:
 
