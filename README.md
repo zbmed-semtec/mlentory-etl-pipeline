@@ -19,6 +19,11 @@ A big effort in this project will be using semantic technologies aligned to the 
 
 In the end, the system and the data it collects will help researchers and other interested parties find and pick ML models from different platforms to solve their particular problems.
 
+## How to execute the project
+There are different things you can execute in this project.
+- The first one is the whole ETL pipeline, which is the main component of the project. See instructions here: [ETL Pipeline](code/README.md)
+- The second one is the test component, which is the component that tests the ETL pipeline. See instructions here: [Test Component](test/README.md)
+
 ## Project architecture
 
 The project architecture is the following:
@@ -56,3 +61,4 @@ The project structure is the following:
 ## Acknowledgements
 
 This project is part of NFDI4DataScience consortium services. [NFDI4DataScience](https://www.nfdi4datascience.de/) is funded by the [German Research Foundation (DFG)](https://www.dfg.de/), [project number 460234259](https://gepris.dfg.de/gepris/projekt/460234259).
+

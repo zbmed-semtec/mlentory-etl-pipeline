@@ -1,5 +1,6 @@
 Playground/HF_API/Downloaded_files/
 
+.vscode/
 data/transform_queue/*.tsv
 data/transform_queue/*.json
 
@@ -14,6 +15,7 @@ data/mysql_data
 data/virtuoso_data
 
 tests/Test_files/load_files/virtuoso_data
+tests/Test_files/load_files/elastic
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
