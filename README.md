@@ -1,16 +1,16 @@
 # MLentory Extraction/Transformation/Loader (ETL) Pipeline 
 
-MLentory, is centered around information on  ML models, how to harmonize that data, and how to make it available and searchable on an FDO registry.
+MLentory is centered around information on  ML models, how to harmonize that data, and how to make it available and searchable on an FDO (FAIR Digital Object) registry.
 
 ## Purpose
-To build a system that extracts ML model information from different platforms, normalizes that data in a common format, stores it, and shares it in a FAIR Digital Object (FDO) registry to facilitate information retrieval (IR) and comparison/recommendation systems.
+To build a system that extracts ML (Machine Learning) model information from different platforms, normalizes that data in a common format, stores it, and shares it in a FDO registry to facilitate IR (Information Retrieval) and comparison/recommendation systems.
 
 This TDD (Technical Design Document) will help new contributors understand and old ones remember what decisions were made on the system's design, the motivation behind them, and their impact. The document focuses on the design of the ETL pipeline to collect, transform, and store extracted information.
 
-## How To Execute The Project
+## Run The Project
 There are different things you can execute in this project.
 - The first one is the whole ETL pipeline, which is the main component of the project. See instructions here: [ETL Pipeline](code/README.md)
-- The second one is the test component, which is the component that tests the ETL pipeline. See instructions here: [Test Component](test/README.md)
+- The second one is the test component, which is the component that tests the ETL pipeline. See instructions here: [Test Component](tests/README.md)
 
 ## Background
 This project is part of the NFDI4DataScience initiative, a German Consortium whose vision is to support all steps of the complex and interdisciplinary research data lifecycle, including collecting/creating, processing, analyzing, publishing, archiving, and reusing resources in Data Science and Artificial Intelligence.
