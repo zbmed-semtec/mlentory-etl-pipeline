@@ -21,8 +21,8 @@ services:
       - ../data/load_queue:/app_test/load_queue
       - ../code/config_data:/app_test/config_data
       - /var/run/docker.sock:/var/run/docker.sock
-    env_file:
-      - fileName: .env
+    # env_file:
+    #   - fileName: .env
     dns:
       - 1.1.1.1
 
@@ -53,8 +53,8 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock
     dns:
       - 1.1.1.1
-    env_file:
-      - fileName: .env
+    # env_file:
+    #   - fileName: .env
     command: ["tail", "-f", "/dev/null"]
     # command: ["./tests/validate_tests.sh"]
     # command: ["/bin/bash"]
