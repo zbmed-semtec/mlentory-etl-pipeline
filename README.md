@@ -30,11 +30,11 @@ The ETL pipeline is composed of 4 main components:
 
 ### The platform extractors
 
-The platform extractors are the components that extract information from different platforms. They are implemented as isolated containers that communicate with the rest of the ETL pipeline through a CSV database that is going to be used as a queue to process the information being gather from each platform.
+The platform extractors are the components that extract information from different platforms. They are implemented as isolated containers that communicate with the rest of the ETL pipeline through json files that are going to be used in a queue to process the information being gather from each platform.
 
 ### The Transformation pipeline
 
-The transformation pipeline will be in charge of transforming the information extracted from the platform extractors into a common format given by the data schema described in Figure 2. The transformation pipeline will be implemented as a container that will be connected to the database used by the platform extractors.
+The transformation pipeline will be in charge of transforming the information extracted from the platform extractors into a common format given by the data schema described in Figure 2.
 
 ### The Loading pipeline
 
@@ -48,10 +48,68 @@ Will be a container in charge of launching the pipelines in the right order, and
 
 The project structure is the following:
 
-- A Backend folder where the code of the ETL pipeline is located.
-- A ML folder where you can find the code to train and test the ML models for the data extraction.
-- A Playground folder where we test and get familiar with the different technologies used in the project.
-- A Assets folder where you can find resources related to the project like diagrams, functions, and documentation.
+- A [code](/code/) folder where the code of the ETL pipeline is located.
+- A [playground](/playground/) folder where we test and get familiar with the different technologies used in the project.
+- A [data](/data/) Where you can find data folders that are used in the different sections of the project.
+- A [docs](/docs/) folder where you can find resources related to the project like diagrams, functions, and documentation.
+- A [tests](/tests/) folder where you can find the tests configuration of the project.
+
+```
+.
+├── CITATION.cff
+├── LICENSE
+├── README.md
+├── code
+│   ├── README.md
+│   ├── config_data
+│   ├── cuda-keyring_1.1-1_all.deb
+│   ├── docker-compose.yml
+│   ├── extractors
+│   ├── load
+│   └── transform
+├── data
+│   ├── anzograph_data
+│   ├── datasets
+│   ├── load_queue
+│   ├── mysql_data
+│   ├── mysql_test_data
+│   ├── transform_queue
+│   └── virtuoso_data
+├── docs
+│   ├── Analysis_graphs
+│   ├── HF_legal_files
+│   └── Readme_images
+├── playground
+│   ├── DB
+│   ├── Dev_tests
+│   ├── Dockerfile.gpu
+│   ├── Dockerfile.no_gpu
+│   ├── HF_API
+│   ├── README.md
+│   ├── docker-compose.yml
+│   └── requirements.txt
+└── tests
+    ├── Dockerfile.local
+    ├── Dockerfile.remote
+    ├── README.md
+    ├── Test_files
+    ├── __pycache__
+    ├── conftest.py
+    ├── docker-compose.yml
+    ├── pytest.ini
+    ├── requirements.txt
+    ├── test_extract_HF_MetadataParser.py
+    ├── test_load_Elasticsearch.py
+    ├── test_load_GraphCreator.py
+    ├── test_load_MySQLHandler.py
+    ├── test_transform_FieldProcessorHF.py
+    ├── test_transform_FileProcessor.py
+    ├── test_transform_QueueObserver.py
+    ├── validate_tests.sh
+    └── wait-for-it.sh
+```
+
+
 
 ## Acknowledgements
 
