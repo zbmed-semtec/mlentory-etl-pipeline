@@ -10,13 +10,13 @@ from typing import Callable, List, Dict, Set
 from SPARQLWrapper import SPARQLWrapper, JSON, DIGEST, TURTLE
 
 if "app_test" in os.getcwd():
-    from load.core.dbHandler.MySQLHandler import MySQLHandler
-    from load.core.dbHandler.VirtuosoHandler import VirtuosoHandler
-    from load.core.GraphCreator import GraphCreator
+    from code.load.core.dbHandler.SQLHandler import SQLHandler
+    from code.load.core.dbHandler.RDFHandler import RDFHandler
+    from code.load.core.GraphHandler import GraphHandler
 else:
-    from core.dbHandler.MySQLHandler import MySQLHandler
-    from core.dbHandler.VirtuosoHandler import VirtuosoHandler
-    from core.GraphCreator import GraphCreator
+    from code.load.core.dbHandler.SQLHandler import SQLHandler
+    from code.load.core.dbHandler.RDFHandler import RDFHandler
+    from code.load.core.GraphHandler import GraphHandler
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -29,38 +29,29 @@ class LoadProcessor:
 
     def __init__(
         self,
-        mySQLHandler: MySQLHandler,
-        virtuosoHandler: VirtuosoHandler,
-        graphCreator: GraphCreator,
+        SQLHandler: SQLHandler,
+        RDFHandler: RDFHandler,
+        GraphHandler: GraphHandler,
         kg_files_directory: str,
     ):
         """
         Initializes a new LoadProcessor instance.
         """
-        self.mySQLHandler = mySQLHandler
-        self.mySQLHandler.connect()
-        self.virtuosoHandler = virtuosoHandler
-        self.graphCreator = graphCreator
+        self.SQLHandler = SQLHandler
+        self.SQLHandler.connect()
+        self.RDFHandler = RDFHandler
+        self.GraphHandler = GraphHandler
         self.kg_files_directory = kg_files_directory
 
     def load_dataframe(self, df):
-
-        # Steps to load the graph
-        # First, we need to create the graph that we want to load
-        # Then, we need to create the graph that is currently in production
-        # Then, Identify the triplets that have not been seen in the database before,
-        # for that we need to query the SQL database to check if the specific triplet exists or not
-        # If the triplet exists, we need to delete from the graph
-        # If the triplet does not exist, we do nothing
-        # Then, all the triplets that remain in the graph are added to the virtuoso graph and to the SQL database.
-
+        
         now = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
 
         filename_ttl = f"{self.kg_files_directory}/{now}_Transformed_HF_fair4ml_schema_KG.ttl"  # Create new filename
 
-        self.graphCreator.load_df(df)
-        self.graphCreator.create_graph()
-        self.graphCreator.store_graph(filename_ttl)
+        self.GraphHandler.load_df(df)
+        self.GraphHandler.create_graph()
+        self.GraphHandler.store_graph(filename_ttl)
 
         # extracted_graph = Graph()
         # extracted_graph.parse(ttl_file_path,format="turtle")
@@ -87,7 +78,7 @@ class LoadProcessor:
         # I'm pondering on how to extract information on the version
         for subject, predicate, object in extracted_graph:
             print(f"subject: {subject}, predicate: {predicate}, object: {object}")
-            result = self.mySQLHandler.query(
+            result = self.SQLHandler.query(
                 f"SELECT * FROM Triplet WHERE subject = '{subject}' AND relation = '{predicate}' AND object = '{object}'"
             )
             if result.empty:

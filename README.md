@@ -23,7 +23,7 @@ In the end, the system and the data it collects will help researchers and other 
 
 The project architecture is the following:
 
-<img src="docs/Readme_images/MLentory Backend TDD Diagrams-General ETL Deployment Diagram.jpg"/>
+<img src="docs/Readme_images/MLentory Backend TDD Diagrams-Main_component_interaction_Diagram_v2.png"/>
 <p style="text-align: center; font-size: 0.8em; color: #cccccc">Figure 3. Deployment Diagram of the whole ETL pipeline.</p>
 
 The ETL pipeline is composed of 4 main components:
@@ -99,11 +99,7 @@ The project structure is the following:
     ├── pytest.ini
     ├── requirements.txt
     ├── test_extract_HF_MetadataParser.py
-    ├── test_load_Elasticsearch.py
-    ├── test_load_GraphCreator.py
-    ├── test_load_MySQLHandler.py
-    ├── test_transform_FieldProcessorHF.py
-    ├── test_transform_FileProcessor.py
+    ├── ...
     ├── test_transform_QueueObserver.py
     ├── validate_tests.sh
     └── wait-for-it.sh
