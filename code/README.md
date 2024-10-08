@@ -2,7 +2,7 @@
 
 In this backend folder you will find the code that is use to build and run the MLentory data extraction pipeline.
 
-<img src="../docs/Readme_images/MLentory Backend TDD Diagrams-Main_component_interaction_Diagram.jpg"/>
+<img src="../docs/Readme_images/MLentory Backend TDD Diagrams-Main_component_interaction_Diagram_v2.png"/>
 <p style=" text-align: center; font-size: 0.8em; color: #cccccc">MLentory Pipeline</p>
 
 

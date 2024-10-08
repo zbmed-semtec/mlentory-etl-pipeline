@@ -1,9 +1,9 @@
 from core.QueueObserver import QueueObserver
 from core.FileProcessor import FileProcessor
 from core.LoadProcessor import LoadProcessor
-from core.dbHandler.VirtuosoHandler import VirtuosoHandler
-from core.dbHandler.MySQLHandler import MySQLHandler
-from core.GraphCreator import GraphCreator
+from code.load.core.dbHandler.RDFHandler import RDFHandler
+from code.load.core.dbHandler.SQLHandler import SQLHandler
+from code.load.core.GraphHandler import GraphHandler
 import argparse
 import datetime
 import logging
@@ -38,11 +38,11 @@ def main():
 
     try:
         # Initializing the database handlers
-        mySQLHandler = MySQLHandler(
+        SQLHandler = SQLHandler(
             host="mysql", user="user", password="password123", database="MLentory_DB"
         )
-        mySQLHandler.connect()
-        virtuosoHandler = VirtuosoHandler(
+        SQLHandler.connect()
+        RDFHandler = RDFHandler(
             container_name="code_virtuoso_1",
             kg_files_directory="/../kg_files",
             virtuoso_user="dba",
@@ -50,15 +50,15 @@ def main():
             sparql_endpoint="http://virtuoso:8890/sparql",
         )
         # Initializing the graph creator
-        graphCreator = GraphCreator(
-            mySQLHandler=mySQLHandler, virtuosoHandler=virtuosoHandler
+        GraphHandler = GraphHandler(
+            SQLHandler=SQLHandler, RDFHandler=RDFHandler
         )
 
         # Initializing the load processor
         load_processor = LoadProcessor(
-            mySQLHandler=mySQLHandler,
-            virtuosoHandler=virtuosoHandler,
-            graphCreator=graphCreator,
+            SQLHandler=SQLHandler,
+            RDFHandler=RDFHandler,
+            GraphHandler=GraphHandler,
             kg_files_directory="./../kg_files",
         )
 

@@ -3,7 +3,7 @@ import pandas as pd
 from typing import Callable, List, Dict, Set, Any
 
 
-class MySQLHandler:
+class SQLHandler:
     def __init__(self, host: str, user: str, password: str, database: str):
         self.host = host
         self.user = user

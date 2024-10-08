@@ -4,18 +4,18 @@ from SPARQLWrapper import SPARQLWrapper, DIGEST, POST, GET, TURTLE, CSV, JSON, X
 from rdflib import Graph
 
 
-class VirtuosoHandler:
+class RDFHandler:
     def __init__(
         self,
         container_name,
-        virtuoso_user,
-        virtuoso_password,
+        _user,
+        _password,
         kg_files_directory,
         sparql_endpoint,
     ):
         self.container_name = container_name
-        self.virtuoso_user = virtuoso_user
-        self.virtuoso_password = virtuoso_password
+        self._user = _user
+        self._password = _password
         self.kg_files_directory = kg_files_directory
         self.sparql_endpoint = sparql_endpoint
         self.client = docker.from_env()
@@ -24,20 +24,20 @@ class VirtuosoHandler:
         container = self.client.containers.get(self.container_name)
 
         sql_command = f""" exec=\"RDF_GLOBAL_RESET ();\""""
-        command = f"""isql -S 1111 -U {self.virtuoso_user} -P {self.virtuoso_password} {sql_command}"""
+        command = f"""isql -S 1111 -U {self._user} -P {self._password} {sql_command}"""
         result = container.exec_run(command)
         print(result)
 
     def load_graph(self, ttl_file_path):
         """
-        Uploads a TTL file containing a graph to a Virtuoso instance running in a Docker container.
+        Uploads a TTL file containing a graph to a RDF database instance running in a Docker container.
 
         Args:
             ttl_file_path: Path to the TTL file on the host machine.
             kg_files_directory: Directory where the TTL file will be located.
             container_name: Name of the Docker container.
-            virtuoso_user: Virtuoso username.
-            virtuoso_password: Virtuoso password.
+            _user:  username.
+            _password:  password.
         """
         container = self.client.containers.get(self.container_name)
         new_ttl_file_path = f"{self.kg_files_directory}/{ttl_file_path.split('/')[-1]}"
@@ -51,7 +51,7 @@ class VirtuosoHandler:
                                 DB.DBA.rdf_loader_run();
                                 checkpoint;\""""
 
-        command = f"""isql -S 1111 -U {self.virtuoso_user} -P {self.virtuoso_password} {sql_command}"""
+        command = f"""isql -S 1111 -U {self._user} -P {self._password} {sql_command}"""
 
         print("\nCOMMANDDDDDDDD: ", command)
         result = container.exec_run(command)
@@ -59,24 +59,19 @@ class VirtuosoHandler:
 
     def delete_graph(self, ttl_file_path):
         """
-        Deletes all triplets associated with the graph in the TTL file in the Virtuoso instance running in a Docker container.
+        Deletes all triplets associated with the graph in the TTL file in the  instance running in a Docker container.
 
         Args:
             ttl_file_path: Path to the TTL file on the host machine.
             kg_files_directory: Directory where the TTL file will be located.
             container_name: Name of the Docker container.
-            virtuoso_user: Virtuoso username.
-            virtuoso_password: Virtuoso password.
+            _user:  username.
+            _password:  password.
         """
         container = self.client.containers.get(self.container_name)
         new_ttl_file_path = f"{self.kg_files_directory}/{ttl_file_path.split('/')[-1]}"
 
         shutil.move(ttl_file_path, new_ttl_file_path)
-        # DELETE from rdf_quad;
-        # select * from rdf_quad a where a.g = iri_to_id('http://example.com/data_1');
-        # select * from rdf_quad a where a.g = iri_to_id('http://example.com/data_2');
-        # DELETE FROM DB.DBA.LOAD_LIST;
-        # and a.g = iri_to_id('http://example.com/data_1'))
         sql_command = f""" exec=\"
                                 ld_dir('/opt/virtuoso-opensource/database/kg_files',
                                 '{ttl_file_path.split('/')[-1]}',
@@ -90,7 +85,7 @@ class VirtuosoHandler:
                                 and a.g = iri_to_id('http://example.com/data_1'));\"
                         """
 
-        command = f"""isql -S 1111 -U {self.virtuoso_user} -P {self.virtuoso_password} {sql_command}"""
+        command = f"""isql -S 1111 -U {self._user} -P {self._password} {sql_command}"""
 
         print("\nCOMMANDDDDDDDD: ", command)
         result = container.exec_run(command)
@@ -98,11 +93,11 @@ class VirtuosoHandler:
 
     def delete_triple(self, sparql_endpoint, subject, predicate, object, graph_iri):
         """
-        Deletes a triple from the Virtuoso graph.
+        Deletes a triple from the graph.
         """
         sparql = SPARQLWrapper(sparql_endpoint)
         sparql.setHTTPAuth(DIGEST)
-        sparql.setCredentials(self.virtuoso_user, self.virtuoso_password)
+        sparql.setCredentials(self._user, self._password)
         sparql.setMethod(POST)
         # query = "DELETE { ?s ?p ?o } WHERE {GRAPH <http://example.com/data_1> {?s ?p ?o}}".format(subject=subject, predicate=predicate, object=object, graph_iri=graph_iri)
         # query = f"DELETE {{ ?s ?p ?o }} WHERE {{GRAPH <{graph_iri}> {{{subject} {predicate} {object}}}}}"
@@ -125,7 +120,7 @@ class VirtuosoHandler:
     def query(self, sparql_endpoint, query):
         sparql = SPARQLWrapper(sparql_endpoint)
         sparql.setHTTPAuth(DIGEST)
-        sparql.setCredentials(self.virtuoso_user, self.virtuoso_password)
+        sparql.setCredentials(self._user, self._password)
         sparql.setQuery(query)
         # sparql.setReturnFormat(TURTLE)
 
