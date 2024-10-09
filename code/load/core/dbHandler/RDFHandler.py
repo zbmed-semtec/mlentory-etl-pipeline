@@ -53,9 +53,7 @@ class RDFHandler:
 
         command = f"""isql -S 1111 -U {self._user} -P {self._password} {sql_command}"""
 
-        print("\nCOMMANDDDDDDDD: ", command)
         result = container.exec_run(command)
-        print("\nRESULTTTTTTTTT: ", result.output)
 
     def delete_graph(self, ttl_file_path):
         """
@@ -87,9 +85,7 @@ class RDFHandler:
 
         command = f"""isql -S 1111 -U {self._user} -P {self._password} {sql_command}"""
 
-        print("\nCOMMANDDDDDDDD: ", command)
         result = container.exec_run(command)
-        print("\nRESULTTTTTTTTT: ", result.output)
 
     def delete_triple(self, sparql_endpoint, subject, predicate, object, graph_iri):
         """
@@ -102,16 +98,11 @@ class RDFHandler:
         # query = "DELETE { ?s ?p ?o } WHERE {GRAPH <http://example.com/data_1> {?s ?p ?o}}".format(subject=subject, predicate=predicate, object=object, graph_iri=graph_iri)
         # query = f"DELETE {{ ?s ?p ?o }} WHERE {{GRAPH <{graph_iri}> {{{subject} {predicate} {object}}}}}"
         query = f"WITH <{graph_iri}> DELETE {{ {subject._value} {predicate._value} {object._value} }}"
-
-        print("\nQUERY: ", query)
-
         sparql.setQuery(query)
         # sparql.setReturnFormat(TURTLE)
 
         g = sparql.query()
 
-        # self.print_sample_triples(g)
-        print("")
         for row in g:
             print(row)
 

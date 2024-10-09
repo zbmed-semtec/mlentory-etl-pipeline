@@ -11,11 +11,11 @@ from datetime import datetime
 from typing import Callable, List, Dict, Set
 
 if "app_test" in os.getcwd():
-    from code.load.core.dbHandler.SQLHandler import SQLHandler
-    from code.load.core.dbHandler.RDFHandler import RDFHandler
+    from load.core.dbHandler.SQLHandler import SQLHandler
+    from load.core.dbHandler.RDFHandler import RDFHandler
 else:
-    from code.load.core.dbHandler.SQLHandler import SQLHandler
-    from code.load.core.dbHandler.RDFHandler import RDFHandler
+    from core.dbHandler.SQLHandler import SQLHandler
+    from core.dbHandler.RDFHandler import RDFHandler
 
 
 class GraphHandler:
@@ -31,61 +31,19 @@ class GraphHandler:
         self.kg_files_directory = kg_files_directory
         self.new_triplets = []
         self.old_triplets = []
-
-        # self.last_update_date = None
         self.curr_update_date = None
 
     def load_df(self, df):
         self.df = df
         
-    def create_graph(self):
-        self.update_sql_graph()
-        self.update_rdf_graph()
-
-    def update_rdf_graph(self):
-        
-        new_triplets_graph = rdflib.Graph(identifier="http://example.com/data_1")
-        new_triplets_graph.bind("fair4ml", URIRef("http://fair4ml.com/"))
-        new_triplets_graph.bind("codemeta", URIRef("http://codemeta.com/"))
-        new_triplets_graph.bind("schema", URIRef("https://schema.org/"))
-        new_triplets_graph.bind("mlentory", URIRef("https://mlentory.com/"))
-        new_triplets_graph.bind("prov", URIRef("http://www.w3.org/ns/prov#"))
-
-        old_triplets_graph = rdflib.Graph(identifier="http://example.com/data_2")
-        old_triplets_graph.bind("fair4ml", URIRef("http://fair4ml.com/"))
-        old_triplets_graph.bind("codemeta", URIRef("http://codemeta.com/"))
-        old_triplets_graph.bind("schema", URIRef("https://schema.org/"))
-        old_triplets_graph.bind("mlentory", URIRef("https://mlentory.com/"))
-        old_triplets_graph.bind("prov", URIRef("http://www.w3.org/ns/prov#"))
-        
-        for new_triplet in self.new_triplets:
-            new_triplets_graph.add(new_triplet)
-        
-        for old_triplet in self.old_triplets:
-            old_triplets_graph.add(old_triplet)
-        
-        current_date = datetime.now().strftime("%Y-%m-%d")
-        path_new_triplets_graph = os.path.join(
-            self.kg_files_directory, f"new_triplets_graph_{current_date}.ttl"
-        )
-        new_triplets_graph.serialize(
-            destination=path_new_triplets_graph, format="turtle"
-        )
-
-        self.RDFHandler.load_graph(ttl_file_path=path_new_triplets_graph)
-
-        if len(old_triplets_graph) > 0:
-            path_old_triplets_graph = os.path.join(
-                self.kg_files_directory, f"old_triplets_graph_{current_date}.ttl"
-            )
-            old_triplets_graph.serialize(
-                destination=path_old_triplets_graph, format="turtle"
-            )
-
-            self.RDFHandler.delete_graph(ttl_file_path=path_old_triplets_graph)
+    def update_graph(self):
+        #This graph updates the metadata of the triplets and identifies which triplets are new and which ones are not longer valid
+        self.update_metadata_graph()
+        #This update uses the new_triplets and the old_triplets list to update the current version of the graph.
+        self.update_current_graph()
 
     #Construct all the triplets in the input dataframe 
-    def update_sql_graph(self):
+    def update_metadata_graph(self):
         for index, row in self.df.iterrows():
             # For each row we first create an m4ml:MLModel instance
             model_uri = URIRef(
@@ -253,7 +211,7 @@ class GraphHandler:
             )
         
         if is_new_triplet:
-            self.new_triplets.add((subject, predicate, object))
+            self.new_triplets.append((subject, predicate, object))
         
 
     def deprecate_old_triplets(self, model_uri):
@@ -273,7 +231,7 @@ class GraphHandler:
         
         if not old_triplets_df.empty:
             for index, old_triplet in old_triplets_df.iterrows():
-                self.old_triplets.add(
+                self.old_triplets.append(
                     (
                         self.n3_to_term(old_triplet["subject"]),
                         self.n3_to_term(old_triplet["predicate"]),
@@ -308,3 +266,45 @@ class GraphHandler:
 
     def n3_to_term(self, n3):
         return from_n3(n3.encode("unicode_escape").decode("unicode_escape"))
+    
+    def update_current_graph(self):
+        
+        new_triplets_graph = rdflib.Graph(identifier="http://example.com/data_1")
+        new_triplets_graph.bind("fair4ml", URIRef("http://fair4ml.com/"))
+        new_triplets_graph.bind("codemeta", URIRef("http://codemeta.com/"))
+        new_triplets_graph.bind("schema", URIRef("https://schema.org/"))
+        new_triplets_graph.bind("mlentory", URIRef("https://mlentory.com/"))
+        new_triplets_graph.bind("prov", URIRef("http://www.w3.org/ns/prov#"))
+
+        old_triplets_graph = rdflib.Graph(identifier="http://example.com/data_2")
+        old_triplets_graph.bind("fair4ml", URIRef("http://fair4ml.com/"))
+        old_triplets_graph.bind("codemeta", URIRef("http://codemeta.com/"))
+        old_triplets_graph.bind("schema", URIRef("https://schema.org/"))
+        old_triplets_graph.bind("mlentory", URIRef("https://mlentory.com/"))
+        old_triplets_graph.bind("prov", URIRef("http://www.w3.org/ns/prov#"))
+        
+        for new_triplet in self.new_triplets:
+            new_triplets_graph.add(new_triplet)
+        
+        for old_triplet in self.old_triplets:
+            old_triplets_graph.add(old_triplet)
+        
+        current_date = datetime.now().strftime("%Y-%m-%d")
+        path_new_triplets_graph = os.path.join(
+            self.kg_files_directory, f"new_triplets_graph_{current_date}.ttl"
+        )
+        new_triplets_graph.serialize(
+            destination=path_new_triplets_graph, format="turtle"
+        )
+
+        self.RDFHandler.load_graph(ttl_file_path=path_new_triplets_graph)
+
+        if len(old_triplets_graph) > 0:
+            path_old_triplets_graph = os.path.join(
+                self.kg_files_directory, f"old_triplets_graph_{current_date}.ttl"
+            )
+            old_triplets_graph.serialize(
+                destination=path_old_triplets_graph, format="turtle"
+            )
+
+            self.RDFHandler.delete_graph(ttl_file_path=path_old_triplets_graph)
