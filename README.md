@@ -1,11 +1,12 @@
-# MLentory Extraction/Transformation/Loader (ETL) Pipeline 
+# MLentory Extraction/Transformation/Loader (ETL) Pipeline
 
 MLentory is centered around information on  ML models, how to harmonize that data, and how to make it available and searchable on an FDO (FAIR Digital Object) registry.
 
 ## Purpose
 To build a system that extracts ML (Machine Learning) model information from different platforms, normalizes that data in a common format, stores it, and shares it in a FDO registry to facilitate IR (Information Retrieval) and comparison/recommendation systems.
 
-This TDD (Technical Design Document) will help new contributors understand and old ones remember what decisions were made on the system's design, the motivation behind them, and their impact. The document focuses on the design of the ETL pipeline to collect, transform, and store extracted information.
+This [TDD](https://docs.google.com/document/d/1aczsHqJ5xxc9Gdd9wC_sfutz1yVUgNJ7WttuSl3SsXU/edit?usp=sharing) (Technical Design Document) will help new contributors understand and old ones remember what decisions were made on the system's design, the motivation behind them, and their impact. The document focuses on the design of the ETL pipeline to collect, transform, and store extracted information.
+
 
 ## Run The Project
 There are different things you can execute in this project.
@@ -14,7 +15,6 @@ There are different things you can execute in this project.
 
 ## Background
 This project is part of the NFDI4DataScience initiative, a German Consortium whose vision is to support all steps of the complex and interdisciplinary research data lifecycle, including collecting/creating, processing, analyzing, publishing, archiving, and reusing resources in Data Science and Artificial Intelligence.
-
 
 <img src="docs/Readme_images/NFDI4DataScience_structure.png"/>
 <p style=" text-align: center; font-size: 0.8em; color: #cccccc">Figure 1. General diagram of the NFDI4DataScience main project.</p>
