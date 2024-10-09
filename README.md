@@ -1,13 +1,20 @@
-# MLentory Extraction/Transformation/Loader (ETL) Pipeline 
+# MLentory Extraction/Transformation/Loader (ETL) Pipeline
+
+MLentory is centered around information on  ML models, how to harmonize that data, and how to make it available and searchable on an FDO (FAIR Digital Object) registry.
 
 ## Purpose
-To build a system that extracts ML model information from different platforms, normalizes that data in a common format, stores it, and shares it in a FAIR Digital Object (FDO) registry to facilitate information retrieval (IR) and comparison/recommendation systems.
+To build a system that extracts ML (Machine Learning) model information from different platforms, normalizes that data in a common format, stores it, and shares it in a FDO registry to facilitate IR (Information Retrieval) and comparison/recommendation systems.
 
-This TDD will help new contributors understand and old ones remember what decisions were made on the system's design, the motivation behind them, and their impact. The document focuses on the design of the ETL pipeline to collect, transform, and store extracted information.
+This [TDD](https://docs.google.com/document/d/1aczsHqJ5xxc9Gdd9wC_sfutz1yVUgNJ7WttuSl3SsXU/edit?usp=sharing) (Technical Design Document) will help new contributors understand and old ones remember what decisions were made on the system's design, the motivation behind them, and their impact. The document focuses on the design of the ETL pipeline to collect, transform, and store extracted information.
+
+
+## Run The Project
+There are different things you can execute in this project.
+- The first one is the whole ETL pipeline, which is the main component of the project. See instructions here: [ETL Pipeline](code/README.md)
+- The second one is the test component, which is the component that tests the ETL pipeline. See instructions here: [Test Component](tests/README.md)
 
 ## Background
-This project is part of the NFDI4DataScience initiative, a German Consortium whose vision is to support all steps of the complex and interdisciplinary research data lifecycle, including collecting/creating, processing, analyzing, publishing, archiving, and reusing resources in Data Science and Artificial Intelligence. Our project, namely MLentory, is centered around information on  ML models, how to harmonize that data, and how to make it available and searchable on an FDO registry.
-
+This project is part of the NFDI4DataScience initiative, a German Consortium whose vision is to support all steps of the complex and interdisciplinary research data lifecycle, including collecting/creating, processing, analyzing, publishing, archiving, and reusing resources in Data Science and Artificial Intelligence.
 
 <img src="docs/Readme_images/NFDI4DataScience_structure.png"/>
 <p style=" text-align: center; font-size: 0.8em; color: #cccccc">Figure 1. General diagram of the NFDI4DataScience main project.</p>
@@ -28,15 +35,15 @@ The project architecture is the following:
 
 The ETL pipeline is composed of 4 main components:
 
-### The platform extractors
+### The Platform Extractors
 
 The platform extractors are the components that extract information from different platforms. They are implemented as isolated containers that communicate with the rest of the ETL pipeline through json files that are going to be used in a queue to process the information being gather from each platform.
 
-### The Transformation pipeline
+### The Transformation Pipeline
 
 The transformation pipeline will be in charge of transforming the information extracted from the platform extractors into a common format given by the data schema described in Figure 2.
 
-### The Loading pipeline
+### The Loading Pipeline
 
 Will be a container in charge of uploading, updating and resolving conflicts in the information provided by the transformation pipeline, this data will be stored in the RDF database.
 
@@ -44,7 +51,7 @@ Will be a container in charge of uploading, updating and resolving conflicts in 
 
 Will be a container in charge of launching the pipelines in the right order, and of monitoring the status of the pipelines.
 
-## Project structure
+## Project Structure
 
 The project structure is the following:
 
@@ -110,3 +117,4 @@ The project structure is the following:
 ## Acknowledgements
 
 This project is part of NFDI4DataScience consortium services. [NFDI4DataScience](https://www.nfdi4datascience.de/) is funded by the [German Research Foundation (DFG)](https://www.dfg.de/), [project number 460234259](https://gepris.dfg.de/gepris/projekt/460234259).
+

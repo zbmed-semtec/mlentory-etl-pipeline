@@ -50,9 +50,7 @@ def main():
             sparql_endpoint="http://virtuoso:8890/sparql",
         )
         # Initializing the graph creator
-        GraphHandler = GraphHandler(
-            SQLHandler=SQLHandler, RDFHandler=RDFHandler
-        )
+        GraphHandler = GraphHandler(SQLHandler=SQLHandler, RDFHandler=RDFHandler)
 
         # Initializing the load processor
         load_processor = LoadProcessor(
