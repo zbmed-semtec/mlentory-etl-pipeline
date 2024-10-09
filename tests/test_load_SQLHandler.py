@@ -4,13 +4,13 @@ from rdflib import Graph, URIRef, Literal
 
 
 sys.path.append(".")
-from load.core.dbHandler.MySQLHandler import MySQLHandler
+from load.core.dbHandler.SQLHandler import SQLHandler
 
 
-class TestLMySQLHandler:
+class TestSQLHandler:
     @pytest.fixture(scope="class")
     def my_sql_handler(self):
-        return MySQLHandler(
+        return SQLHandler(
             host="mysql", user="test_user", password="test_pass", database="test_DB"
         )
 

@@ -10,14 +10,14 @@ from pandas import Timestamp
 from rdflib import Graph, URIRef, Literal, BNode
 
 sys.path.append(".")
-from load.core.GraphCreator import GraphCreator
-from load.core.dbHandler.MySQLHandler import MySQLHandler
-from load.core.dbHandler.VirtuosoHandler import VirtuosoHandler
+from load.core.GraphHandler import GraphHandler
+from load.core.dbHandler.SQLHandler import SQLHandler
+from load.core.dbHandler.RDFHandler import RDFHandler
 
 
-class TestGraphCreator:
+class TestGraphHandler:
     """
-    Test class for GraphCreator
+    Test class for GraphHandler
     """
 
     @classmethod
@@ -27,8 +27,8 @@ class TestGraphCreator:
         )
 
     @pytest.fixture
-    def setup_mysql_handler(self) -> MySQLHandler:
-        my_sql_handler = MySQLHandler(
+    def setup_mysql_handler(self) -> SQLHandler:
+        my_sql_handler = SQLHandler(
             host="mysql", user="test_user", password="test_pass", database="test_DB"
         )
         my_sql_handler.connect()
@@ -39,49 +39,49 @@ class TestGraphCreator:
         my_sql_handler.disconnect()
 
     @pytest.fixture
-    def setup_virtuoso_handler(self) -> VirtuosoHandler:
+    def setup_virtuoso_handler(self) -> RDFHandler:
         kg_files_directory = "./tests/Test_files/load_files/virtuoso_data/kg_files"
 
-        virtuosoHandler = VirtuosoHandler(
+        rdfHandler = RDFHandler(
             container_name="virtuoso",
             kg_files_directory=kg_files_directory,
-            virtuoso_user="dba",
-            virtuoso_password="my_strong_password",
+            _user="dba",
+            _password="my_strong_password",
             sparql_endpoint="http://virtuoso:8890/sparql",
         )
 
-        virtuosoHandler.reset_db()
+        rdfHandler.reset_db()
 
-        return virtuosoHandler
+        return rdfHandler
 
     @pytest.fixture
-    def setup_mock_graph_creator(self) -> GraphCreator:
-        mock_mySQLHandler = Mock(spec=MySQLHandler)
-        mock_virtuosoHandler = Mock(spec=VirtuosoHandler)
-        graph_creator = GraphCreator(
-            mock_mySQLHandler,
-            mock_virtuosoHandler,
+    def setup_mock_graph_handler(self) -> GraphHandler:
+        mock_SQLHandler = Mock(spec=SQLHandler)
+        mock_RDFHandler = Mock(spec=RDFHandler)
+        graph_handler = GraphHandler(
+            mock_SQLHandler,
+            mock_RDFHandler,
             kg_files_directory="./tests/Test_files/load_files/virtuoso_data/kg_files",
         )
-        graph_creator.load_df(self.m4ml_example_dataframe)
-        return graph_creator
+        graph_handler.load_df(self.m4ml_example_dataframe)
+        return graph_handler
 
     @pytest.fixture
-    def setup_graph_creator(
+    def setup_graph_handler(
         self, setup_mysql_handler, setup_virtuoso_handler
-    ) -> GraphCreator:
+    ) -> GraphHandler:
         # Initializing the database handlers
-        graph_creator = GraphCreator(
+        graph_handler = GraphHandler(
             setup_mysql_handler,
             setup_virtuoso_handler,
             kg_files_directory=setup_virtuoso_handler.kg_files_directory,
         )
-        return graph_creator
+        return graph_handler
 
-    def create_graph(self, source_file_path: str, graph_creator: GraphCreator):
+    def create_graph(self, source_file_path: str, graph_handler: GraphHandler):
         df_example = pd.read_json(source_file_path)
-        graph_creator.load_df(df_example)
-        graph_creator.create_rdf_graph()
+        graph_handler.load_df(df_example)
+        graph_handler.update_graph()
 
     def assert_sql_db_state(
         self,
@@ -89,13 +89,13 @@ class TestGraphCreator:
         expected_models: int,
         expected_ranges: int,
         expected_extraction_info: int,
-        graph_creator: GraphCreator,
+        graph_handler: GraphHandler,
         expected_deprecated: int = 0,
         print_df: bool = False,
     ):
-        triplets_df = graph_creator.mySQLHandler.query("SELECT * FROM Triplet")
-        ranges_df = graph_creator.mySQLHandler.query("SELECT * FROM Version_Range")
-        extraction_info_df = graph_creator.mySQLHandler.query(
+        triplets_df = graph_handler.SQLHandler.query("SELECT * FROM Triplet")
+        ranges_df = graph_handler.SQLHandler.query("SELECT * FROM Version_Range")
+        extraction_info_df = graph_handler.SQLHandler.query(
             "SELECT * FROM Triplet_Extraction_Info"
         )
 
@@ -114,10 +114,10 @@ class TestGraphCreator:
         self,
         expected_triplets: int,
         expected_models: int,
-        graph_creator: GraphCreator,
+        graph_handler: GraphHandler,
         print_graph=False,
     ):
-        result_graph = graph_creator.virtuosoHandler.query(
+        result_graph = graph_handler.RDFHandler.query(
             "http://virtuoso:8890/sparql",
             """CONSTRUCT { ?s ?p ?o } WHERE {GRAPH <http://example.com/data_1> {?s ?p ?o}}""",
         )
@@ -138,13 +138,13 @@ class TestGraphCreator:
         # assert result_count[0]["count"] == expected_models
         # assert
 
-    # def test_basic_creation(self, setup_mock_graph_creator: GraphCreator):
-    #     graph_creator = setup_mock_graph_creator
-    #     graph_creator.load_df(self.m4ml_example_dataframe)
-    #     graph_creator.create_rdf_graph()
+    # def test_basic_creation(self, setup_mock_graph_handler: GraphHandler):
+    #     graph_handler = setup_mock_graph_handler
+    #     graph_handler.load_df(self.m4ml_example_dataframe)
+    #     graph_handler.create_rdf_graph()
 
-    def test_one_new_triplet_creation(self, setup_graph_creator: GraphCreator):
-        graph_creator = setup_graph_creator
+    def test_one_new_triplet_creation(self, setup_graph_handler: GraphHandler):
+        graph_handler = setup_graph_handler
         extraction_info = {
             "extraction_method": "Parsed_from_HF_dataset",
             "confidence": 1.0,
@@ -153,10 +153,10 @@ class TestGraphCreator:
         subject = URIRef("subject")
         predicate = URIRef("predicate")
         object = URIRef("object")
-        graph_creator.create_triplet_in_SQL(subject, predicate, object, extraction_info)
+        graph_handler.process_triplet(subject, predicate, object, extraction_info)
 
         # Ensure that the triplet was created
-        new_triplet_df = graph_creator.mySQLHandler.query(
+        new_triplet_df = graph_handler.SQLHandler.query(
             f"""
                                                           SELECT * FROM Triplet 
                                                           WHERE subject = '{str(subject.n3())}' 
@@ -169,14 +169,14 @@ class TestGraphCreator:
         new_triplet_id = new_triplet_df.iloc[0]["id"]
 
         # Check if a new extraction_info was created
-        new_extraction_info_df = graph_creator.mySQLHandler.query(
+        new_extraction_info_df = graph_handler.SQLHandler.query(
             "SELECT * FROM Triplet_Extraction_Info WHERE method_description='Parsed_from_HF_dataset' AND extraction_confidence=1.0"
         )
         assert len(new_extraction_info_df) == 1
         new_extraction_info_id = new_extraction_info_df.iloc[0]["id"]
 
         # Check if a new version_range  was created
-        new_version_range_df = graph_creator.mySQLHandler.query(
+        new_version_range_df = graph_handler.SQLHandler.query(
             f"""SELECT * FROM Version_Range WHERE
                                                                         triplet_id = '{new_triplet_id}'
                                                                         AND extraction_info_id = '{new_extraction_info_id}'"""
@@ -187,12 +187,12 @@ class TestGraphCreator:
         assert new_version_range_df.iloc[0]["deprecated"] == False
         # print(new_version_range_df)
 
-    def test_small_graph_creation(self, setup_graph_creator: GraphCreator):
-        graph_creator = setup_graph_creator
+    def test_small_graph_creation(self, setup_graph_handler: GraphHandler):
+        graph_handler = setup_graph_handler
         # Read dataframe from json file
         self.create_graph(
             source_file_path="./tests/Test_files/load_files/hf_transformed_fair4ml_example_small_1.json",
-            graph_creator=graph_creator,
+            graph_handler=graph_handler,
         )
         self.assert_sql_db_state(
             expected_triplets=14,
@@ -200,22 +200,22 @@ class TestGraphCreator:
             expected_ranges=14,
             expected_extraction_info=2,
             expected_deprecated=0,
-            graph_creator=graph_creator,
+            graph_handler=graph_handler,
             print_df=True,
         )
 
         self.assert_virtuoso_db_state(
             expected_triplets=14,
             expected_models=2,
-            graph_creator=graph_creator,
+            graph_handler=graph_handler,
             print_graph=True,
         )
 
-    def test_small_graph_update_same_models(self, setup_graph_creator: GraphCreator):
-        graph_creator = setup_graph_creator
+    def test_small_graph_update_same_models(self, setup_graph_handler: GraphHandler):
+        graph_handler = setup_graph_handler
         self.create_graph(
             source_file_path="./tests/Test_files/load_files/hf_transformed_fair4ml_example_small_1.json",
-            graph_creator=graph_creator,
+            graph_handler=graph_handler,
         )
         self.assert_sql_db_state(
             expected_triplets=14,
@@ -223,20 +223,20 @@ class TestGraphCreator:
             expected_ranges=14,
             expected_extraction_info=2,
             expected_deprecated=0,
-            graph_creator=graph_creator,
+            graph_handler=graph_handler,
             print_df=False,
         )
 
         self.assert_virtuoso_db_state(
             expected_triplets=14,
             expected_models=2,
-            graph_creator=graph_creator,
+            graph_handler=graph_handler,
             print_graph=False,
         )
 
         self.create_graph(
             source_file_path="./tests/Test_files/load_files/hf_transformed_fair4ml_example_small_2.json",
-            graph_creator=graph_creator,
+            graph_handler=graph_handler,
         )
         self.assert_sql_db_state(
             expected_triplets=17,
@@ -244,22 +244,22 @@ class TestGraphCreator:
             expected_ranges=18,
             expected_extraction_info=3,
             expected_deprecated=3,
-            graph_creator=graph_creator,
+            graph_handler=graph_handler,
             print_df=False,
         )
 
         self.assert_virtuoso_db_state(
             expected_triplets=14,
             expected_models=2,
-            graph_creator=graph_creator,
+            graph_handler=graph_handler,
             print_graph=False,
         )
 
-    def test_small_graph_add_new_models(self, setup_graph_creator: GraphCreator):
-        graph_creator = setup_graph_creator
+    def test_small_graph_add_new_models(self, setup_graph_handler: GraphHandler):
+        graph_handler = setup_graph_handler
         self.create_graph(
             source_file_path="./tests/Test_files/load_files/hf_transformed_fair4ml_example_small_1.json",
-            graph_creator=graph_creator,
+            graph_handler=graph_handler,
         )
         self.assert_sql_db_state(
             expected_triplets=14,
@@ -267,20 +267,20 @@ class TestGraphCreator:
             expected_ranges=14,
             expected_extraction_info=2,
             expected_deprecated=0,
-            graph_creator=graph_creator,
+            graph_handler=graph_handler,
             print_df=False,
         )
 
         self.assert_virtuoso_db_state(
             expected_triplets=14,
             expected_models=2,
-            graph_creator=graph_creator,
+            graph_handler=graph_handler,
             print_graph=False,
         )
 
         self.create_graph(
             source_file_path="./tests/Test_files/load_files/hf_transformed_fair4ml_example_small_3.json",
-            graph_creator=graph_creator,
+            graph_handler=graph_handler,
         )
         self.assert_sql_db_state(
             expected_triplets=20,
@@ -288,24 +288,24 @@ class TestGraphCreator:
             expected_ranges=20,
             expected_extraction_info=2,
             expected_deprecated=0,
-            graph_creator=graph_creator,
+            graph_handler=graph_handler,
             print_df=False,
         )
 
         self.assert_virtuoso_db_state(
             expected_triplets=20,
             expected_models=3,
-            graph_creator=graph_creator,
+            graph_handler=graph_handler,
             print_graph=False,
         )
 
     def test_small_graph_update_and_add_new_models(
-        self, setup_graph_creator: GraphCreator
+        self, setup_graph_handler: GraphHandler
     ):
-        graph_creator = setup_graph_creator
+        graph_handler = setup_graph_handler
         self.create_graph(
             source_file_path="./tests/Test_files/load_files/hf_transformed_fair4ml_example_small_1.json",
-            graph_creator=graph_creator,
+            graph_handler=graph_handler,
         )
         self.assert_sql_db_state(
             expected_triplets=14,
@@ -313,20 +313,20 @@ class TestGraphCreator:
             expected_ranges=14,
             expected_extraction_info=2,
             expected_deprecated=0,
-            graph_creator=graph_creator,
+            graph_handler=graph_handler,
             print_df=True,
         )
 
         self.assert_virtuoso_db_state(
             expected_triplets=14,
             expected_models=2,
-            graph_creator=graph_creator,
+            graph_handler=graph_handler,
             print_graph=True,
         )
 
         self.create_graph(
             source_file_path="./tests/Test_files/load_files/hf_transformed_fair4ml_example_small_3.json",
-            graph_creator=graph_creator,
+            graph_handler=graph_handler,
         )
 
         self.assert_sql_db_state(
@@ -335,20 +335,20 @@ class TestGraphCreator:
             expected_ranges=20,
             expected_extraction_info=2,
             expected_deprecated=0,
-            graph_creator=graph_creator,
+            graph_handler=graph_handler,
             print_df=False,
         )
 
         self.assert_virtuoso_db_state(
             expected_triplets=20,
             expected_models=3,
-            graph_creator=graph_creator,
+            graph_handler=graph_handler,
             print_graph=False,
         )
 
         self.create_graph(
             source_file_path="./tests/Test_files/load_files/hf_transformed_fair4ml_example_small_2.json",
-            graph_creator=graph_creator,
+            graph_handler=graph_handler,
         )
         self.assert_sql_db_state(
             expected_triplets=23,
@@ -356,20 +356,20 @@ class TestGraphCreator:
             expected_ranges=24,
             expected_extraction_info=3,
             expected_deprecated=0,
-            graph_creator=graph_creator,
+            graph_handler=graph_handler,
         )
 
         self.assert_virtuoso_db_state(
             expected_triplets=23,
             expected_models=3,
-            graph_creator=graph_creator,
+            graph_handler=graph_handler,
             print_graph=True,
         )
 
-    def test_triplet_deprecation(self, setup_graph_creator: GraphCreator):
-        graph_creator = setup_graph_creator
-        graph_creator.curr_update_date = "2024-07-16_09-14-40"
-        graph_creator.create_triplet_in_SQL(
+    def test_triplet_deprecation(self, setup_graph_handler: GraphHandler):
+        graph_handler = setup_graph_handler
+        graph_handler.curr_update_date = "2024-07-16_09-14-40"
+        graph_handler.process_triplet(
             URIRef("http://example.com/model1"),
             URIRef("http://example.com/property1"),
             URIRef("http://example.com/object1"),
@@ -386,11 +386,11 @@ class TestGraphCreator:
             expected_ranges=1,
             expected_extraction_info=1,
             expected_deprecated=0,
-            graph_creator=graph_creator,
+            graph_handler=graph_handler,
         )
 
-        graph_creator.curr_update_date = "2025-07-16_09-14-40"
-        graph_creator.create_triplet_in_SQL(
+        graph_handler.curr_update_date = "2025-07-16_09-14-40"
+        graph_handler.process_triplet(
             URIRef("http://example.com/model1"),
             URIRef("http://example.com/property1"),
             URIRef("http://example.com/object2"),
@@ -400,7 +400,7 @@ class TestGraphCreator:
                 "extraction_time": "2025-07-16_09-14-40",
             },
         )
-        graph_creator.deprecate_old_triplets(URIRef("http://example.com/model1"))
+        graph_handler.deprecate_old_triplets(URIRef("http://example.com/model1"))
 
         self.assert_sql_db_state(
             expected_triplets=2,
@@ -408,15 +408,15 @@ class TestGraphCreator:
             expected_ranges=2,
             expected_extraction_info=1,
             expected_deprecated=1,
-            graph_creator=graph_creator,
+            graph_handler=graph_handler,
             print_df=False,
         )
 
-    def test_small_graph_multiple_deprecations(self, setup_graph_creator: GraphCreator):
-        graph_creator = setup_graph_creator
+    def test_small_graph_multiple_deprecations(self, setup_graph_handler: GraphHandler):
+        graph_handler = setup_graph_handler
         self.create_graph(
             source_file_path="./tests/Test_files/load_files/hf_transformed_fair4ml_example_small_1.json",
-            graph_creator=graph_creator,
+            graph_handler=graph_handler,
         )
 
         self.assert_sql_db_state(
@@ -425,20 +425,20 @@ class TestGraphCreator:
             expected_ranges=14,
             expected_extraction_info=2,
             expected_deprecated=0,
-            graph_creator=graph_creator,
+            graph_handler=graph_handler,
             print_df=True,
         )
 
         self.assert_virtuoso_db_state(
             expected_triplets=14,
             expected_models=2,
-            graph_creator=graph_creator,
+            graph_handler=graph_handler,
             print_graph=True,
         )
 
         self.create_graph(
             source_file_path="./tests/Test_files/load_files/hf_transformed_fair4ml_example_small_4.json",
-            graph_creator=graph_creator,
+            graph_handler=graph_handler,
         )
 
         self.assert_sql_db_state(
@@ -447,25 +447,25 @@ class TestGraphCreator:
             expected_ranges=15,
             expected_extraction_info=2,
             expected_deprecated=4,
-            graph_creator=graph_creator,
+            graph_handler=graph_handler,
             print_df=False,
         )
 
         self.assert_virtuoso_db_state(
             expected_triplets=11,
             expected_models=2,
-            graph_creator=graph_creator,
+            graph_handler=graph_handler,
             print_graph=True,
         )
 
-    def test_large_dataset(self, setup_graph_creator: GraphCreator):
-        graph_creator = setup_graph_creator
+    def test_large_dataset(self, setup_graph_handler: GraphHandler):
+        graph_handler = setup_graph_handler
         self.create_graph(
             "./tests/Test_files/load_files/hf_transformed_fair4ml_example.json",
-            graph_creator,
+            graph_handler,
         )
 
-    # def test_malformed_input(self, setup_graph_creator: GraphCreator):
-    #     graph_creator = setup_graph_creator
+    # def test_malformed_input(self, setup_graph_handler: GraphHandler):
+    #     graph_handler = setup_graph_handler
     #     with pytest.raises(ValueError):
-    #         self.create_graph("./tests/Test_files/load_files/malformed_data.json", graph_creator)
+    #         self.create_graph("./tests/Test_files/load_files/malformed_data.json", graph_handler)
