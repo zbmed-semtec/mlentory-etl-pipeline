@@ -44,7 +44,7 @@ class LoadProcessor:
         self.kg_files_directory = kg_files_directory
 
     def load_dataframe(self, df):
-        
+
         now = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
 
         filename_ttl = f"{self.kg_files_directory}/{now}_Transformed_HF_fair4ml_schema_KG.ttl"  # Create new filename
