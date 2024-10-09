@@ -1,5 +1,4 @@
 import pytest
-
 import socket
 from collections import deque
 
@@ -10,16 +9,16 @@ from contextlib import contextmanager
 
 STOP_SIGNAL = "Stop Read"
 
+
 @pytest.fixture()
 def logger():
     logger = logging.getLogger(__name__)
     logger.setLevel(logging.INFO)
     return logger
 
+
 @pytest.fixture()
 def caplog_workaround():
-    
-    
     @contextmanager
     def ctx():
         print("Created context")
@@ -39,10 +38,9 @@ def caplog_workaround():
                 exc_info=log_record.exc_info,
             )
             # print("Not finished")
-            if(log_record.message == STOP_SIGNAL):
+            if log_record.message == STOP_SIGNAL:
                 print("Finished with stop signal")
                 break
         print("End of context")
-        
 
     return ctx
