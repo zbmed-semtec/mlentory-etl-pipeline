@@ -43,9 +43,9 @@ class TestElasticsearch:
     def book_es_client(self, es_client):
 
         Book.init(index="book_index", using=es_client)
-        
-        author_1 = Author(name = "Author1", age = 30)
-        author_2 = Author(name = "Author2", age = 40)
+
+        author_1 = Author(name="Author1", age=30)
+        author_2 = Author(name="Author2", age=40)
 
         docs = [
             Book(
@@ -171,7 +171,7 @@ class TestElasticsearch:
         result = s.execute()
 
         assert result["hits"]["total"]["value"] == 0
-        
+
         s = (
             Search(using=book_es_client, index="book_index")
             .query("match_phrase", title="Book1")
@@ -188,31 +188,32 @@ class TestElasticsearch:
         )
         result = s.execute()
         assert result["hits"]["total"]["value"] == 0
-        
+
     def test_nested_queries(self, book_es_client):
-        
+
         # self.print_all_documents(book_es_client)
-        
+
         q = Q("nested", path="author", query=Q("match", author__name="Author2"))
         s = Search(using=book_es_client, index="book_index").query(q)
-        
+
         result = s.execute()
-            
+
         assert result["hits"]["total"]["value"] == 2
-        
+
         # q = Q("nested", path="author", query=Q("match", author__name="Author2"))
         # s = Search(using=book_es_client, index="book_index").query(q)
-        
+
         s = (
             Search(using=book_es_client, index="book_index")
             .query(Q("match", title="Boo"))
-            .query(Q("nested", path="author", query=Q("range", author__age={"gte": 40})))
+            .query(
+                Q("nested", path="author", query=Q("range", author__age={"gte": 40}))
+            )
             # .filter("range", author__age={"gte": 40})
         )
-        
+
         result = s.execute()
-        
-        
+
         # print("INDEX Mapping: ", book_es_client.indices.get_mapping(index="book_index"))
 
         assert result["hits"]["total"]["value"] == 2
@@ -223,32 +224,34 @@ class TestElasticsearch:
             .query(Q("nested", path="author", query=Q("match", author__name="Author2")))
         )
         result = s.execute()
-        
+
         documents = result["hits"]["hits"]
-        
+
         for doc in documents:
             # dict_keys(['_index', '_type', '_id', '_score', '_source'])
-            
-            print(doc['_type'])
-            print(doc['_source'])
-            
+
+            print(doc["_type"])
+            print(doc["_source"])
+
         assert result["hits"]["total"]["value"] == 0
 
     def test_tokenizers(self, book_es_client):
-        
+
         self.print_all_documents(book_es_client)
         # print("INDEX Mapping: ", book_es_client.indices.get_mapping(index="book_index"))
-        
-        text_analyzer = analyzer('my_tokenfilter',
-                         type='custom',
-                         tokenizer=tokenizer('trigram', 'nGram', min_gram=3, max_gram=3))
-        response = text_analyzer.simulate("book1", using =  book_es_client)
+
+        text_analyzer = analyzer(
+            "my_tokenfilter",
+            type="custom",
+            tokenizer=tokenizer("trigram", "nGram", min_gram=3, max_gram=3),
+        )
+        response = text_analyzer.simulate("book1", using=book_es_client)
         tokens = [t.token for t in response.tokens]
-        
+
         print("TEXT ANALYZER: ", tokens)
         # print("INDEX Mapping: ", Book.to_dict())
         print("INDEX Mapping: ", book_es_client.indices.get_mapping(index="book_index"))
-        
+
     def test_delete_document(self, es_client):
         # Add a document to delete
         doc = {"title": "Delete Me", "content": "This document will be deleted"}
@@ -263,38 +266,48 @@ class TestElasticsearch:
             es_client.get(index="test_index", id="3")
 
     def print_all_documents(self, client):
-            # Perform a search that matches all documents
-            response = client.search()
+        # Perform a search that matches all documents
+        response = client.search()
 
-            # Access the list of documents from the response
-            documents = response['hits']['hits']
+        # Access the list of documents from the response
+        documents = response["hits"]["hits"]
 
-            # Print the documents
-            print("Printing all documents:")
-            for doc in documents:
-                # dict_keys(['_index', '_type', '_id', '_score', '_source'])
-                
-                print(doc['_type'])
-                print(doc['_source'])
-                print("TERM vectors: ", client.termvectors(index="book_index", id=doc['_id'], fields="title"))
+        # Print the documents
+        print("Printing all documents:")
+        for doc in documents:
+            # dict_keys(['_index', '_type', '_id', '_score', '_source'])
+
+            print(doc["_type"])
+            print(doc["_source"])
+            print(
+                "TERM vectors: ",
+                client.termvectors(index="book_index", id=doc["_id"], fields="title"),
+            )
+
 
 class Author(InnerDoc):
-    name = Text(analyzer=analyzer('title_analyzer',
-                         filter = 'lowercase',          
-                         tokenizer=tokenizer('edge_ngram', 'edge_ngram', min_gram=3, max_gram=10)),
-                 )
+    name = Text(
+        analyzer=analyzer(
+            "title_analyzer",
+            filter="lowercase",
+            tokenizer=tokenizer("edge_ngram", "edge_ngram", min_gram=3, max_gram=10),
+        ),
+    )
     age = Integer()
-    
+
     class Meta:
         index = "book_index"
-        doc_type = '_doc'
-    
-    
+        doc_type = "_doc"
+
+
 class Book(Document):
-    title = Text(analyzer=analyzer('title_analyzer',
-                         filter = 'lowercase',          
-                         tokenizer=tokenizer('edge_ngram', 'edge_ngram', min_gram=3, max_gram=10)),
-                 )
+    title = Text(
+        analyzer=analyzer(
+            "title_analyzer",
+            filter="lowercase",
+            tokenizer=tokenizer("edge_ngram", "edge_ngram", min_gram=3, max_gram=10),
+        ),
+    )
     content = Text()
     pages = Integer()
     category = Keyword()
@@ -312,6 +325,4 @@ class Book(Document):
 
     class Meta:
         index = "book_index"
-        doc_type = '_doc'
-
-
+        doc_type = "_doc"
