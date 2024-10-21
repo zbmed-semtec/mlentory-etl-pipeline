@@ -13,9 +13,11 @@ from typing import Callable, List, Dict, Set
 if "app_test" in os.getcwd():
     from load.core.dbHandler.SQLHandler import SQLHandler
     from load.core.dbHandler.RDFHandler import RDFHandler
+    from load.core.Entities import HFModel
 else:
     from core.dbHandler.SQLHandler import SQLHandler
     from core.dbHandler.RDFHandler import RDFHandler
+    from core.Entities import HFModel
 
 
 class GraphHandler:
@@ -24,13 +26,16 @@ class GraphHandler:
         SQLHandler: SQLHandler,
         RDFHandler: RDFHandler,
         kg_files_directory: str = "./../kg_files",
+        platform: str = "hugging_face"
     ):
         self.df_to_transform = None
         self.SQLHandler = SQLHandler
         self.RDFHandler = RDFHandler
         self.kg_files_directory = kg_files_directory
+        self.platform = platform
         self.new_triplets = []
         self.old_triplets = []
+        self.id_to_model_entity = {}
         self.curr_update_date = None
 
     def load_df(self, df):
@@ -45,84 +50,13 @@ class GraphHandler:
     # Construct all the triplets in the input dataframe
     def update_metadata_graph(self):
         for index, row in self.df.iterrows():
-            # For each row we first create an m4ml:MLModel instance
-            model_uri = URIRef(
-                f"mlentory:/hugging_face/{str(row['schema.org:name'][0]['data'])}"
-            )
-
-            self.process_triplet(
-                subject=model_uri,
-                predicate=RDF.type,
-                object=URIRef("fair4ml:MLModel"),
-                extraction_info=row["schema.org:name"][0],
-            )
-
-            if self.curr_update_date == None:
-                self.curr_update_date = datetime.strptime(
-                    row["schema.org:name"][0]["extraction_time"], "%Y-%m-%d_%H-%M-%S"
-                )
-
-            # Go through all the columns and add the triplets
-            for column in self.df.columns:
-                if column == "schema.org:name":
-                    continue
-                # Handle the cases where a new entity has to be created
-                if column in [
-                    "fair4ml:mlTask",
-                    "fair4ml:sharedBy",
-                    "fair4ml:testedOn",
-                    "fair4ml:trainedOn",
-                    "codemeta:referencePublication",
-                ]:
-                    # Go through the different sources that can create information about the entity
-                    if type(row[column]) != list and pd.isna(row[column]):
-                        continue
-                    for source in row[column]:
-                        if source["data"] == None:
-                            self.process_triplet(
-                                subject=model_uri,
-                                predicate=URIRef(column),
-                                object=Literal("None"),
-                                extraction_info=source,
-                            )
-                        elif type(source["data"]) == str:
-                            data = source["data"]
-                            self.process_triplet(
-                                subject=model_uri,
-                                predicate=URIRef(column),
-                                object=URIRef(
-                                    f"mlentory:hugging_face/{data.replace(' ','_')}"
-                                ),
-                                extraction_info=source,
-                            )
-                        elif type(source["data"]) == list:
-                            for entity in source["data"]:
-                                self.process_triplet(
-                                    subject=model_uri,
-                                    predicate=URIRef(column),
-                                    object=URIRef(
-                                        f"mlentory:hugging_face/{entity.replace(' ','_')}"
-                                    ),
-                                    extraction_info=source,
-                                )
-                if column in [
-                    "schema.org:datePublished",
-                    "dateCreated",
-                    "dateModified",
-                ]:
-                    # print("ROWWWWWWW",row[column])
-                    self.process_triplet(
-                        subject=model_uri,
-                        predicate=URIRef(column),
-                        object=Literal(row[column][0]["data"], datatype=XSD.date),
-                        extraction_info=row[column][0],
-                    )
-                if column in ["storageRequirements", "name"]:
-                    self.process_triplet(
-                        subject=model_uri,
-                        predicate=URIRef(column),
-                        object=Literal(row[column]["data"], datatype=XSD.string),
-                    )
+            
+            # For each row we first create an m4ml:MLModel instance and their respective triplets
+            model_uri = self.process_model(row)
+            
+            # We indexed the model information in elasticsearch
+            model_uri = self.index_model(row,model_uri)
+            
 
             # Deprecate all the triplets that were not created or updated for the current model
             self.deprecate_old_triplets(model_uri)
@@ -131,6 +65,85 @@ class GraphHandler:
         self.update_triplet_ranges_for_unchanged_models(self.curr_update_date)
         self.curr_update_date = None
 
+    def process_model(self, row):
+        model_uri = self.text_to_uri_term(str(row['schema.org:name'][0]['data']))
+
+        self.process_triplet(
+            subject=model_uri,
+            predicate=RDF.type,
+            object=URIRef("fair4ml:MLModel"),
+            extraction_info=row["schema.org:name"][0],
+        )
+
+        if self.curr_update_date == None:
+            self.curr_update_date = datetime.strptime(
+                row["schema.org:name"][0]["extraction_time"], "%Y-%m-%d_%H-%M-%S"
+            )
+
+        # Go through all the columns and add the triplets
+        for column in self.df.columns:
+            if column == "schema.org:name":
+                continue
+            # Handle the cases where a new entity has to be created
+            if column in [
+                "fair4ml:mlTask",
+                "fair4ml:sharedBy",
+                "fair4ml:testedOn",
+                "fair4ml:trainedOn",
+                "codemeta:referencePublication",
+            ]:
+                # Go through the different sources that can create information about the entity
+                if type(row[column]) != list and pd.isna(row[column]):
+                    continue
+                for source in row[column]:
+                    if source["data"] == None:
+                        self.process_triplet(
+                            subject=model_uri,
+                            predicate=URIRef(column),
+                            object=Literal("None"),
+                            extraction_info=source,
+                        )
+                    elif type(source["data"]) == str:
+                        data = source["data"]
+                        self.process_triplet(
+                            subject=model_uri,
+                            predicate=URIRef(column),
+                            object=self.text_to_uri_term(data.replace(' ','_')),
+                            extraction_info=source,
+                        )
+                    elif type(source["data"]) == list:
+                        for entity in source["data"]:
+                            self.process_triplet(
+                                subject=model_uri,
+                                predicate=URIRef(column),
+                                object=self.text_to_uri_term(entity.replace(' ','_')),
+                                extraction_info=source,
+                            )
+            if column in [
+                "schema.org:datePublished",
+                "schema.org:dateCreated",
+                "schema.org:dateModified",
+            ]:
+                # print("ROWWWWWWW",row[column])
+                self.process_triplet(
+                    subject=model_uri,
+                    predicate=URIRef(column),
+                    object=Literal(row[column][0]["data"], datatype=XSD.date),
+                    extraction_info=row[column][0],
+                )
+            if column in [
+                "schema.org:storageRequirements",
+                "schema.org:name",
+                "codemeta:readme"
+            ]:
+                
+                self.process_triplet(
+                    subject=model_uri,
+                    predicate=URIRef(column),
+                    object=Literal(row[column]["data"], datatype=XSD.string),
+                )
+                
+        return model_uri
     # This function helps us identify if a triplet is new or old
     # In case the triplet is new, we add it to the graph
     # In case the triplet already exists, we update its metadata information
@@ -212,7 +225,10 @@ class GraphHandler:
 
         if is_new_triplet:
             self.new_triplets.append((subject, predicate, object))
-
+                    
+                    
+        
+    
     def deprecate_old_triplets(self, model_uri):
 
         model_uri_json = str(model_uri.n3())
@@ -263,8 +279,7 @@ class GraphHandler:
 
         self.SQLHandler.execute_sql(update_query)
 
-    def n3_to_term(self, n3):
-        return from_n3(n3.encode("unicode_escape").decode("unicode_escape"))
+    
 
     def update_current_graph(self):
 
@@ -307,3 +322,10 @@ class GraphHandler:
             )
 
             self.RDFHandler.delete_graph(ttl_file_path=path_old_triplets_graph)
+
+    
+    def n3_to_term(self, n3):
+        return from_n3(n3.encode("unicode_escape").decode("unicode_escape"))
+    
+    def text_to_uri_term(self, text):
+        return URIRef(f"mlentory:/{self.platform}/{text}")
