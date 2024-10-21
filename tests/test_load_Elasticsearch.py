@@ -1,4 +1,5 @@
 import numpy as np
+
 np.float_ = np.float64
 import pytest
 from elasticsearch import Elasticsearch
