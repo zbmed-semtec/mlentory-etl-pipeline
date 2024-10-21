@@ -1,5 +1,6 @@
 import os
 import numpy as np
+
 np.float_ = np.float64
 import pandas as pd
 from elasticsearch import Elasticsearch
@@ -25,32 +26,43 @@ if "app_test" in os.getcwd():
 else:
     from core.Entities import HFModel, Model
 
+
 class IndexHandler:
-    def __init__(self, es_host='localhost', es_port=9200):
-        
-        self.es = Elasticsearch([{'host': es_host, 'port': es_port, "scheme": "http"}],
+    def __init__(self, es_host="localhost", es_port=9200):
+
+        self.es = Elasticsearch(
+            [{"host": es_host, "port": es_port, "scheme": "http"}],
             basic_auth=("elastic", "changeme"),
         )
-        
-    
-    def initialize_HF_index(self, index_name='hf_models'):
-        HFModel.init(index=index_name, using=self.es) 
-    
+
+    def initialize_HF_index(self, index_name="hf_models"):
+        HFModel.init(index=index_name, using=self.es)
+
     def index_hf_model(self, row, model_uri):
         model_uri_json = str(model_uri.n3())
         index_model_entity = HFModel()
-        
-        
+
         index_model_entity.db_identifier = model_uri_json
-        index_model_entity.name = self.handle_raw_data(row['schema.org:name'])[0]
-        index_model_entity.readme = self.handle_raw_data(row['codemeta:readme'])[0]
-        index_model_entity.mlTask = self.handle_raw_data(row['fair4ml:mlTask'])
-        index_model_entity.author = self.handle_raw_data(row['schema.org:author'])
-        
-        
+        if "schema.org:name" in row.keys():
+            index_model_entity.name = self.handle_raw_data(row["schema.org:name"])[0]
+        else:
+            index_model_entity.name = ""
+        if "codemeta:readme" in row.keys():
+            index_model_entity.readme = self.handle_raw_data(row["codemeta:readme"])[0]
+        else:
+            index_model_entity.readme = ""
+        if "fair4ml:mlTask" in row.keys():
+            index_model_entity.mlTask = self.handle_raw_data(row["fair4ml:mlTask"])
+        else:
+            index_model_entity.mlTask = []
+        if "schema.org:author" in row.keys():
+            index_model_entity.author = self.handle_raw_data(row["schema.org:author"])
+        else:
+            index_model_entity.author = []
+
         print(index_model_entity.to_dict())
         return index_model_entity
-        
+
     def handle_raw_data(self, raw_data):
         if type(raw_data) != list and pd.isna(raw_data):
             return ""
@@ -64,16 +76,16 @@ class IndexHandler:
             elif type(source["data"]) == list:
                 for data in source["data"]:
                     formatted_data.append(data)
-                    
+
         return formatted_data
-        
+
     def add_document(self, index_name, document):
         try:
             self.es.index(index=index_name, body=document)
             print("Document added successfully.")
         except Exception as e:
             print(f"Error adding document: {str(e)}")
-    
+
     def add_documents(self, documents):
         try:
             bulk(self.es, [doc.upsert() for doc in documents])
@@ -81,7 +93,6 @@ class IndexHandler:
         except Exception as e:
             print(f"Error adding documents: {str(e)}")
 
-    
     def index_document(self, index_name, doc_id, document):
         try:
             self.es.index(index=index_name, id=doc_id, body=document)
@@ -92,7 +103,7 @@ class IndexHandler:
     def search(self, index_name, query):
         try:
             result = self.es.search(index=index_name, body=query)
-            return result['hits']['hits']
+            return result["hits"]["hits"]
         except Exception as e:
             print(f"Error searching index: {str(e)}")
             return []
@@ -103,7 +114,7 @@ class IndexHandler:
             print(f"Index '{index_name}' deleted successfully.")
         else:
             print(f"Index '{index_name}' does not exist.")
-    
+
     def clean_indices(self):
         indices_to_delete = list(self.es.indices.get_alias(index="*").keys())
         if len(indices_to_delete) > 0:

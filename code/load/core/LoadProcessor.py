@@ -44,29 +44,11 @@ class LoadProcessor:
         self.RDFHandler = RDFHandler
         self.GraphHandler = GraphHandler
         self.kg_files_directory = kg_files_directory
-        
-        
 
     def update_dbs_with_df(self, df):
-        
+
         # The graph handler updates the SQL and RDF databases with the new data
         self.GraphHandler.load_df(df)
         self.GraphHandler.update_graph()
-        
-        #Here we re indexed the data in Elasticsearch
-        
-            
-            
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
 
-   
+        # Here we re indexed the data in Elasticsearch

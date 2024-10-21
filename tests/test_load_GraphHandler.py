@@ -1,3 +1,6 @@
+import numpy as np
+
+np.float_ = np.float64
 import pytest
 import sys
 import os
@@ -12,6 +15,7 @@ sys.path.append(".")
 from load.core.GraphHandler import GraphHandler
 from load.core.dbHandler.SQLHandler import SQLHandler
 from load.core.dbHandler.RDFHandler import RDFHandler
+from load.core.dbHandler.IndexHandler import IndexHandler
 
 
 class TestGraphHandler:
@@ -54,12 +58,26 @@ class TestGraphHandler:
         return rdfHandler
 
     @pytest.fixture
+    def setup_elasticsearch_handler(self) -> IndexHandler:
+        elasticsearch_handler = IndexHandler(
+            es_host="elastic",
+            es_port=9200,
+        )
+
+        yield elasticsearch_handler
+
+        elasticsearch_handler.clean_indices()
+        elasticsearch_handler.es.close()
+
+    @pytest.fixture
     def setup_mock_graph_handler(self) -> GraphHandler:
         mock_SQLHandler = Mock(spec=SQLHandler)
         mock_RDFHandler = Mock(spec=RDFHandler)
+        mock_IndexHandler = Mock(spec=IndexHandler)
         graph_handler = GraphHandler(
             mock_SQLHandler,
             mock_RDFHandler,
+            mock_IndexHandler,
             kg_files_directory="./tests/Test_files/load_files/virtuoso_data/kg_files",
         )
         graph_handler.load_df(self.m4ml_example_dataframe)
@@ -67,12 +85,13 @@ class TestGraphHandler:
 
     @pytest.fixture
     def setup_graph_handler(
-        self, setup_mysql_handler, setup_virtuoso_handler
+        self, setup_mysql_handler, setup_virtuoso_handler, setup_elasticsearch_handler
     ) -> GraphHandler:
         # Initializing the database handlers
         graph_handler = GraphHandler(
             setup_mysql_handler,
             setup_virtuoso_handler,
+            setup_elasticsearch_handler,
             kg_files_directory=setup_virtuoso_handler.kg_files_directory,
         )
         return graph_handler

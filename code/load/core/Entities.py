@@ -18,7 +18,7 @@ class Model(Document):
     """
 
     db_identifier = Text()
-    
+
     name = Text(
         analyzer=analyzer(
             "title_analyzer",
@@ -29,17 +29,15 @@ class Model(Document):
     readme = Text()
     mlTask = Keyword(multi=True)
     author = Text(multi=True)
-    
-    
+
     # citation = Text()
     # version = Text()
     # ethicalLegalSocial = Text()
-    
+
     # dateCreated = Date()
     # dateModified = Date()
     # datePublished = Date()
 
-    
     # trainedOn = Text()
     # evaluatedOn = Text()
     # testedOn = Text()
@@ -47,15 +45,16 @@ class Model(Document):
 
     # downloads = Integer()
     # storage_requirements = Integer()
-    
+
     # license = Keyword()
-    
+
     # mlTask = Keyword(multi=True)
     # softwareRequirements = Text(multi=True)
     # author = Text(multi=True)
-    
+
     # sql_id = Text()
     # rdf_id = Text()
+
 
 class HFModel(Model):
     """
@@ -64,7 +63,7 @@ class HFModel(Model):
 
     def save(self, **kwargs):
         return super(HFModel, self).save(**kwargs)
-    
+
     class Meta:
         index = "hf_models"  # You can change the index name
         doc_type = "_doc"
@@ -73,7 +72,6 @@ class HFModel(Model):
         dict_ = self.to_dict()
         dict_["_index"] = "hf_models"
         return dict_
-    
-    def props(self):   
-        return [i for i in self.__dict__.keys() if i[:1] != '_']
-    
+
+    def props(self):
+        return [i for i in self.__dict__.keys() if i[:1] != "_"]

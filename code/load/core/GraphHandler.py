@@ -14,10 +14,12 @@ if "app_test" in os.getcwd():
     from load.core.dbHandler.SQLHandler import SQLHandler
     from load.core.dbHandler.RDFHandler import RDFHandler
     from load.core.Entities import HFModel
+    from load.core.dbHandler.IndexHandler import IndexHandler
 else:
     from core.dbHandler.SQLHandler import SQLHandler
     from core.dbHandler.RDFHandler import RDFHandler
     from core.Entities import HFModel
+    from core.dbHandler.IndexHandler import IndexHandler
 
 
 class GraphHandler:
@@ -25,12 +27,14 @@ class GraphHandler:
         self,
         SQLHandler: SQLHandler,
         RDFHandler: RDFHandler,
+        IndexHandler: IndexHandler,
         kg_files_directory: str = "./../kg_files",
-        platform: str = "hugging_face"
+        platform: str = "hugging_face",
     ):
         self.df_to_transform = None
         self.SQLHandler = SQLHandler
         self.RDFHandler = RDFHandler
+        self.IndexHandler = IndexHandler
         self.kg_files_directory = kg_files_directory
         self.platform = platform
         self.new_triplets = []
@@ -49,14 +53,16 @@ class GraphHandler:
 
     # Construct all the triplets in the input dataframe
     def update_metadata_graph(self):
+
+        index_model_entities = []
         for index, row in self.df.iterrows():
-            
+
             # For each row we first create an m4ml:MLModel instance and their respective triplets
             model_uri = self.process_model(row)
-            
+
             # We indexed the model information in elasticsearch
-            model_uri = self.index_model(row,model_uri)
-            
+            index_model_entity = self.IndexHandler.index_hf_model(row, model_uri)
+            index_model_entities.append(index_model_entity)
 
             # Deprecate all the triplets that were not created or updated for the current model
             self.deprecate_old_triplets(model_uri)
@@ -66,7 +72,7 @@ class GraphHandler:
         self.curr_update_date = None
 
     def process_model(self, row):
-        model_uri = self.text_to_uri_term(str(row['schema.org:name'][0]['data']))
+        model_uri = self.text_to_uri_term(str(row["schema.org:name"][0]["data"]))
 
         self.process_triplet(
             subject=model_uri,
@@ -108,7 +114,7 @@ class GraphHandler:
                         self.process_triplet(
                             subject=model_uri,
                             predicate=URIRef(column),
-                            object=self.text_to_uri_term(data.replace(' ','_')),
+                            object=self.text_to_uri_term(data.replace(" ", "_")),
                             extraction_info=source,
                         )
                     elif type(source["data"]) == list:
@@ -116,7 +122,7 @@ class GraphHandler:
                             self.process_triplet(
                                 subject=model_uri,
                                 predicate=URIRef(column),
-                                object=self.text_to_uri_term(entity.replace(' ','_')),
+                                object=self.text_to_uri_term(entity.replace(" ", "_")),
                                 extraction_info=source,
                             )
             if column in [
@@ -134,16 +140,38 @@ class GraphHandler:
             if column in [
                 "schema.org:storageRequirements",
                 "schema.org:name",
-                "codemeta:readme"
+                "codemeta:readme",
             ]:
-                
-                self.process_triplet(
-                    subject=model_uri,
-                    predicate=URIRef(column),
-                    object=Literal(row[column]["data"], datatype=XSD.string),
-                )
-                
+                if type(row[column]) != list and pd.isna(row[column]):
+                    continue
+                for source in row[column]:
+                    if source["data"] == None:
+                        self.process_triplet(
+                            subject=model_uri,
+                            predicate=URIRef(column),
+                            object=Literal("", datatype=XSD.string),
+                            extraction_info=source,
+                        )
+                    elif type(source["data"]) == str:
+                        data = source["data"]
+                        self.process_triplet(
+                            subject=model_uri,
+                            predicate=URIRef(column),
+                            object=Literal(row[column][0]["data"], datatype=XSD.string),
+                            extraction_info=source,
+                        )
+                    elif type(source["data"]) == list:
+                        for entity in source["data"]:
+                            self.process_triplet(
+                                subject=model_uri,
+                                predicate=URIRef(column),
+                                object=Literal(
+                                    row[column][0]["data"], datatype=XSD.string
+                                ),
+                                extraction_info=source,
+                            )
         return model_uri
+
     # This function helps us identify if a triplet is new or old
     # In case the triplet is new, we add it to the graph
     # In case the triplet already exists, we update its metadata information
@@ -225,10 +253,7 @@ class GraphHandler:
 
         if is_new_triplet:
             self.new_triplets.append((subject, predicate, object))
-                    
-                    
-        
-    
+
     def deprecate_old_triplets(self, model_uri):
 
         model_uri_json = str(model_uri.n3())
@@ -279,8 +304,6 @@ class GraphHandler:
 
         self.SQLHandler.execute_sql(update_query)
 
-    
-
     def update_current_graph(self):
 
         new_triplets_graph = rdflib.Graph(identifier="http://example.com/data_1")
@@ -323,9 +346,8 @@ class GraphHandler:
 
             self.RDFHandler.delete_graph(ttl_file_path=path_old_triplets_graph)
 
-    
     def n3_to_term(self, n3):
         return from_n3(n3.encode("unicode_escape").decode("unicode_escape"))
-    
+
     def text_to_uri_term(self, text):
         return URIRef(f"mlentory:/{self.platform}/{text}")
