@@ -1,10 +1,8 @@
 import numpy as np
-
 np.float_ = np.float64
 import pytest
 from elasticsearch import Elasticsearch
 from elasticsearch.helpers import bulk
-from elasticsearch.client import IndicesClient
 from elasticsearch_dsl import Search, Q, tokenizer
 
 
