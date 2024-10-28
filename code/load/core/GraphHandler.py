@@ -249,7 +249,9 @@ class GraphHandler:
         else:
             version_range_id = version_range_df.iloc[0]["id"]
             self.SQLHandler.update(
-                "Version_Range", {"use_end": extraction_time}, f"id = '{version_range_id}'"
+                "Version_Range",
+                {"use_end": extraction_time},
+                f"id = '{version_range_id}'",
             )
 
         if is_new_triplet:

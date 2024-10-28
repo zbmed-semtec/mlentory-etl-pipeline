@@ -112,10 +112,12 @@ class SQLHandler:
 
     def reset_all_tables(self):
         cursor = self.connection.cursor()
-        cursor.execute("""
+        cursor.execute(
+            """
             SELECT table_name FROM information_schema.tables
             WHERE table_schema = 'public'
-        """)
+        """
+        )
         tables = cursor.fetchall()
 
         cursor.execute("SET CONSTRAINTS ALL DEFERRED")

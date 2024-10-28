@@ -33,7 +33,10 @@ class TestGraphHandler:
     @pytest.fixture
     def setup_sql_handler(self) -> SQLHandler:
         sql_handler = SQLHandler(
-            host="postgres", user="test_user", password="test_password", database="test_DB"
+            host="postgres",
+            user="test_user",
+            password="test_password",
+            database="test_DB",
         )
         sql_handler.connect()
         sql_handler.reset_all_tables()
@@ -112,10 +115,10 @@ class TestGraphHandler:
         expected_deprecated: int = 0,
         print_df: bool = False,
     ):
-        triplets_df = graph_handler.SQLHandler.query("SELECT * FROM \"Triplet\"")
-        ranges_df = graph_handler.SQLHandler.query("SELECT * FROM \"Version_Range\"")
+        triplets_df = graph_handler.SQLHandler.query('SELECT * FROM "Triplet"')
+        ranges_df = graph_handler.SQLHandler.query('SELECT * FROM "Version_Range"')
         extraction_info_df = graph_handler.SQLHandler.query(
-            "SELECT * FROM \"Triplet_Extraction_Info\""
+            'SELECT * FROM "Triplet_Extraction_Info"'
         )
 
         if print_df:
@@ -201,8 +204,12 @@ class TestGraphHandler:
                                                                         AND extraction_info_id = '{new_extraction_info_id}'"""
         )
         assert len(new_version_range_df) == 1
-        assert new_version_range_df.iloc[0]["use_start"] == Timestamp("2024-08-15 09:08:26")
-        assert new_version_range_df.iloc[0]["use_end"] == Timestamp("2024-08-15 09:08:26")
+        assert new_version_range_df.iloc[0]["use_start"] == Timestamp(
+            "2024-08-15 09:08:26"
+        )
+        assert new_version_range_df.iloc[0]["use_end"] == Timestamp(
+            "2024-08-15 09:08:26"
+        )
         assert new_version_range_df.iloc[0]["deprecated"] == False
         # print(new_version_range_df)
 
@@ -378,19 +385,21 @@ class TestGraphHandler:
             expected_extraction_info=3,
             expected_deprecated=0,
             graph_handler=graph_handler,
-            print_df=False
+            print_df=False,
         )
 
         self.assert_virtuoso_db_state(
             expected_triplets=23,
             expected_models=3,
             graph_handler=graph_handler,
-            print_graph=False
+            print_graph=False,
         )
 
     def test_triplet_deprecation(self, setup_graph_handler: GraphHandler):
         graph_handler = setup_graph_handler
-        graph_handler.curr_update_date = datetime.strptime("2024-07-16_09-14-40", "%Y-%m-%d_%H-%M-%S")
+        graph_handler.curr_update_date = datetime.strptime(
+            "2024-07-16_09-14-40", "%Y-%m-%d_%H-%M-%S"
+        )
         graph_handler.process_triplet(
             URIRef("http://example.com/model1"),
             URIRef("http://example.com/property1"),
@@ -411,7 +420,9 @@ class TestGraphHandler:
             graph_handler=graph_handler,
         )
 
-        graph_handler.curr_update_date = datetime.strptime("2025-07-16_09-14-40","%Y-%m-%d_%H-%M-%S")
+        graph_handler.curr_update_date = datetime.strptime(
+            "2025-07-16_09-14-40", "%Y-%m-%d_%H-%M-%S"
+        )
 
         graph_handler.process_triplet(
             URIRef("http://example.com/model1"),
