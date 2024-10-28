@@ -2,8 +2,6 @@ version: "3.8"
 
 services:
   test:
-    depends_on:
-        - mysql
     profiles:
       - test
     # environment:
@@ -31,8 +29,6 @@ services:
 
 
   ci_test:
-    depends_on:
-      - mysql
     profiles:
       - ci_test
     container_name: ci_test
@@ -65,30 +61,44 @@ services:
     #     ls
     #     ./tests/wait-for-it.sh mysql:3306 --
     #     pytest
-     
 
-  mysql:
+  postgres:
     profiles:
-      - ci_test
-      - test
-    image: mysql:latest
-    hostname: mysql
+        - ci_test
+        - test
+    image: postgres:14.1-alpine
+    container_name: postgres
     environment:
-      MYSQL_ROOT_PASSWORD: test_pass
-      MYSQL_DATABASE: test_DB
-      MYSQL_USER: test_user
-      MYSQL_PASSWORD: test_pass
-      MYSQL_USER_1: additional_user1
-      MYSQL_PASSWORD_1: password1
-      MYSQL_USER_2: additional_user2
-      MYSQL_PASSWORD_2: password2
-    volumes:
-    - ../code/load/sql_files/test_init.sql:/docker-entrypoint-initdb.d/init.sql
-    # - ../data/mysql_test_data:/var/lib/mysql
+      POSTGRES_USER: test_user
+      POSTGRES_PASSWORD: test_password
+      POSTGRES_DB: test_DB
     ports:
-      - "42333:3306"
-      - "33060:33060"
-    command: --init-file /docker-entrypoint-initdb.d/init.sql
+      - '5432:5432'
+    volumes:
+      - ../code/load/sql_files/test_init.sql:/docker-entrypoint-initdb.d/init.sql   
+
+  # mysql:
+  #   profiles:
+  #     - ci_test
+  #     - test
+  #   image: mysql:latest
+  #   hostname: mysql
+  #   environment:
+  #     MYSQL_ROOT_PASSWORD: test_pass
+  #     MYSQL_DATABASE: test_DB
+  #     MYSQL_USER: test_user
+  #     MYSQL_PASSWORD: test_pass
+  #     MYSQL_USER_1: additional_user1
+  #     MYSQL_PASSWORD_1: password1
+  #     MYSQL_USER_2: additional_user2
+  #     MYSQL_PASSWORD_2: password2
+  #   volumes:
+  #   - ../code/load/sql_files/test_init.sql:/docker-entrypoint-initdb.d/init.sql
+  #   # - ../data/mysql_test_data:/var/lib/mysql
+  #   ports:
+  #     - "42333:3306"
+  #     - "33060:33060"
+  #   command: --init-file /docker-entrypoint-initdb.d/init.sql
   
   virtuoso:
     profiles:

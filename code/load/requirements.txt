@@ -7,3 +7,4 @@ mysql-connector-python
 docker
 sparqlwrapper
 elasticsearch
+psycopg2

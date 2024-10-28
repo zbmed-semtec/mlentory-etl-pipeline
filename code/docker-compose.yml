@@ -93,6 +93,17 @@ services:
     # Uncomment this line to test the script
     command: ["tail", "-f", "/dev/null"]
   
+  postgres:
+    image: postgres:14.1-alpine
+    container_name: postgres
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: postgresql
+    ports:
+      - '5432:5432'
+    volumes:
+      - ../data/postgres_data:/var/lib/postgresql/data
   mysql:
     image: mysql:latest
     profiles:

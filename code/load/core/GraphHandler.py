@@ -5,6 +5,7 @@ from rdflib.util import from_n3
 import uuid
 import json
 import pandas as pd
+from pandas import Timestamp
 import json
 import os
 from datetime import datetime
@@ -183,13 +184,13 @@ class GraphHandler:
 
         triplet_id = -1
         triplet_id_df = self.SQLHandler.query(
-            f"""SELECT id FROM Triplet WHERE subject = '{subject_json}'
+            f"""SELECT id FROM "Triplet" WHERE subject = '{subject_json}'
                                                                                      AND predicate = '{predicate_json}' 
                                                                                      AND object = '{object_json}'"""
         )
         extraction_info_id = -1
         extraction_info_id_df = self.SQLHandler.query(
-            f"""SELECT id FROM Triplet_Extraction_Info WHERE 
+            f"""SELECT id FROM "Triplet_Extraction_Info" WHERE 
                                                                     method_description = '{extraction_info["extraction_method"]}' 
                                                                     AND extraction_confidence = {extraction_info["confidence"]}"""
         )
@@ -223,7 +224,7 @@ class GraphHandler:
         # We already have the triplet and the extraction info
         # We need to check if there is already a version range for this triplet
         version_range_df = self.SQLHandler.query(
-            f"""SELECT id,start,end FROM Version_Range WHERE
+            f"""SELECT vr.id, vr.use_start, vr.use_end FROM "Version_Range" vr WHERE
                                                                         triplet_id = '{triplet_id}'
                                                                         AND extraction_info_id = '{extraction_info_id}'
                                                                         AND deprecated = {False}"""
@@ -240,15 +241,15 @@ class GraphHandler:
                 {
                     "triplet_id": str(triplet_id),
                     "extraction_info_id": str(extraction_info_id),
-                    "start": extraction_time,
-                    "end": extraction_time,
+                    "use_start": extraction_time,
+                    "use_end": extraction_time,
                     "deprecated": False,
                 },
             )
         else:
             version_range_id = version_range_df.iloc[0]["id"]
             self.SQLHandler.update(
-                "Version_Range", {"end": extraction_time}, f"id = '{version_range_id}'"
+                "Version_Range", {"use_end": extraction_time}, f"id = '{version_range_id}'"
             )
 
         if is_new_triplet:
@@ -259,13 +260,13 @@ class GraphHandler:
         model_uri_json = str(model_uri.n3())
 
         old_triplets_df = self.SQLHandler.query(
-            f"""SELECT t.id,t.subject,t.predicate,t.object
-                                                  FROM Triplet t 
-                                                      JOIN Version_Range vr 
+            f"""SELECT t.id,t.subject,t.predicate,t.object, vr.deprecated, vr.use_end
+                                                  FROM "Triplet" t 
+                                                      JOIN "Version_Range" vr 
                                                       ON t.id = vr.triplet_id
                                                       WHERE t.subject = '{model_uri_json}'
-                                                      AND vr.deprecated = 0
-                                                      AND vr.end < '{self.curr_update_date}'
+                                                      AND vr.deprecated = {False}
+                                                      AND vr.use_end < '{self.curr_update_date}'
                                                     """
         )
 
@@ -280,12 +281,14 @@ class GraphHandler:
                 )
 
         update_query = f"""
-            UPDATE Version_Range vr
-            JOIN Triplet t ON t.id = vr.triplet_id
-            SET vr.deprecated = 1, vr.end = '{self.curr_update_date}'
+            UPDATE "Version_Range" vr
+            SET deprecated = {True}, use_end = '{self.curr_update_date}'
+            FROM "Triplet" t
+                JOIN "Version_Range" on t.id = triplet_id
             WHERE t.subject = '{model_uri_json}'
-            AND vr.end < '{self.curr_update_date}'
-            AND vr.deprecated = 0
+            AND vr.use_end < '{self.curr_update_date}'
+            AND vr.deprecated = {False}
+            AND vr.triplet_id = t.id
         """
         self.SQLHandler.execute_sql(update_query)
 
@@ -296,10 +299,10 @@ class GraphHandler:
         """
 
         update_query = f"""
-            UPDATE Version_Range vr
-            SET vr.end = '{curr_date}'
-            WHERE vr.end != '{curr_date}'
-            AND vr.deprecated = 0
+            UPDATE "Version_Range"
+            SET use_end = '{curr_date}'
+            WHERE use_end != '{curr_date}'
+            AND deprecated = {False}
         """
 
         self.SQLHandler.execute_sql(update_query)

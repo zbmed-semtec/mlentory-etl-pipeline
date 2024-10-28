@@ -3,7 +3,7 @@
         
         "schema.org:name":[
             {
-                "data":"distilbert\/distilbert-base-uncased",
+                "data":"distilbert",
                 "extraction_method":"Parsed_from_HF_dataset",
                 "confidence":1.0,
                 "extraction_time":"2026-07-16_09-14-40"
@@ -51,7 +51,7 @@
         
         "schema.org:name":[
             {
-                "data":"sentence-transformers\/all-MiniLM-L12-v2",
+                "data":"sentence-transformers",
                 "extraction_method":"Parsed_from_HF_dataset",
                 "confidence":1.0,
                 "extraction_time":"2026-07-16_09-14-40"
