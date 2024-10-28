@@ -3,7 +3,7 @@
         
         "schema.org:name":[
             {
-                "data":"MIT\/ast-finetuned-audioset-10-10-0.4593",
+                "data":"audio_set",
                 "extraction_method":"Parsed_from_HF_dataset",
                 "confidence":1.0,
                 "extraction_time":"2027-07-16_09-14-40"
@@ -49,7 +49,7 @@
         
         "schema.org:name":[
             {
-                "data":"sentence-transformers\/all-MiniLM-L12-v2",
+                "data":"sentence-transformers",
                 "extraction_method":"Parsed_from_HF_dataset",
                 "confidence":1.0,
                 "extraction_time":"2027-07-16_09-14-40"

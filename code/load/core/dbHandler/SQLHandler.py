@@ -1,4 +1,4 @@
-import mysql.connector
+import psycopg2
 import pandas as pd
 from typing import Callable, List, Dict, Set, Any
 
@@ -15,7 +15,7 @@ class SQLHandler:
         """
         Establishes a connection to the MySQL database.
         """
-        self.connection = mysql.connector.connect(
+        self.connection = psycopg2.connect(
             host=self.host,
             user=self.user,
             password=self.password,
@@ -42,10 +42,11 @@ class SQLHandler:
         """
         cursor = self.connection.cursor()
         placeholders = ", ".join(["%s"] * len(data))
-        columns = ", ".join(data.keys())
-        sql = f"INSERT INTO {table} ({columns}) VALUES ({placeholders})"
+        columns = ", ".join(f'"{k}"' for k in data.keys())
+        sql = f'INSERT INTO "{table}" ({columns}) VALUES ({placeholders}) RETURNING id'
         cursor.execute(sql, list(data.values()))
-        last_insert_id = cursor.lastrowid
+        last_insert_id = cursor.fetchone()[0]
+        self.connection.commit()
         cursor.close()
         return last_insert_id
 
@@ -60,11 +61,12 @@ class SQLHandler:
         Returns:
             pd.DataFrame: A DataFrame containing the query results.
         """
-        cursor = self.connection.cursor(dictionary=True)
+        cursor = self.connection.cursor()
         cursor.execute(sql, params or ())
+        columns = [desc[0] for desc in cursor.description]
         result = cursor.fetchall()
         cursor.close()
-        return pd.DataFrame(result)
+        return pd.DataFrame(result, columns=columns)
 
     def delete(self, table: str, condition: str) -> None:
         """
@@ -75,7 +77,7 @@ class SQLHandler:
             condition (str): The WHERE clause specifying which records to delete.
         """
         cursor = self.connection.cursor()
-        sql = f"DELETE FROM {table} WHERE {condition}"
+        sql = f'DELETE FROM "{table}" WHERE {condition}'
         cursor.execute(sql)
         self.connection.commit()
         cursor.close()
@@ -90,8 +92,8 @@ class SQLHandler:
             condition (str): The WHERE clause specifying which records to update.
         """
         cursor = self.connection.cursor()
-        set_clause = ", ".join([f"{key} = %s" for key in data.keys()])
-        sql = f"UPDATE {table} SET {set_clause} WHERE {condition}"
+        set_clause = ", ".join([f'"{key}" = %s' for key in data.keys()])
+        sql = f'UPDATE "{table}" SET {set_clause} WHERE {condition}'
         cursor.execute(sql, list(data.values()))
         self.connection.commit()
         cursor.close()
@@ -110,13 +112,15 @@ class SQLHandler:
 
     def reset_all_tables(self):
         cursor = self.connection.cursor()
-        cursor.execute("SHOW TABLES")
+        cursor.execute("""
+            SELECT table_name FROM information_schema.tables
+            WHERE table_schema = 'public'
+        """)
         tables = cursor.fetchall()
 
-        cursor.execute("SET FOREIGN_KEY_CHECKS = 0")
+        cursor.execute("SET CONSTRAINTS ALL DEFERRED")
         for table in tables:
-            cursor.execute(f"TRUNCATE TABLE {table[0]}")
-        cursor.execute("SET FOREIGN_KEY_CHECKS = 1")
+            cursor.execute(f'TRUNCATE TABLE "{table[0]}" CASCADE')
 
         self.connection.commit()
         cursor.close()
