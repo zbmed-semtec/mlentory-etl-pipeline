@@ -40,6 +40,7 @@ class GraphHandler:
         self.platform = platform
         self.new_triplets = []
         self.old_triplets = []
+        self.models_to_index = []
         self.id_to_model_entity = {}
         self.curr_update_date = None
 
@@ -51,19 +52,52 @@ class GraphHandler:
         self.update_metadata_graph()
         # This update uses the new_triplets and the old_triplets list to update the current version of the graph.
         self.update_current_graph()
+        # This updates the index with the new models and triplets
+        self.update_indexes()
+
+    def update_indexes(self):
+        new_models = []
+        for row_num, row in self.df.iterrows():
+
+            # For each row we first create an m4ml:MLModel instance and their respective triplets
+            model_uri = self.models_to_index[row_num]
+
+            index_model_entity = self.IndexHandler.create_hf_index_entity(
+                row, model_uri
+            )
+
+            # Check if model already exists in elasticsearch
+            search_result = self.IndexHandler.search(
+                self.IndexHandler.hf_index,
+                {"query": {"match_phrase": {"db_identifier": str(model_uri.n3())}}},
+            )
+
+            print("SEARCH RESULT: ", search_result)
+
+            if not search_result:
+                # Only index if model doesn't exist
+                new_models.append(index_model_entity)
+            else:
+                # If model already exists, update the index
+                self.IndexHandler.update_document(
+                    index_model_entity.meta.index,
+                    search_result[0]["_id"],
+                    index_model_entity.to_dict(),
+                )
+
+        # Index the model entities
+        if len(new_models) > 0:
+            self.IndexHandler.add_documents(new_models)
+
+        self.models_to_index = []
 
     # Construct all the triplets in the input dataframe
     def update_metadata_graph(self):
 
-        index_model_entities = []
         for index, row in self.df.iterrows():
-
             # For each row we first create an m4ml:MLModel instance and their respective triplets
             model_uri = self.process_model(row)
-
-            # We indexed the model information in elasticsearch
-            index_model_entity = self.IndexHandler.index_hf_model(row, model_uri)
-            index_model_entities.append(index_model_entity)
+            self.models_to_index.append(model_uri)
 
             # Deprecate all the triplets that were not created or updated for the current model
             self.deprecate_old_triplets(model_uri)
@@ -131,7 +165,6 @@ class GraphHandler:
                 "schema.org:dateCreated",
                 "schema.org:dateModified",
             ]:
-                # print("ROWWWWWWW",row[column])
                 self.process_triplet(
                     subject=model_uri,
                     predicate=URIRef(column),

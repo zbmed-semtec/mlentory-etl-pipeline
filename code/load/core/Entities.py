@@ -61,16 +61,20 @@ class HFModel(Model):
     This class represents a model from Hugging Face Hub with its properties.
     """
 
-    def save(self, **kwargs):
-        return super(HFModel, self).save(**kwargs)
-
     class Meta:
         index = "hf_models"  # You can change the index name
         doc_type = "_doc"
 
+    def __init__(self, **kwargs):
+        # self.meta.index = index
+        super(HFModel, self).__init__(**kwargs)
+
+    def save(self, **kwargs):
+        return super(HFModel, self).save(**kwargs)
+
     def upsert(self):
         dict_ = self.to_dict()
-        dict_["_index"] = "hf_models"
+        dict_["_index"] = self.meta.index
         return dict_
 
     def props(self):
