@@ -1,5 +1,5 @@
-CREATE DATABASE test_DB;
-\c test_DB;
+CREATE DATABASE history_DB;
+\c history_DB;
 
 CREATE TABLE IF NOT EXISTS "Version_Range" (
     "id" BIGSERIAL PRIMARY KEY,

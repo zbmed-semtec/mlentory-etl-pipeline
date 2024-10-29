@@ -4,6 +4,7 @@ services:
   # Extractor service
   hf_extractor_with_gpu:
     profiles: [gpu]
+    container_name: hf_gpu
     build: 
       context: .
       dockerfile: ./extractors/hf_extractor/Dockerfile.gpu  # Path to extractor Dockerfile
@@ -30,6 +31,7 @@ services:
   
   hf_extractor_with_no_gpu:
     profiles: [no_gpu]
+    container_name: hf_no_gpu
     build: 
       context: .
       dockerfile: ./extractors/hf_extractor/Dockerfile.no_gpu  # Path to extractor Dockerfile
@@ -48,10 +50,12 @@ services:
     # Uncomment this line to develop on the container
     command: ["tail", "-f", "/dev/null"]
 
+  ### Module in charge of transforming the data to the RDA FAIR4ML schema
   transform:
     profiles:
       - gpu
       - no_gpu
+    container_name: transform
     build: 
       context: .
       dockerfile: ./transform/Dockerfile  # Path to extractor Dockerfile
@@ -70,13 +74,17 @@ services:
     # Uncomment for production
     #command: ["python3", "ExtractFromDataset.py"]
 
+  ### Module in charge of loading the data into the database
   load:    
     depends_on:
       - transform
-      - mysql
+      - postgres
+      - virtuoso
+      - elastic
     profiles:
       - gpu
       - no_gpu
+    container_name: load
     build: 
       context: .
       dockerfile: ./load/Dockerfile  # Path to extractor Dockerfile
@@ -93,35 +101,42 @@ services:
     # Uncomment this line to test the script
     command: ["tail", "-f", "/dev/null"]
   
+  ### SQL database
   postgres:
+    profiles:
+        - gpu
+        - no_gpu
     image: postgres:14.1-alpine
     container_name: postgres
     environment:
       POSTGRES_USER: user
       POSTGRES_PASSWORD: password
-      POSTGRES_DB: postgresql
+      POSTGRES_DB: history_DB
     ports:
       - '5432:5432'
     volumes:
+      - ./load/sql_files/init.sql:/docker-entrypoint-initdb.d/init.sql
       - ../data/postgres_data:/var/lib/postgresql/data
-  mysql:
-    image: mysql:latest
-    profiles:
-      - gpu
-      - no_gpu
-    hostname: mysql
-    environment:
-      MYSQL_ROOT_PASSWORD: password123
-      MYSQL_DATABASE: Extraction_Results
-      MYSQL_USER: user
-      MYSQL_PASSWORD: password123
-    ports:
-      - "42333:3306"
-      - "33060:33060"
-    volumes:
-    - ../code/load/sql_files/init.sql:/docker-entrypoint-initdb.d/init.sql
-    - ../data/mysql_data:/var/lib/mysql
-    command: --init-file /docker-entrypoint-initdb.d/init.sql
+
+  # mysql:
+  #   image: mysql:latest
+  #   profiles:
+  #     - gpu
+  #     - no_gpu
+  #   hostname: mysql
+  #   environment:
+  #     MYSQL_ROOT_PASSWORD: password123
+  #     MYSQL_DATABASE: Extraction_Results
+  #     MYSQL_USER: user
+  #     MYSQL_PASSWORD: password123
+  #   ports:
+  #     - "42333:3306"
+  #     - "33060:33060"
+  #   volumes:
+  #   - ../code/load/sql_files/init.sql:/docker-entrypoint-initdb.d/init.sql
+  #   - ../data/mysql_data:/var/lib/mysql
+  #   command: --init-file /docker-entrypoint-initdb.d/init.sql
+
 
   # anzograph:
   #   image: cambridgesemantics/anzograph:latest
@@ -131,12 +146,14 @@ services:
   #   volumes:
   #     - /DB/anzograph-data:/opt/anzograph-data
 
+  ### RDF database
   virtuoso:
-    image: openlink/virtuoso-opensource-7:latest
-    hostname: virtuoso
     profiles:
       - gpu
       - no_gpu
+    image: openlink/virtuoso-opensource-7:latest
+    hostname: virtuoso
+    container_name: virtuoso
     ports:
       - "1111:1111"
       - "8890:8890"
@@ -144,6 +161,35 @@ services:
       DBA_PASSWORD: my_strong_password
     volumes:
       - ../data/virtuoso_data:/opt/virtuoso-opensource/database
+
+  ### Component to index data based on specific paramaters in Elasticsearch
+  elastic:
+    profiles:
+      - gpu
+      - no_gpu
+    image: docker.elastic.co/elasticsearch/elasticsearch:7.6.0
+    container_name: elastic
+    hostname: elastic
+    # privileged: true
+    environment:
+      - node.name=elastic
+      - "transport.host=localhost"
+      - "bootstrap.system_call_filter=false"
+      # - discovery.type=single-node
+      - cluster.name=es-docker-cluster
+      - cluster.initial_master_nodes=elastic
+      - bootstrap.memory_lock=true
+      # - node.max_local_storage_nodes=2
+      - "ES_JAVA_OPTS=-Xms256m -Xmx256m"
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    volumes:
+      - ../data/elasticsearch_data:/var/lib/elasticsearch/data
+    ports:
+      - 9200:9200
+      - 9300:9300
 
   # transformer service
   # transformer:

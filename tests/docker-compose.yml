@@ -104,9 +104,9 @@ services:
     profiles:
         - ci_test
         - test
-    container_name: virtuoso
     image: openlink/virtuoso-opensource-7:latest
     hostname: virtuoso
+    container_name: virtuoso
     ports:
       - "1111:1111"
       - "8890:8890"
