@@ -68,6 +68,8 @@ class TestGraphHandler:
             es_port=9200,
         )
 
+        elasticsearch_handler.initialize_HF_index(index_name="test_hf_models")
+
         yield elasticsearch_handler
 
         elasticsearch_handler.clean_indices()
@@ -160,10 +162,20 @@ class TestGraphHandler:
         # assert result_count[0]["count"] == expected_models
         # assert
 
-    # def test_basic_creation(self, setup_mock_graph_handler: GraphHandler):
-    #     graph_handler = setup_mock_graph_handler
-    #     graph_handler.load_df(self.m4ml_example_dataframe)
-    #     graph_handler.create_rdf_graph()
+    def assert_elasticsearch_state(
+        self,
+        expected_models: int,
+        graph_handler: GraphHandler,
+        print_info=False,
+    ):
+        graph_handler.IndexHandler.es.indices.refresh(index="test_hf_models")
+        result = graph_handler.IndexHandler.es.search(
+            index="test_hf_models",
+            body={"query": {"match_all": {}}},
+        )
+        print("Check Elasticsearch: ", result, "\n")
+        result_count = result["hits"]["total"]["value"]
+        assert result_count == expected_models
 
     def test_one_new_triplet_creation(self, setup_graph_handler: GraphHandler):
         graph_handler = setup_graph_handler
@@ -262,6 +274,12 @@ class TestGraphHandler:
             print_graph=False,
         )
 
+        self.assert_elasticsearch_state(
+            expected_models=2,
+            graph_handler=graph_handler,
+            print_info=False,
+        )
+
         self.create_graph(
             source_file_path="./tests/Test_files/load_files/hf_transformed_fair4ml_example_small_2.json",
             graph_handler=graph_handler,
@@ -281,6 +299,12 @@ class TestGraphHandler:
             expected_models=2,
             graph_handler=graph_handler,
             print_graph=False,
+        )
+
+        self.assert_elasticsearch_state(
+            expected_models=2,
+            graph_handler=graph_handler,
+            print_info=False,
         )
 
     def test_small_graph_add_new_models(self, setup_graph_handler: GraphHandler):
@@ -306,10 +330,17 @@ class TestGraphHandler:
             print_graph=False,
         )
 
+        self.assert_elasticsearch_state(
+            expected_models=2,
+            graph_handler=graph_handler,
+            print_info=False,
+        )
+
         self.create_graph(
             source_file_path="./tests/Test_files/load_files/hf_transformed_fair4ml_example_small_3.json",
             graph_handler=graph_handler,
         )
+
         self.assert_sql_db_state(
             expected_triplets=20,
             expected_models=3,
@@ -325,6 +356,12 @@ class TestGraphHandler:
             expected_models=3,
             graph_handler=graph_handler,
             print_graph=False,
+        )
+
+        self.assert_elasticsearch_state(
+            expected_models=3,
+            graph_handler=graph_handler,
+            print_info=True,
         )
 
     def test_small_graph_update_and_add_new_models(

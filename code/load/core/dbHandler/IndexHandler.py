@@ -36,11 +36,14 @@ class IndexHandler:
         )
 
     def initialize_HF_index(self, index_name="hf_models"):
+        self.hf_index = index_name
         HFModel.init(index=index_name, using=self.es)
 
-    def index_hf_model(self, row, model_uri):
+    def create_hf_index_entity(self, row, model_uri):
         model_uri_json = str(model_uri.n3())
         index_model_entity = HFModel()
+
+        index_model_entity.meta.index = self.hf_index
 
         index_model_entity.db_identifier = model_uri_json
         if "schema.org:name" in row.keys():
@@ -60,7 +63,7 @@ class IndexHandler:
         else:
             index_model_entity.author = []
 
-        print(index_model_entity.to_dict())
+        # print(index_model_entity.to_dict())
         return index_model_entity
 
     def handle_raw_data(self, raw_data):
@@ -93,12 +96,12 @@ class IndexHandler:
         except Exception as e:
             print(f"Error adding documents: {str(e)}")
 
-    def index_document(self, index_name, doc_id, document):
+    def update_document(self, index_name, document_id, document):
         try:
-            self.es.index(index=index_name, id=doc_id, body=document)
-            print(f"Document indexed successfully with ID: {doc_id}")
+            self.es.update(index=index_name, id=document_id, body={"doc": document})
+            print("Document updated successfully.")
         except Exception as e:
-            print(f"Error indexing document: {str(e)}")
+            print(f"Error updating document: {str(e)}")
 
     def search(self, index_name, query):
         try:
