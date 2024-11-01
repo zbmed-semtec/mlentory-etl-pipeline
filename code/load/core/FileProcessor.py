@@ -47,7 +47,6 @@ class FileProcessor:
         if filename not in self.processed_files:
             try:
                 logger.info(f"Processing file: {filename}")
-                # print(f"Processing file: {filename}")
                 if filename.endswith(".tsv"):
                     df = pd.read_csv(filename, sep="\t", usecols=lambda x: x != 0)
                 elif filename.endswith(".json"):
@@ -61,6 +60,8 @@ class FileProcessor:
                     raise ValueError("Unsupported file type")
 
                 self.load_processor.update_dbs_with_df(df=m4ml_models_df)
+                
+                self.load_processor.print_DB_states()
 
                 # self.processed_files_in_last_batch.append(filename)
                 logger.info(f"Finished processing: {filename}")

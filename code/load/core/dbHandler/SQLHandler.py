@@ -110,19 +110,40 @@ class SQLHandler:
         self.connection.commit()
         cursor.close()
 
-    def reset_all_tables(self):
+    def delete_all_tables(self):
         cursor = self.connection.cursor()
         cursor.execute(
             """
-            SELECT table_name FROM information_schema.tables
-            WHERE table_schema = 'public'
-        """
+                SELECT table_name FROM information_schema.tables
+                WHERE table_schema = 'public'
+            """
         )
         tables = cursor.fetchall()
 
         cursor.execute("SET CONSTRAINTS ALL DEFERRED")
         for table in tables:
             cursor.execute(f'TRUNCATE TABLE "{table[0]}" CASCADE')
+
+        self.connection.commit()
+        cursor.close()
+
+    def clean_all_tables(self):
+        """
+        Deletes all rows from all tables in the database while preserving table structures.
+        """
+        cursor = self.connection.cursor()
+        cursor.execute(
+            """
+            SELECT table_name FROM information_schema.tables
+            WHERE table_schema = 'public'
+            """
+        )
+        tables = cursor.fetchall()
+
+        cursor.execute("SET CONSTRAINTS ALL DEFERRED")
+        
+        for table in tables:
+            cursor.execute(f'DELETE FROM "{table[0]}"')
 
         self.connection.commit()
         cursor.close()

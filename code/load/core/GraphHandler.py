@@ -2,8 +2,6 @@ import rdflib
 from rdflib import Graph, URIRef, Literal, BNode
 from rdflib.namespace import RDF, XSD, FOAF
 from rdflib.util import from_n3
-import uuid
-import json
 import pandas as pd
 from pandas import Timestamp
 import json

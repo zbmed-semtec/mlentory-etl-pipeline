@@ -39,7 +39,7 @@ class TestGraphHandler:
             database="test_DB",
         )
         sql_handler.connect()
-        sql_handler.reset_all_tables()
+        sql_handler.delete_all_tables()
 
         yield sql_handler
         # disconnect and close the connection
