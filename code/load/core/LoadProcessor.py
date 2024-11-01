@@ -53,3 +53,42 @@ class LoadProcessor:
         # The graph handler updates the SQL and RDF databases with the new data
         self.GraphHandler.load_df(df)
         self.GraphHandler.update_graph()
+    
+    def print_DB_states(self):
+        triplets_df = self.GraphHandler.SQLHandler.query('SELECT * FROM "Triplet"')
+        ranges_df = self.GraphHandler.SQLHandler.query('SELECT * FROM "Version_Range"')
+        extraction_info_df = self.GraphHandler.SQLHandler.query(
+            'SELECT * FROM "Triplet_Extraction_Info"'
+        )
+
+        print("SQL TRIPlETS\n", triplets_df)
+        print("SQL RANGES\n", ranges_df)
+        print("SQL EXTRACTION INFO\n", extraction_info_df)
+        
+        result_graph = self.GraphHandler.RDFHandler.query(
+            "http://virtuoso:8890/sparql",
+            """CONSTRUCT { ?s ?p ?o } WHERE {GRAPH <http://example.com/data_1> {?s ?p ?o}}""",
+        )
+        
+        print("VIRTUOSO TRIPlETS\n")
+        for i, (s, p, o) in enumerate(result_graph):
+            print(f"{i}: {s} {p} {o}")
+
+        result_count = result_graph.query(
+            """SELECT (COUNT(DISTINCT ?s) AS ?count) WHERE{?s ?p ?o}"""
+        )
+        
+        for triple in result_count:
+            print("VIRTUOSO MODEL COUNT\n", triple.asdict()["count"]._value)
+        
+        self.GraphHandler.IndexHandler.es.indices.refresh(index="hf_models")
+        result = self.GraphHandler.IndexHandler.es.search(
+            index="hf_models",
+            body={"query": {"match_all": {}}},
+        )
+        print("Check Elasticsearch: ", result, "\n")
+    
+    def clean_DBs(self):
+        self.RDFHandler.reset_db()
+        self.IndexHandler.clean_indices()
+        self.SQLHandler.clean_all_tables()

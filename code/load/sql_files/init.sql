@@ -1,15 +1,6 @@
 CREATE DATABASE history_DB;
 \c history_DB;
 
-CREATE TABLE IF NOT EXISTS "Version_Range" (
-    "id" BIGSERIAL PRIMARY KEY,
-    "triplet_id" BIGINT NOT NULL,
-    "start" TIMESTAMP NOT NULL,
-    "end" TIMESTAMP NOT NULL,
-    "deprecated" BOOLEAN NOT NULL DEFAULT FALSE,
-    "extraction_info_id" BIGINT NOT NULL
-);
-
 CREATE TABLE IF NOT EXISTS "Triplet" (
     "id" BIGSERIAL PRIMARY KEY,
     "subject" VARCHAR(1024) NOT NULL,
@@ -21,6 +12,15 @@ CREATE TABLE IF NOT EXISTS "Triplet_Extraction_Info" (
     "id" BIGSERIAL PRIMARY KEY,
     "method_description" TEXT NOT NULL,
     "extraction_confidence" DECIMAL(6,5)
+);
+
+CREATE TABLE IF NOT EXISTS "Version_Range" (
+    "id" BIGSERIAL PRIMARY KEY,
+    "triplet_id" BIGINT NOT NULL REFERENCES "Triplet"("id") ON DELETE CASCADE,
+    "use_start" TIMESTAMP NOT NULL,
+    "use_end" TIMESTAMP NOT NULL,
+    "deprecated" BOOLEAN NOT NULL DEFAULT FALSE,
+    "extraction_info_id" BIGINT NOT NULL REFERENCES "Triplet_Extraction_Info"("id") ON DELETE CASCADE
 );
 
 ALTER TABLE "Version_Range" 

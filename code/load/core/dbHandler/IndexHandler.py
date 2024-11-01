@@ -37,7 +37,12 @@ class IndexHandler:
 
     def initialize_HF_index(self, index_name="hf_models"):
         self.hf_index = index_name
-        HFModel.init(index=index_name, using=self.es)
+        if not self.es.indices.exists(index=index_name):
+            HFModel.init(index=index_name, using=self.es)
+        else:
+            self.es.indices.close(index=index_name)
+            HFModel.init(index=index_name, using=self.es)
+            self.es.indices.open(index=index_name)
 
     def create_hf_index_entity(self, row, model_uri):
         model_uri_json = str(model_uri.n3())

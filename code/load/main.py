@@ -10,39 +10,7 @@ import datetime
 import logging
 import time
 
-def print_DB_states(graph_handler):
-    triplets_df = graph_handler.SQLHandler.query('SELECT * FROM "Triplet"')
-    ranges_df = graph_handler.SQLHandler.query('SELECT * FROM "Version_Range"')
-    extraction_info_df = graph_handler.SQLHandler.query(
-        'SELECT * FROM "Triplet_Extraction_Info"'
-    )
 
-    print("SQL TRIPlETS\n", triplets_df)
-    print("SQL RANGES\n", ranges_df)
-    print("SQL EXTRACTION INFO\n", extraction_info_df)
-    
-    result_graph = graph_handler.RDFHandler.query(
-        "http://virtuoso:8890/sparql",
-        """CONSTRUCT { ?s ?p ?o } WHERE {GRAPH <http://example.com/data_1> {?s ?p ?o}}""",
-    )
-    
-    print("VIRTUOSO TRIPlETS\n")
-    for i, (s, p, o) in enumerate(result_graph):
-        print(f"{i}: {s} {p} {o}")
-
-    result_count = result_graph.query(
-        """SELECT (COUNT(DISTINCT ?s) AS ?count) WHERE{?s ?p ?o}"""
-    )
-    
-    print("VIRTUOSO MODEL COUNT\n", result_count)
-    
-    graph_handler.IndexHandler.es.indices.refresh(index="test_hf_models")
-    result = graph_handler.IndexHandler.es.search(
-        index="test_hf_models",
-        body={"query": {"match_all": {}}},
-    )
-    print("Check Elasticsearch: ", result, "\n")
-    
     
 
 def main():
@@ -79,13 +47,13 @@ def main():
             password="password",
             database="history_DB",
         )
-        SQLHandler.connect()
+        sqlHandler.connect()
         
         rdfHandler = RDFHandler(
             container_name="virtuoso",
             kg_files_directory="/../kg_files",
-            virtuoso_user="dba",
-            virtuoso_password="my_strong_password",
+            _user="dba",
+            _password="my_strong_password",
             sparql_endpoint="http://virtuoso:8890/sparql",
         )
         
@@ -97,7 +65,7 @@ def main():
         elasticsearchHandler.initialize_HF_index(index_name="hf_models")
         
         # Initializing the graph creator
-        GraphHandler = GraphHandler(
+        graphHandler = GraphHandler(
             SQLHandler=sqlHandler,
             RDFHandler=rdfHandler,
             IndexHandler=elasticsearchHandler,
@@ -109,7 +77,7 @@ def main():
             SQLHandler=sqlHandler,
             RDFHandler=rdfHandler,
             IndexHandler=elasticsearchHandler,
-            GraphHandler=GraphHandler,
+            GraphHandler=graphHandler,
             kg_files_directory="./../kg_files",
         )
 
@@ -119,18 +87,19 @@ def main():
         )
         observer = QueueObserver(watch_dir=args.folder, file_processor=file_processor)
         observer.start()
-        file_processor.process_file("./../load_queue/test copy.json")
         
-        print_DB_states(graph_handler=GraphHandler)
-
+        load_processor.clean_DBs()
+        # file_processor.process_file("./../load_queue/test copy.json")
         # Keep the script running to monitor changes
-        # while True:
-        #     time.sleep(0.5)
+        while True:
+            time.sleep(0.5)
+
     except Exception as e:
         logger.exception("Exception occurred ", e)
     except KeyboardInterrupt:
         logger.info("Server Stop")
-
+    
+    observer.stop()
 
 if __name__ == "__main__":
     main()

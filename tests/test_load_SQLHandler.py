@@ -158,11 +158,11 @@ class TestSQLHandler:
         mock_cursor.execute.assert_called_once_with(test_sql)
         mock_connection.commit.assert_called_once()
 
-    def test_reset_all_tables(self, sql_handler, mock_connection, mock_cursor):
+    def test_delete_all_tables(self, sql_handler, mock_connection, mock_cursor):
         sql_handler.connection = mock_connection
         mock_cursor.fetchall.return_value = [("table1",), ("table2",)]
 
-        sql_handler.reset_all_tables()
+        sql_handler.delete_all_tables()
 
         assert mock_cursor.execute.call_count == 4
         mock_connection.commit.assert_called_once()

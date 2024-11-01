@@ -94,6 +94,7 @@ services:
       - ../data/load_queue:/load_queue
       - ../data/virtuoso_data/kg_files:/kg_files
       - ./config_data:/config_data
+      # Necessary to run docker commands inside other containers
       - /var/run/docker.sock:/var/run/docker.sock 
     dns:
       - 1.1.1.1
