@@ -28,6 +28,8 @@ services:
     # command: ["python3", "ExtractFromDataset.py"]
     # Uncomment this line to develop on the container
     command: ["tail", "-f", "/dev/null"]
+    networks:
+      - mlentory_network
   
   hf_extractor_with_no_gpu:
     profiles: [no_gpu]
@@ -49,6 +51,8 @@ services:
     # command: ["python3", "main.py"]
     # Uncomment this line to develop on the container
     command: ["tail", "-f", "/dev/null"]
+    networks:
+      - mlentory_network
 
   ### Module in charge of transforming the data to the RDA FAIR4ML schema
   transform:
@@ -71,6 +75,8 @@ services:
 
     # Uncomment this line to test the script
     command: ["tail", "-f", "/dev/null"]
+    networks:
+      - mlentory_network
     # Uncomment for production
     #command: ["python3", "ExtractFromDataset.py"]
 
@@ -101,6 +107,8 @@ services:
 
     # Uncomment this line to test the script
     command: ["tail", "-f", "/dev/null"]
+    networks:
+      - mlentory_network
   
   ### SQL database
   postgres:
@@ -118,6 +126,8 @@ services:
     volumes:
       - ./load/sql_files/init.sql:/docker-entrypoint-initdb.d/init.sql
       - ../data/postgres_data:/var/lib/postgresql/data
+    networks:
+      - mlentory_network
 
   # mysql:
   #   image: mysql:latest
@@ -162,6 +172,8 @@ services:
       DBA_PASSWORD: my_strong_password
     volumes:
       - ../data/virtuoso_data:/opt/virtuoso-opensource/database
+    networks:
+      - mlentory_network
 
   ### Component to index data based on specific paramaters in Elasticsearch
   elastic:
@@ -187,10 +199,12 @@ services:
         soft: -1
         hard: -1
     volumes:
-      - ../data/elasticsearch_data:/var/lib/elasticsearch/data
+      - ../data/elasticsearch_data:/usr/share/elasticsearch/data
     ports:
       - 9200:9200
       - 9300:9300
+    networks:
+      - mlentory_network
 
   # transformer service
   # transformer:
@@ -216,4 +230,8 @@ services:
 #     name: my-macvlan-net
 #   host:
 #     external: true
+
+networks:
+  mlentory_network:
+    external: true
 
