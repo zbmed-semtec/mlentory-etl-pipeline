@@ -176,6 +176,36 @@ class TestGraphHandler:
         print("Check Elasticsearch: ", result, "\n")
         result_count = result["hits"]["total"]["value"]
         assert result_count == expected_models
+    
+    def assert_dbs_states(
+        self,
+        expected_triplets: int,
+        expected_models: int,
+        expected_ranges: int,
+        expected_extraction_info: int,
+        graph_handler: GraphHandler,
+        expected_deprecated: int = 0,
+        print_df: bool = False,
+    ):
+        self.assert_sql_db_state(
+            expected_triplets,
+            expected_models,
+            expected_ranges,
+            expected_extraction_info,
+            graph_handler,
+            expected_deprecated,
+            print_df,
+        )
+        self.assert_virtuoso_db_state(
+            expected_triplets-expected_deprecated, 
+            expected_models, 
+            graph_handler
+        )
+        
+        self.assert_elasticsearch_state(
+            expected_models, 
+            graph_handler
+        )
 
     def test_one_new_triplet_creation(self, setup_graph_handler: GraphHandler):
         graph_handler = setup_graph_handler
@@ -232,22 +262,17 @@ class TestGraphHandler:
             source_file_path="./tests/Test_files/load_files/hf_transformed_fair4ml_example_small_1.json",
             graph_handler=graph_handler,
         )
-        self.assert_sql_db_state(
-            expected_triplets=14,
+        
+        self.assert_dbs_states(
+            expected_triplets=16,
             expected_models=2,
-            expected_ranges=14,
+            expected_ranges=16,
             expected_extraction_info=2,
             expected_deprecated=0,
             graph_handler=graph_handler,
             print_df=False,
         )
-
-        self.assert_virtuoso_db_state(
-            expected_triplets=14,
-            expected_models=2,
-            graph_handler=graph_handler,
-            print_graph=True,
-        )
+        
 
     def test_small_graph_update_same_models(self, setup_graph_handler: GraphHandler):
         # The idea of this test is to evaluate if the graph is correctly updated when
@@ -257,54 +282,30 @@ class TestGraphHandler:
             source_file_path="./tests/Test_files/load_files/hf_transformed_fair4ml_example_small_1.json",
             graph_handler=graph_handler,
         )
-        self.assert_sql_db_state(
-            expected_triplets=14,
+        
+        self.assert_dbs_states(
+            expected_triplets=16,
             expected_models=2,
-            expected_ranges=14,
+            expected_ranges=16,
             expected_extraction_info=2,
             expected_deprecated=0,
             graph_handler=graph_handler,
             print_df=False,
         )
 
-        self.assert_virtuoso_db_state(
-            expected_triplets=14,
-            expected_models=2,
-            graph_handler=graph_handler,
-            print_graph=False,
-        )
-
-        self.assert_elasticsearch_state(
-            expected_models=2,
-            graph_handler=graph_handler,
-            print_info=False,
-        )
-
         self.create_graph(
             source_file_path="./tests/Test_files/load_files/hf_transformed_fair4ml_example_small_2.json",
             graph_handler=graph_handler,
         )
-        self.assert_sql_db_state(
-            expected_triplets=17,
+        
+        self.assert_dbs_states(
+            expected_triplets=19,
             expected_models=2,
-            expected_ranges=18,
+            expected_ranges=20,
             expected_extraction_info=3,
             expected_deprecated=3,
             graph_handler=graph_handler,
             print_df=False,
-        )
-
-        self.assert_virtuoso_db_state(
-            expected_triplets=14,
-            expected_models=2,
-            graph_handler=graph_handler,
-            print_graph=False,
-        )
-
-        self.assert_elasticsearch_state(
-            expected_models=2,
-            graph_handler=graph_handler,
-            print_info=False,
         )
 
     def test_small_graph_add_new_models(self, setup_graph_handler: GraphHandler):
@@ -313,55 +314,29 @@ class TestGraphHandler:
             source_file_path="./tests/Test_files/load_files/hf_transformed_fair4ml_example_small_1.json",
             graph_handler=graph_handler,
         )
-        self.assert_sql_db_state(
-            expected_triplets=14,
+        self.assert_dbs_states(
+            expected_triplets=16,
             expected_models=2,
-            expected_ranges=14,
+            expected_ranges=16,
             expected_extraction_info=2,
             expected_deprecated=0,
             graph_handler=graph_handler,
             print_df=False,
         )
-
-        self.assert_virtuoso_db_state(
-            expected_triplets=14,
-            expected_models=2,
-            graph_handler=graph_handler,
-            print_graph=False,
-        )
-
-        self.assert_elasticsearch_state(
-            expected_models=2,
-            graph_handler=graph_handler,
-            print_info=False,
-        )
-
+        
         self.create_graph(
             source_file_path="./tests/Test_files/load_files/hf_transformed_fair4ml_example_small_3.json",
             graph_handler=graph_handler,
         )
-
-        self.assert_sql_db_state(
-            expected_triplets=20,
+        
+        self.assert_dbs_states(
+            expected_triplets=23,
             expected_models=3,
-            expected_ranges=20,
+            expected_ranges=23,
             expected_extraction_info=2,
             expected_deprecated=0,
             graph_handler=graph_handler,
             print_df=False,
-        )
-
-        self.assert_virtuoso_db_state(
-            expected_triplets=20,
-            expected_models=3,
-            graph_handler=graph_handler,
-            print_graph=False,
-        )
-
-        self.assert_elasticsearch_state(
-            expected_models=3,
-            graph_handler=graph_handler,
-            print_info=True,
         )
 
     def test_small_graph_update_and_add_new_models(
@@ -372,21 +347,15 @@ class TestGraphHandler:
             source_file_path="./tests/Test_files/load_files/hf_transformed_fair4ml_example_small_1.json",
             graph_handler=graph_handler,
         )
-        self.assert_sql_db_state(
-            expected_triplets=14,
+        
+        self.assert_dbs_states(
+            expected_triplets=16,
             expected_models=2,
-            expected_ranges=14,
+            expected_ranges=16,
             expected_extraction_info=2,
             expected_deprecated=0,
             graph_handler=graph_handler,
             print_df=False,
-        )
-
-        self.assert_virtuoso_db_state(
-            expected_triplets=14,
-            expected_models=2,
-            graph_handler=graph_handler,
-            print_graph=False,
         )
 
         self.create_graph(
@@ -394,42 +363,29 @@ class TestGraphHandler:
             graph_handler=graph_handler,
         )
 
-        self.assert_sql_db_state(
-            expected_triplets=20,
+        self.assert_dbs_states(
+            expected_triplets=23,
             expected_models=3,
-            expected_ranges=20,
+            expected_ranges=23,
             expected_extraction_info=2,
             expected_deprecated=0,
             graph_handler=graph_handler,
             print_df=False,
         )
 
-        self.assert_virtuoso_db_state(
-            expected_triplets=20,
-            expected_models=3,
-            graph_handler=graph_handler,
-            print_graph=False,
-        )
-
         self.create_graph(
             source_file_path="./tests/Test_files/load_files/hf_transformed_fair4ml_example_small_2.json",
             graph_handler=graph_handler,
         )
-        self.assert_sql_db_state(
-            expected_triplets=23,
+        
+        self.assert_dbs_states(
+            expected_triplets=26,
             expected_models=3,
-            expected_ranges=24,
+            expected_ranges=27,
             expected_extraction_info=3,
             expected_deprecated=0,
             graph_handler=graph_handler,
             print_df=False,
-        )
-
-        self.assert_virtuoso_db_state(
-            expected_triplets=23,
-            expected_models=3,
-            graph_handler=graph_handler,
-            print_graph=False,
         )
 
     def test_triplet_deprecation(self, setup_graph_handler: GraphHandler):
@@ -490,21 +446,14 @@ class TestGraphHandler:
             graph_handler=graph_handler,
         )
 
-        self.assert_sql_db_state(
-            expected_triplets=14,
+        self.assert_dbs_states(
+            expected_triplets=16,
             expected_models=2,
-            expected_ranges=14,
+            expected_ranges=16,
             expected_extraction_info=2,
             expected_deprecated=0,
             graph_handler=graph_handler,
-            print_df=True,
-        )
-
-        self.assert_virtuoso_db_state(
-            expected_triplets=14,
-            expected_models=2,
-            graph_handler=graph_handler,
-            print_graph=True,
+            print_df=False,
         )
 
         self.create_graph(
@@ -512,22 +461,16 @@ class TestGraphHandler:
             graph_handler=graph_handler,
         )
 
-        self.assert_sql_db_state(
-            expected_triplets=15,
+        self.assert_dbs_states(
+            expected_triplets=16,
             expected_models=2,
-            expected_ranges=15,
+            expected_ranges=16,
             expected_extraction_info=2,
-            expected_deprecated=4,
+            expected_deprecated=3,
             graph_handler=graph_handler,
             print_df=False,
         )
-
-        self.assert_virtuoso_db_state(
-            expected_triplets=11,
-            expected_models=2,
-            graph_handler=graph_handler,
-            print_graph=True,
-        )
+        
 
     def test_large_dataset(self, setup_graph_handler: GraphHandler):
         graph_handler = setup_graph_handler

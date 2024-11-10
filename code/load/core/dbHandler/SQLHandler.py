@@ -125,6 +125,7 @@ class SQLHandler:
             cursor.execute(f'TRUNCATE TABLE "{table[0]}" CASCADE')
 
         self.connection.commit()
+        
         cursor.close()
 
     def clean_all_tables(self):

@@ -5,6 +5,7 @@ import pytest
 import pandas as pd
 from unittest.mock import Mock, patch
 from typing import Dict, Any
+import psycopg2
 
 
 sys.path.append(".")

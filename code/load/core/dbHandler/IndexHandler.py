@@ -55,10 +55,10 @@ class IndexHandler:
             index_model_entity.name = self.handle_raw_data(row["schema.org:name"])[0]
         else:
             index_model_entity.name = ""
-        if "codemeta:readme" in row.keys():
-            index_model_entity.readme = self.handle_raw_data(row["codemeta:readme"])[0]
+        if "schema.org:releaseNotes" in row.keys():
+            index_model_entity.releaseNotes = self.handle_raw_data(row["schema.org:releaseNotes"])[0]
         else:
-            index_model_entity.readme = ""
+            index_model_entity.releaseNotes = ""
         if "fair4ml:mlTask" in row.keys():
             index_model_entity.mlTask = self.handle_raw_data(row["fair4ml:mlTask"])
         else:

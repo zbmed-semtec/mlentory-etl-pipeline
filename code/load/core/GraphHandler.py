@@ -2,6 +2,7 @@ import rdflib
 from rdflib import Graph, URIRef, Literal, BNode
 from rdflib.namespace import RDF, XSD, FOAF
 from rdflib.util import from_n3
+import hashlib
 import pandas as pd
 from pandas import Timestamp
 import json
@@ -121,8 +122,8 @@ class GraphHandler:
 
         # Go through all the columns and add the triplets
         for column in self.df.columns:
-            if column == "schema.org:name":
-                continue
+            # if column == "schema.org:name":
+            #     continue
             # Handle the cases where a new entity has to be created
             if column in [
                 "fair4ml:mlTask",
@@ -172,7 +173,9 @@ class GraphHandler:
             if column in [
                 "schema.org:storageRequirements",
                 "schema.org:name",
+                "schema.org:releaseNotes",
                 "codemeta:readme",
+                "schema.org:license"
             ]:
                 if type(row[column]) != list and pd.isna(row[column]):
                     continue
@@ -202,6 +205,7 @@ class GraphHandler:
                                 ),
                                 extraction_info=source,
                             )
+                
         return model_uri
 
     # This function helps us identify if a triplet is new or old
@@ -214,11 +218,15 @@ class GraphHandler:
         is_new_triplet = False
 
         triplet_id = -1
+        
+        object_hash = hashlib.md5(object_json.encode()).hexdigest()
+        
         triplet_id_df = self.SQLHandler.query(
             f"""SELECT id FROM "Triplet" WHERE subject = '{subject_json}'
                                                                                      AND predicate = '{predicate_json}' 
-                                                                                     AND object = '{object_json}'"""
+                                                                                     AND md5(object) = '{object_hash}'"""
         )
+        
         extraction_info_id = -1
         extraction_info_id_df = self.SQLHandler.query(
             f"""SELECT id FROM "Triplet_Extraction_Info" WHERE 
