@@ -88,7 +88,8 @@ def main():
         observer = QueueObserver(watch_dir=args.folder, file_processor=file_processor)
         observer.start()
         
-        # load_processor.clean_DBs()
+        load_processor.clean_DBs()
+
         # file_processor.process_file("./../load_queue/test copy.json")
         # Keep the script running to monitor changes
         while True:

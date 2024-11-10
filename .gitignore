@@ -14,6 +14,7 @@ data/datasets/*.json
 data/mysql_data
 data/virtuoso_data
 data/elasticsearch_data
+data/postgres_data
 
 .env
 

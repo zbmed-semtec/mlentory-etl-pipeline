@@ -26,7 +26,7 @@ class Model(Document):
             tokenizer=tokenizer("edge_ngram", "edge_ngram", min_gram=3, max_gram=10),
         ),
     )
-    readme = Text()
+    releaseNotes = Text()
     mlTask = Keyword(multi=True)
     author = Text(multi=True)
 

@@ -4,7 +4,7 @@ CREATE DATABASE history_DB;
 CREATE TABLE IF NOT EXISTS "Triplet" (
     "id" BIGSERIAL PRIMARY KEY,
     "subject" VARCHAR(1024) NOT NULL,
-    "predicate" VARCHAR(1024) NOT NULL,
+    "predicate" VARCHAR(2048) NOT NULL,
     "object" TEXT NOT NULL
 );
 
