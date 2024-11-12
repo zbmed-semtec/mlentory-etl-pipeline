@@ -183,13 +183,15 @@ class FieldProcessorHF:
         # print("Processed value: ",processed_value)
         return processed_value
 
-    def process_property_(self, property_description_M4ML: pd.Series, info_HF: pd.Series) -> str:
+    def process_property_(
+        self, property_description_M4ML: pd.Series, info_HF: pd.Series
+    ) -> str:
         property_name = property_description_M4ML["Property"]
-        
+
         # Direct mappings to HF questions
         direct_question_mappings = {
             "fair4ml:ethicalLegalSocial": "q_id_15",
-            "fair4ml:evaluatedOn": "q_id_19", 
+            "fair4ml:evaluatedOn": "q_id_19",
             "fair4ml:fineTunedFrom": "q_id_8",
             "fair4ml:intendedUse": "q_id_20",
             "fair4ml:mlTask": "q_id_3",
@@ -205,13 +207,13 @@ class FieldProcessorHF:
             "codemeta:referencePublication": "q_id_13",
             "author": "q_id_24",
             "dateCreated": "q_id_2",
-            "dateModified": "q_id_26", 
+            "dateModified": "q_id_26",
             "datePublished": "q_id_2",
             "funding": "q_id_27",
             "license": "q_id_15",
             "maintainer": "q_id_1",
             "version": "q_id_28",
-            "name": "q_id_0"
+            "name": "q_id_0",
         }
 
         # Properties that need HF link with specific tail
@@ -221,26 +223,29 @@ class FieldProcessorHF:
             "codemeta:readme": "/blob/main/README.md",
             "discussionUrl": "/discussions",
             "identifier": "",
-            "url": ""
+            "url": "",
         }
 
         # Special cases with custom processing
         special_processors = {
-            "fair4ml:hasCO2eEmissions": lambda: [self.add_default_extraction_info("Not extracted", "None", 1.0)],
+            "fair4ml:hasCO2eEmissions": lambda: [
+                self.add_default_extraction_info("Not extracted", "None", 1.0)
+            ],
             "fair4ml:trainedOn": lambda: self.process_trainedOn(info_HF),
-            "softwareRequirements": lambda: self.process_softwareRequirements(info_HF)
+            "softwareRequirements": lambda: self.process_softwareRequirements(info_HF),
         }
 
         # Process based on mapping type
         if property_name in direct_question_mappings:
-            return self.find_value_in_HF(info_HF, direct_question_mappings[property_name])
+            return self.find_value_in_HF(
+                info_HF, direct_question_mappings[property_name]
+            )
         elif property_name in hf_link_mappings:
             return self.build_HF_link(info_HF, hf_link_mappings[property_name])
         elif property_name in special_processors:
             return special_processors[property_name]()
-        
-        return ""
 
+        return ""
 
     def process_softwareRequirements(self, info_HF: pd.DataFrame) -> List:
 

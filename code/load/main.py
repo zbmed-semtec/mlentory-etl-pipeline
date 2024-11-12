@@ -11,8 +11,6 @@ import logging
 import time
 
 
-    
-
 def main():
     # Handling script arguments
     parser = argparse.ArgumentParser(description="Queue Observer Script")
@@ -48,7 +46,7 @@ def main():
             database="history_DB",
         )
         sqlHandler.connect()
-        
+
         rdfHandler = RDFHandler(
             container_name="virtuoso",
             kg_files_directory="/../kg_files",
@@ -56,14 +54,14 @@ def main():
             _password="my_strong_password",
             sparql_endpoint="http://virtuoso:8890/sparql",
         )
-        
+
         elasticsearchHandler = IndexHandler(
             es_host="elastic",
             es_port=9200,
         )
 
         elasticsearchHandler.initialize_HF_index(index_name="hf_models")
-        
+
         # Initializing the graph creator
         graphHandler = GraphHandler(
             SQLHandler=sqlHandler,
@@ -87,8 +85,8 @@ def main():
         )
         observer = QueueObserver(watch_dir=args.folder, file_processor=file_processor)
         observer.start()
-        
-        load_processor.clean_DBs()
+
+        # load_processor.clean_DBs()
 
         # file_processor.process_file("./../load_queue/test copy.json")
         # Keep the script running to monitor changes
@@ -99,8 +97,9 @@ def main():
         logger.exception("Exception occurred ", e)
     except KeyboardInterrupt:
         logger.info("Server Stop")
-    
+
     observer.stop()
+
 
 if __name__ == "__main__":
     main()

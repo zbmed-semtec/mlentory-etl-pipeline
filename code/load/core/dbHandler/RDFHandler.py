@@ -54,8 +54,8 @@ class RDFHandler:
         command = f"""isql -S 1111 -U {self._user} -P {self._password} {sql_command}"""
 
         result = container.exec_run(command)
-    
-    def upload_rdf_file(self, rdf_file_path, container_rdf_folder,graph_iri):
+
+    def upload_rdf_file(self, rdf_file_path, container_rdf_folder, graph_iri):
         """
         Uploads a RDF file containing a graph to a RDF database instance running in a Docker container.
 
