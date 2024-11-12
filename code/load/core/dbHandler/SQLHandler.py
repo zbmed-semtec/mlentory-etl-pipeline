@@ -125,7 +125,7 @@ class SQLHandler:
             cursor.execute(f'TRUNCATE TABLE "{table[0]}" CASCADE')
 
         self.connection.commit()
-        
+
         cursor.close()
 
     def clean_all_tables(self):
@@ -142,7 +142,7 @@ class SQLHandler:
         tables = cursor.fetchall()
 
         cursor.execute("SET CONSTRAINTS ALL DEFERRED")
-        
+
         for table in tables:
             cursor.execute(f'DELETE FROM "{table[0]}"')
 

@@ -176,7 +176,7 @@ class TestGraphHandler:
         print("Check Elasticsearch: ", result, "\n")
         result_count = result["hits"]["total"]["value"]
         assert result_count == expected_models
-    
+
     def assert_dbs_states(
         self,
         expected_triplets: int,
@@ -197,15 +197,10 @@ class TestGraphHandler:
             print_df,
         )
         self.assert_virtuoso_db_state(
-            expected_triplets-expected_deprecated, 
-            expected_models, 
-            graph_handler
+            expected_triplets - expected_deprecated, expected_models, graph_handler
         )
-        
-        self.assert_elasticsearch_state(
-            expected_models, 
-            graph_handler
-        )
+
+        self.assert_elasticsearch_state(expected_models, graph_handler)
 
     def test_one_new_triplet_creation(self, setup_graph_handler: GraphHandler):
         graph_handler = setup_graph_handler
@@ -262,7 +257,7 @@ class TestGraphHandler:
             source_file_path="./tests/Test_files/load_files/hf_transformed_fair4ml_example_small_1.json",
             graph_handler=graph_handler,
         )
-        
+
         self.assert_dbs_states(
             expected_triplets=16,
             expected_models=2,
@@ -272,7 +267,6 @@ class TestGraphHandler:
             graph_handler=graph_handler,
             print_df=False,
         )
-        
 
     def test_small_graph_update_same_models(self, setup_graph_handler: GraphHandler):
         # The idea of this test is to evaluate if the graph is correctly updated when
@@ -282,7 +276,7 @@ class TestGraphHandler:
             source_file_path="./tests/Test_files/load_files/hf_transformed_fair4ml_example_small_1.json",
             graph_handler=graph_handler,
         )
-        
+
         self.assert_dbs_states(
             expected_triplets=16,
             expected_models=2,
@@ -297,7 +291,7 @@ class TestGraphHandler:
             source_file_path="./tests/Test_files/load_files/hf_transformed_fair4ml_example_small_2.json",
             graph_handler=graph_handler,
         )
-        
+
         self.assert_dbs_states(
             expected_triplets=19,
             expected_models=2,
@@ -323,12 +317,12 @@ class TestGraphHandler:
             graph_handler=graph_handler,
             print_df=False,
         )
-        
+
         self.create_graph(
             source_file_path="./tests/Test_files/load_files/hf_transformed_fair4ml_example_small_3.json",
             graph_handler=graph_handler,
         )
-        
+
         self.assert_dbs_states(
             expected_triplets=23,
             expected_models=3,
@@ -347,7 +341,7 @@ class TestGraphHandler:
             source_file_path="./tests/Test_files/load_files/hf_transformed_fair4ml_example_small_1.json",
             graph_handler=graph_handler,
         )
-        
+
         self.assert_dbs_states(
             expected_triplets=16,
             expected_models=2,
@@ -377,7 +371,7 @@ class TestGraphHandler:
             source_file_path="./tests/Test_files/load_files/hf_transformed_fair4ml_example_small_2.json",
             graph_handler=graph_handler,
         )
-        
+
         self.assert_dbs_states(
             expected_triplets=26,
             expected_models=3,
@@ -470,7 +464,6 @@ class TestGraphHandler:
             graph_handler=graph_handler,
             print_df=False,
         )
-        
 
     def test_large_dataset(self, setup_graph_handler: GraphHandler):
         graph_handler = setup_graph_handler

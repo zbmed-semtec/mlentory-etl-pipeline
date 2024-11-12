@@ -56,7 +56,9 @@ class IndexHandler:
         else:
             index_model_entity.name = ""
         if "schema.org:releaseNotes" in row.keys():
-            index_model_entity.releaseNotes = self.handle_raw_data(row["schema.org:releaseNotes"])[0]
+            index_model_entity.releaseNotes = self.handle_raw_data(
+                row["schema.org:releaseNotes"]
+            )[0]
         else:
             index_model_entity.releaseNotes = ""
         if "fair4ml:mlTask" in row.keys():

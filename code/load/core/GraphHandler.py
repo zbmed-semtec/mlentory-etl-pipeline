@@ -175,7 +175,7 @@ class GraphHandler:
                 "schema.org:name",
                 "schema.org:releaseNotes",
                 "codemeta:readme",
-                "schema.org:license"
+                "schema.org:license",
             ]:
                 if type(row[column]) != list and pd.isna(row[column]):
                     continue
@@ -205,7 +205,7 @@ class GraphHandler:
                                 ),
                                 extraction_info=source,
                             )
-                
+
         return model_uri
 
     # This function helps us identify if a triplet is new or old
@@ -218,15 +218,15 @@ class GraphHandler:
         is_new_triplet = False
 
         triplet_id = -1
-        
+
         object_hash = hashlib.md5(object_json.encode()).hexdigest()
-        
+
         triplet_id_df = self.SQLHandler.query(
             f"""SELECT id FROM "Triplet" WHERE subject = '{subject_json}'
                                                                                      AND predicate = '{predicate_json}' 
                                                                                      AND md5(object) = '{object_hash}'"""
         )
-        
+
         extraction_info_id = -1
         extraction_info_id_df = self.SQLHandler.query(
             f"""SELECT id FROM "Triplet_Extraction_Info" WHERE 
