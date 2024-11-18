@@ -11,6 +11,50 @@ In this backend folder you will find the code that is use to build and run the M
 
 We use a docker based tools to run the project.
 
+If you don't already have Docker, Docker Compose, and Nvdia container toolkit installed you can first check the [prerequisites section](#installing-prerequisites).
+
+If you only want to check that everything runs you can execute the Test script that will build the whole architecture, you can execute *validate_tests.sh* script in the Test folder. Otherwise follow the instructions below:
+
+1. Create the container network:
+```console
+docker network create bridge mlentory_network
+```
+
+2. You need to build the images for the containers in the project, if you have a Nvidia gpu configured use the profile 'gpu' otherwise use the profile 'no_gpu':
+
+```
+docker-compose --profile gpu build
+```
+or
+```
+docker-compose --profile no_gpu build
+```
+
+3. Bring up the container architecture:
+
+```
+docker-compose --profile gpu up
+```
+or
+```
+docker-compose --profile no_gpu up
+```
+
+4. If you want to access any of the running containers:
+
+```
+docker exec -it <container_name> /bin/bash
+```
+For example, if you want to trigger a full dump of the Huggingface model data you can run the following command:
+```console
+# With GPU
+docker exec hf_gpu python3 main.py
+# Without GPU
+docker exec hf_no_gpu python3 main.py
+```
+
+
+## Installing prerequisites
 If you are in machine with a Unix based operating system you just need to install the Docker and Docker Compose services.
 
 If you are in Windows we recommend installing the Windows subsystem for Linux (WSL 2) and install Ubuntu 20.04. The idea is to have a Linux machine inside Windows so that everything can run smoothly. Particularly when working with machine learning libraries using the Windows service for Docker can become troublesome.
@@ -109,36 +153,6 @@ docker-compose --version
 
 If you don't have CUDA drivers installed to use your GPU for ML development you can follow the instructions here: 
 https://developer.nvidia.com/cuda-downloads
-
-### Run the project
-
-If you only want to check that everything runs you can execute the Test script that will build the whole architecture, you can execute *validate_tests.sh* script in the Test folder. Otherwise follow the instructions below:
-
-1. You need to build the images for the containers in the project, if you have a Nvidia gpu configured use the profile 'gpu' otherwise use the profile 'no_gpu':
-
-```
-docker-compose --profile gpu build
-```
-or
-```
-docker-compose --profile no_gpu build
-```
-
-2. Bring up the container architecture:
-
-```
-docker-compose --profile gpu up
-```
-or
-```
-docker-compose --profile no_gpu up
-```
-
-3. If you want to access any of the running containers:
-
-```
-docker exec -it <container_name> /bin/bash
-```
 
 ### Update the default Docker DNS server
 If you are using the WSL or a Linux distribution as your OS you need to configure the following in order for the private container network to resolve outside hostnames and interact correctly with the internet.
