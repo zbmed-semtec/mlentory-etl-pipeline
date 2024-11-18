@@ -45,8 +45,6 @@ services:
       - ./config_data:/config_data
     dns:
       - 1.1.1.1
-    # depends_on:
-    #   - mysql
     # Uncomment this line to test the script
     # command: ["python3", "main.py"]
     # Uncomment this line to develop on the container
@@ -74,7 +72,8 @@ services:
       - 1.1.1.1
 
     # Uncomment this line to test the script
-    command: ["tail", "-f", "/dev/null"]
+    # command: ["tail", "-f", "/dev/null"]
+    command: ["python3", "main.py"]
     networks:
       - mlentory_network
     # Uncomment for production
@@ -106,7 +105,8 @@ services:
       - 1.1.1.1
 
     # Uncomment this line to test the script
-    command: ["tail", "-f", "/dev/null"]
+    # command: ["tail", "-f", "/dev/null"]
+    command: ["python3", "main.py"]
     networks:
       - mlentory_network
   
@@ -128,26 +128,6 @@ services:
       - ../data/postgres_data:/var/lib/postgresql/data
     networks:
       - mlentory_network
-
-  # mysql:
-  #   image: mysql:latest
-  #   profiles:
-  #     - gpu
-  #     - no_gpu
-  #   hostname: mysql
-  #   environment:
-  #     MYSQL_ROOT_PASSWORD: password123
-  #     MYSQL_DATABASE: Extraction_Results
-  #     MYSQL_USER: user
-  #     MYSQL_PASSWORD: password123
-  #   ports:
-  #     - "42333:3306"
-  #     - "33060:33060"
-  #   volumes:
-  #   - ../code/load/sql_files/init.sql:/docker-entrypoint-initdb.d/init.sql
-  #   - ../data/mysql_data:/var/lib/mysql
-  #   command: --init-file /docker-entrypoint-initdb.d/init.sql
-
 
   # anzograph:
   #   image: cambridgesemantics/anzograph:latest
@@ -205,24 +185,6 @@ services:
       - 9300:9300
     networks:
       - mlentory_network
-
-  # transformer service
-  # transformer:
-  #   build: ./transformer  # Path to your transformer Dockerfile
-  #   # Define volumes to mount transformation logic
-  #   volumes:
-  #     - ./transformer:/app/transformer  # Example volume mapping for transformation code
-  #   depends_on:
-  #     - extractor  # Wait for extractor to finish before starting transformer
-
-  # Loader service
-  # loader:
-  #   build: ./loader  # Path to your loader Dockerfile
-  #   # Optional: Define volumes for output data or database connection details
-  #   volumes:
-  #     - ./loader:/app/loader  # Example volume mapping for loader code
-  #   depends_on:
-  #     - transformer  # Wait for transformer to finish before starting loader
 
 # networks:
 #   my-macvlan-net:

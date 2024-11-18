@@ -42,8 +42,9 @@ class GraphHandler:
         self.models_to_index = []
         self.id_to_model_entity = {}
         self.curr_update_date = None
+        self.df = pd.DataFrame()
 
-    def load_df(self, df):
+    def load_df(self, df: pd.DataFrame):
         self.df = df
 
     def update_graph(self):
