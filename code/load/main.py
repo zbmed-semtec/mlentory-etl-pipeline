@@ -37,7 +37,7 @@ def main():
     logger = logging.getLogger(__name__)
     logger.setLevel(logging.INFO)
 
-    #Try to connect three times to the databases
+    # Try to connect three times to the databases
     failed_attempts = 0
     connected = False
     sqlHandler = None
@@ -46,8 +46,8 @@ def main():
     graphHandler = None
     load_processor = None
     observer = None
-    
-    while(failed_attempts<3 and (not connected)):
+
+    while failed_attempts < 3 and (not connected):
         logger.info("\n Trying to connect to DBs \n")
         print("\n Trying to connect to DBs \n")
         try:
@@ -91,40 +91,37 @@ def main():
                 GraphHandler=graphHandler,
                 kg_files_directory="./../kg_files",
             )
-            
+
             logger.info("\n\n Connected to DBs successfully")
             print("\n\n Connected to DBs successfully")
             print(load_processor)
             print(graphHandler)
-            
+
             file_processor = FileProcessor(
                 processed_files_log_path="./loading_logs/Processed_files.txt",
                 load_processor=load_processor,
             )
-            
-            observer = QueueObserver(watch_dir=args.folder, file_processor=file_processor)
+
+            observer = QueueObserver(
+                watch_dir=args.folder, file_processor=file_processor
+            )
             observer.start()
 
             load_processor.clean_DBs()
 
             while True:
                 time.sleep(0.5)
-                
+
         except Exception as e:
             logger.exception("Exception occurred ", e)
-            failed_attempts+=1
+            failed_attempts += 1
             time.sleep(10)
-            if(observer != None):
+            if observer != None:
                 observer.stop()
-    
-    if(failed_attempts == 3):
+
+    if failed_attempts == 3:
         logger.info("\n\n Failed to connect to DBs")
         print("\n\n Failed to connect to DBs")
-            
-            
-        
-        
-        
 
 
 if __name__ == "__main__":

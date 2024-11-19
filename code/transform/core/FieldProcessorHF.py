@@ -49,7 +49,7 @@ class FieldProcessorHF:
             # Get the column type in the M4ML_schema
             property_name = col_names[index]
 
-            new_property = self.process_property_(
+            new_property = self.process_property(
                 property_description_M4ML=row_M4ML, info_HF=row
             )
             df_M4ML[property_name] = new_property
@@ -183,7 +183,7 @@ class FieldProcessorHF:
     #     # print("Processed value: ",processed_value)
     #     return processed_value
 
-    def process_property_(
+    def process_property(
         self, property_description_M4ML: pd.Series, info_HF: pd.Series
     ) -> str:
         property_name = property_description_M4ML["Property"]
