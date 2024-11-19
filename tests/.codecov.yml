@@ -1,0 +1,10 @@
+component_management:
+  individual_components:
+    - component_id: mlentory-load  # this is an identifier that should not be changed
+      name: load  # this is a display name, and can be changed freely
+      paths:
+        - ./tests/load/core
+    - component_id: mlentory-transform  # this is an identifier that should not be changed
+      name: transform  # this is a display name, and can be changed freely
+      paths:
+        - ./tests/transform/core

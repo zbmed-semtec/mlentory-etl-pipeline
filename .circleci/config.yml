@@ -19,6 +19,12 @@ jobs:
             DESTINATION=/usr/local/bin/docker-compose
             sudo curl -L https://github.com/docker/compose/releases/download/${VERSION}/docker-compose-$(uname -s)-$(uname -m) -o $DESTINATION
             sudo chmod 755 $DESTINATION
+      # - run:
+      #     name: Install Python 3.11 
+      #     command: |
+      #       sudo add-apt-repository ppa:deadsnakes/ppa
+      #       sudo apt update
+      #       sudo apt install python3.11
       - run:
           name: Check Docker version
           command: docker --version
@@ -35,6 +41,12 @@ jobs:
           command: |
             chmod +x ./validate_tests.sh
             chmod +x ./wait-for-it.sh
+          working_directory: ./tests
+      - run:
+          name: Check linting in the code folder
+          command: |
+            pip install black
+            black . --check --diff
           working_directory: ./tests
       - run:
           name: Build the container architecture

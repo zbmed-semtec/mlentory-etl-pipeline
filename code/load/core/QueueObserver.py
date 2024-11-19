@@ -7,14 +7,16 @@ import sys
 
 # Here we ask if the container is being executed in the app_test dir
 # In case it is we need to import files differently for the testing environment
-if("app_test" in os.getcwd()):
+if "app_test" in os.getcwd():
     from code.load.core.FileProcessor import FileProcessor
 else:
     from core.FileProcessor import FileProcessor
 
 import logging
+
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
+
 
 class QueueObserver:
     """
@@ -54,7 +56,8 @@ class QueueObserver:
         """
         self.observer.stop()
         self.observer.join()
-        
+
+
 class MyQueueEventHandler(PatternMatchingEventHandler):
     """
     This class defines the logic to be executed when changes are made on the directory being watched.
