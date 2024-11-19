@@ -52,15 +52,6 @@ services:
     # env_file:
     #   - fileName: .env
     command: ["tail", "-f", "/dev/null"]
-    # command: ["./tests/validate_tests.sh"]
-    # command: ["/bin/bash"]
-    # command:
-    #   - /bin/sh 
-    #   - -c
-    #   - |
-    #     ls
-    #     ./tests/wait-for-it.sh mysql:3306 --
-    #     pytest
 
   postgres:
     profiles:
