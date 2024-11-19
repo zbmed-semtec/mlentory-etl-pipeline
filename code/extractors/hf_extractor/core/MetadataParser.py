@@ -1,4 +1,5 @@
 import pandas as pd
+import transformers
 from transformers import pipeline
 from typing import Any, Dict, List, Set, Union
 

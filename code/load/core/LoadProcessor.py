@@ -1,6 +1,5 @@
 import os
 import shutil
-import mysql.connector
 from rdflib.graph import Graph, ConjunctiveGraph
 import docker
 import subprocess
@@ -12,11 +11,15 @@ from SPARQLWrapper import SPARQLWrapper, JSON, DIGEST, TURTLE
 if "app_test" in os.getcwd():
     from code.load.core.dbHandler.SQLHandler import SQLHandler
     from code.load.core.dbHandler.RDFHandler import RDFHandler
+    from code.load.core.dbHandler.IndexHandler import IndexHandler
     from code.load.core.GraphHandler import GraphHandler
+    from code.load.core.Entities import HFModel
 else:
-    from code.load.core.dbHandler.SQLHandler import SQLHandler
-    from code.load.core.dbHandler.RDFHandler import RDFHandler
-    from code.load.core.GraphHandler import GraphHandler
+    from core.dbHandler.SQLHandler import SQLHandler
+    from core.dbHandler.RDFHandler import RDFHandler
+    from core.dbHandler.IndexHandler import IndexHandler
+    from core.GraphHandler import GraphHandler
+    from core.Entities import HFModel
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -31,6 +34,7 @@ class LoadProcessor:
         self,
         SQLHandler: SQLHandler,
         RDFHandler: RDFHandler,
+        IndexHandler: IndexHandler,
         GraphHandler: GraphHandler,
         kg_files_directory: str,
     ):
@@ -40,83 +44,51 @@ class LoadProcessor:
         self.SQLHandler = SQLHandler
         self.SQLHandler.connect()
         self.RDFHandler = RDFHandler
+        self.IndexHandler = IndexHandler
         self.GraphHandler = GraphHandler
         self.kg_files_directory = kg_files_directory
 
-    def load_dataframe(self, df):
+    def update_dbs_with_df(self, df):
 
-        now = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-
-        filename_ttl = f"{self.kg_files_directory}/{now}_Transformed_HF_fair4ml_schema_KG.ttl"  # Create new filename
-
+        # The graph handler updates the SQL and RDF databases with the new data
         self.GraphHandler.load_df(df)
-        self.GraphHandler.create_graph()
-        self.GraphHandler.store_graph(filename_ttl)
+        self.GraphHandler.update_graph()
 
-        # extracted_graph = Graph()
-        # extracted_graph.parse(ttl_file_path,format="turtle")
+    def print_DB_states(self):
+        triplets_df = self.GraphHandler.SQLHandler.query('SELECT * FROM "Triplet"')
+        ranges_df = self.GraphHandler.SQLHandler.query('SELECT * FROM "Version_Range"')
+        extraction_info_df = self.GraphHandler.SQLHandler.query(
+            'SELECT * FROM "Triplet_Extraction_Info"'
+        )
 
-    def load_graph(self, df, kg_files_directory):
+        print("SQL TRIPlETS\n", triplets_df)
+        print("SQL RANGES\n", ranges_df)
+        print("SQL EXTRACTION INFO\n", extraction_info_df)
 
-        now = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+        result_graph = self.GraphHandler.RDFHandler.query(
+            "http://virtuoso:8890/sparql",
+            """CONSTRUCT { ?s ?p ?o } WHERE {GRAPH <http://example.com/data_1> {?s ?p ?o}}""",
+        )
 
-        filename_ttl = f"{self.kg_files_directory}/{now}_Transformed_HF_fair4ml_schema_KG.ttl"  # Create new filename
+        print("VIRTUOSO TRIPlETS\n")
+        for i, (s, p, o) in enumerate(result_graph):
+            print(f"{i}: {s} {p} {o}")
 
-        self.graph_creator.load_df(df)
-        self.graph_creator.create_graph()
-        self.graph_creator.store_graph(filename_ttl)
+        result_count = result_graph.query(
+            """SELECT (COUNT(DISTINCT ?s) AS ?count) WHERE{?s ?p ?o}"""
+        )
 
-        extracted_graph = Graph()
-        # extracted_graph.parse(ttl_file_path,format="turtle")
+        for triple in result_count:
+            print("VIRTUOSO MODEL COUNT\n", triple.asdict()["count"]._value)
 
-        # for subject, predicate, object in graph_to_load:
-        #     print(f"subject: {subject}, predicate: {predicate}, object: {object}")
+        self.GraphHandler.IndexHandler.es.indices.refresh(index="hf_models")
+        result = self.GraphHandler.IndexHandler.es.search(
+            index="hf_models",
+            body={"query": {"match_all": {}}},
+        )
+        print("Check Elasticsearch: ", result, "\n")
 
-    def get_difference_graph(self, extracted_graph):
-        # There are going to be new triplets never seen before
-        # and triplets seen before that where not valid and now they are valid
-        # I'm pondering on how to extract information on the version
-        for subject, predicate, object in extracted_graph:
-            print(f"subject: {subject}, predicate: {predicate}, object: {object}")
-            result = self.SQLHandler.query(
-                f"SELECT * FROM Triplet WHERE subject = '{subject}' AND relation = '{predicate}' AND object = '{object}'"
-            )
-            if result.empty:
-                print(f"subject: {subject}, relation: {predicate}, object: {object}")
-                print("Triplet not found in the database")
-                # We need to delete the triplet from the graph
-                extracted_graph.remove((subject, predicate, object))
-
-    def query_virtuoso(self, sparql_endpoint, query, user, password):
-        sparql = SPARQLWrapper(sparql_endpoint)
-        sparql.setHTTPAuth(DIGEST)
-        sparql.setCredentials(user, password)
-        sparql.setQuery(query)
-        # sparql.setReturnFormat(TURTLE)
-        g = sparql.query()._convertRDF()
-
-        self.print_sample_triples(g)
-        return g
-
-    def print_sample_triples(self, graph, num_triples=10):
-        print(f"Printing {num_triples} sample triples:")
-        for i, (s, p, o) in enumerate(graph):
-            if i >= num_triples:
-                break
-            print(f"{s} {p} {o}")
-
-    def load_graph_to_mysql(self, graph: Graph, table_name: str = "triples") -> None:
-        if not self.connection:
-            self.connect_to_mysql()
-
-        cursor = self.connection.cursor()
-
-        for subject, predicate, obj in graph:
-            query = f"INSERT INTO {table_name} (subject, predicate, object) VALUES (%s, %s, %s)"
-            values = (str(subject), str(predicate), str(obj))
-            cursor.execute(query, values)
-
-        self.connection.commit()
-        cursor.close()
-
-    # def create_graph_
+    def clean_DBs(self):
+        self.RDFHandler.reset_db()
+        self.IndexHandler.clean_indices()
+        self.SQLHandler.clean_all_tables()

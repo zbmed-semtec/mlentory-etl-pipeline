@@ -3,6 +3,7 @@
         "caplog",
         "Dataframe",
         "datestamp",
+        "mlentory",
         "pytest",
         "sparql"
     ],

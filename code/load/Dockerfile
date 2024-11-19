@@ -11,5 +11,5 @@ RUN curl -sfL -o docker.tgz "https://download.docker.com/linux/static/stable/x86
   rm docker.tgz
   
 WORKDIR /app
-COPY load .
+# COPY load .
 

@@ -1,7 +1,6 @@
 from core.QueueObserver import QueueObserver
 from core.FilesProcessor import FilesProcessor
 from core.FieldProcessorHF import FieldProcessorHF
-from code.load.core.GraphCreator import GraphCreator
 import argparse
 import datetime
 import logging
