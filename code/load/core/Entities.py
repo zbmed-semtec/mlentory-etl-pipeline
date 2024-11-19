@@ -23,7 +23,7 @@ class Model(Document):
         analyzer=analyzer(
             "title_analyzer",
             filter="lowercase",
-            tokenizer=tokenizer("edge_ngram", "edge_ngram", min_gram=3, max_gram=10),
+            tokenizer=tokenizer("edge_ngram", "edge_ngram", min_gram=3, max_gram=30),
         ),
     )
     releaseNotes = Text()
