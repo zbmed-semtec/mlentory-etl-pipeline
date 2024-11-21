@@ -1,12 +1,17 @@
 import pandas as pd
 import transformers
 from transformers import pipeline
+from datasets import Dataset
+
 from typing import Any, Dict, List, Set, Union
 
 from huggingface_hub import HfApi
 from huggingface_hub.hf_api import RepoFile, RepoFolder
+
+
 import math
 from datetime import datetime
+from tqdm import tqdm
 
 
 class MetadataParser:
@@ -20,8 +25,10 @@ class MetadataParser:
 
             if torch.cuda.is_available():
                 self.device = 0  # Use GPU if available
+                print("\nUSING GPU\n")
             else:
                 self.device = None  # Don't specify device if no GPU
+                print("\nNOT USING GPU\n")
         except ModuleNotFoundError:
             # If transformers.torch is not available, assume no GPU
             self.device = None
@@ -105,23 +112,13 @@ class MetadataParser:
         )
         HF_df.loc[:, "q_id_30"] = HF_df.loc[:, ("card")]
 
-        # Check if the model was finetuned or retrained
-        # q_id_8 asks What model is used as the base model?
-        # q_id_4 asks What datasets was the model trained on?
-        # q_id_6 asks What datasets were used to finetune the model?
-        # q_id_7 asks What datasets were used to retrain the model?
-        for index, row in HF_df.iterrows():
-            if row["q_id_8"] != "[CLS]" and row["q_id_8"] != None:
-                q_4_answer = HF_df.loc[index:index, "q_id_4"]
-                HF_df.loc[index:index, "q_id_6"] = q_4_answer
-                HF_df.loc[index:index, "q_id_7"] = q_4_answer
-
-        for index, row in HF_df.iterrows():
+        # Iterate with a progress bar
+        for index, row in tqdm(HF_df.iterrows(), total=len(HF_df), desc="Processing repository weights"):
             HF_df.loc[index, "q_id_29"] = self.get_repository_weight_HF(
                 HF_df.loc[index, "q_id_0"]
             )
 
-        for index in range(len(HF_df)):
+        for index in tqdm(range(len(HF_df)), desc="Adding default extraction info"):
             for id in [
                 "q_id_0",
                 "q_id_1",
@@ -219,13 +216,84 @@ class MetadataParser:
 
         return HF_df
 
+    def batched_parse_fields_from_txt_HF(self, HF_df: pd.DataFrame) -> pd.DataFrame:
+        # Create a set of questions to process
+        questions_to_process = sorted(
+            int(q.split("_")[2]) for q in self.available_questions
+        )
+        
+        # Create a dataset with questions and contexts
+        question_context_dataset = self.create_question_context_dataset(HF_df, self.questions, questions_to_process)
+
+        # Process the dataset in batches using the QA pipeline
+        processed_dataset = self.process_question_context_dataset(question_context_dataset, self.qa_pipeline, batch_size=8)
+
+        # Merge the results back into the original DataFrame
+        HF_df = self.merge_answers_into_dataframe(HF_df, processed_dataset)
+
+        return HF_df
+
+    def create_question_context_dataset(self,HF_df: pd.DataFrame, questions: List[str], questions_to_process: Set[int]) -> Dataset:
+        """
+        Expands the dataframe into a dataset where each row contains a question and a corresponding context.
+        """
+        data = []
+        for index, row in HF_df.iterrows():
+            context = row["card"]
+            for q_cnt, question in enumerate(questions):
+                if q_cnt in questions_to_process:
+                    data.append({"context": context, "question": question, "row_index": index, "question_id": f"q_id_{q_cnt}"})
+        
+        return Dataset.from_list(data)
+    
+    def process_question_context_dataset(self,dataset: Dataset, qa_pipeline, batch_size: int = 16) -> Dataset:
+        """
+        Uses the Huggingface pipeline to batch process questions and contexts.
+        """
+        extraction_time = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+        
+        def process_batch(batch):
+            # Run the pipeline in batch mode
+            answers = qa_pipeline(
+                [{"question": q, "context": c} for q, c in zip(batch["question"], 
+                                                               batch["context"])]
+            )
+            
+            # Extract and structure answers
+            batch["answer"] = [a["answer"] for a in answers]
+            batch["score"] = [a["score"] for a in answers]
+            batch["extraction_time"] = extraction_time
+            return batch
+
+        return dataset.map(process_batch, batched=True, batch_size=batch_size)
+
+    def merge_answers_into_dataframe(self,HF_df: pd.DataFrame, processed_dataset: Dataset) -> pd.DataFrame:
+        """
+        Merges the processed answers back into the original DataFrame.
+        """
+        # Group answers by row_index and question_id
+        grouped_answers = processed_dataset.to_pandas().groupby("row_index")
+
+        for row_index, group in grouped_answers:
+            for _, row in group.iterrows():
+                question_id = row["question_id"]
+                HF_df.at[row_index, question_id] = [{
+                    "data": row["answer"],
+                    "confidence": row["score"],
+                    "extraction_method": "Pipeline",
+                    "extraction_time": row["extraction_time"]
+                }]
+        
+        return HF_df
+
+    
     def parse_fields_from_txt_HF(self, HF_df: pd.DataFrame) -> pd.DataFrame:
         questions_to_process = set()
         for q in self.available_questions:
             print(q.split("_")[2])
             questions_to_process.add(int(q.split("_")[2]))
 
-        for index, row in HF_df.iterrows():
+        for index, row in tqdm(HF_df.iterrows(), total=len(HF_df), desc="Parsing text fields"):
             context = row["card"]  # Getting the context from the "card" column
             # Create an empty dictionary to store answers for each question
             answers = {}
@@ -241,7 +309,6 @@ class MetadataParser:
 
             # Add a new column for each question and populate with answers
             for question, answer in answers.items():
-                # print(answer)
                 HF_df.loc[index, question] = [answer]
 
         return HF_df

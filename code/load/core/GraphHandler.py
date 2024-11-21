@@ -130,8 +130,9 @@ class GraphHandler:
                 "fair4ml:mlTask",
                 "fair4ml:sharedBy",
                 "fair4ml:testedOn",
+                "fair4ml:evaluatedOn",
                 "fair4ml:trainedOn",
-                "codemeta:referencePublication",
+                "codemeta:referencePublication"
             ]:
                 # Go through the different sources that can create information about the entity
                 if type(row[column]) != list and pd.isna(row[column]):
@@ -160,6 +161,7 @@ class GraphHandler:
                                 object=self.text_to_uri_term(entity.replace(" ", "_")),
                                 extraction_info=source,
                             )
+            #Handle dates
             if column in [
                 "schema.org:datePublished",
                 "schema.org:dateCreated",
@@ -171,12 +173,20 @@ class GraphHandler:
                     object=Literal(row[column][0]["data"], datatype=XSD.date),
                     extraction_info=row[column][0],
                 )
+            #Handle text values
             if column in [
                 "schema.org:storageRequirements",
                 "schema.org:name",
+                "schema.org:author",
+                "schema.org:discussionUrl",
+                "schema.org:identifier",
+                "schema.org:url",
                 "schema.org:releaseNotes",
-                "codemeta:readme",
                 "schema.org:license",
+                "codemeta:readme",
+                "codemeta:issueTracker",
+                "fair4ml:intendedUse",
+                
             ]:
                 if type(row[column]) != list and pd.isna(row[column]):
                     continue

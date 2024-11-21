@@ -16,6 +16,8 @@ data/virtuoso_data
 data/elasticsearch_data
 data/postgres_data
 
+code/scheduler/logs
+
 .env
 
 tests/Test_files/load_files/virtuoso_data/kg_files/*.ttl
