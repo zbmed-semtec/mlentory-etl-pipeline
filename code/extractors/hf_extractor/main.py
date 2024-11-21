@@ -12,7 +12,8 @@ if __name__ == "__main__":
     parser = MetadataParser(qa_model="Intel/dynamic_tinybert")
 
     # Create new columns to answer each question in the dataframe
-    HF_df = original_HF_df.iloc[0:15]
+    HF_df = original_HF_df.iloc[0:500]
+    print(len(HF_df))
 
     new_columns = {}
 
@@ -64,3 +65,4 @@ if __name__ == "__main__":
     original_HF_df.to_csv(original_hf_filename, sep="\t")
     HF_df.to_json(path_or_buf=modified_hf_filename, orient="records", indent=4)
     print(HF_df.head())
+    print(len(HF_df))
