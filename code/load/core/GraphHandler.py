@@ -7,6 +7,7 @@ import pandas as pd
 from pandas import Timestamp
 import json
 import os
+from tqdm import tqdm
 from datetime import datetime
 from typing import Callable, List, Dict, Set
 
@@ -57,7 +58,7 @@ class GraphHandler:
 
     def update_indexes(self):
         new_models = []
-        for row_num, row in self.df.iterrows():
+        for row_num, row in tqdm(self.df.iterrows(), total=len(self.df), desc="Updating indexes"):
 
             # For each row we first create an m4ml:MLModel instance and their respective triplets
             model_uri = self.models_to_index[row_num]
@@ -94,7 +95,7 @@ class GraphHandler:
     # Construct all the triplets in the input dataframe
     def update_metadata_graph(self):
 
-        for index, row in self.df.iterrows():
+        for index, row in tqdm(self.df.iterrows(), total=len(self.df), desc="Updating metadata graph"):
             # For each row we first create an m4ml:MLModel instance and their respective triplets
             model_uri = self.process_model(row)
             self.models_to_index.append(model_uri)
@@ -122,7 +123,7 @@ class GraphHandler:
             )
 
         # Go through all the columns and add the triplets
-        for column in self.df.columns:
+        for column in tqdm(self.df.columns, desc=f"Processing columns for {model_uri}"):
             # if column == "schema.org:name":
             #     continue
             # Handle the cases where a new entity has to be created

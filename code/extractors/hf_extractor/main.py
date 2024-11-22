@@ -12,7 +12,7 @@ if __name__ == "__main__":
     parser = MetadataParser(qa_model="Intel/dynamic_tinybert")
 
     # Create new columns to answer each question in the dataframe
-    HF_df = original_HF_df.iloc[0:500]
+    HF_df = original_HF_df.iloc[0:10]
     print(len(HF_df))
 
     new_columns = {}

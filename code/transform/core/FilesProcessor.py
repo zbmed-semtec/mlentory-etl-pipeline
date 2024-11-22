@@ -6,6 +6,7 @@ import logging
 from datetime import datetime
 import time
 import pandas as pd
+from tqdm import tqdm
 import os
 
 if "app_test" in os.getcwd():
@@ -111,7 +112,7 @@ class FilesProcessor:
         m4ml_models_df.to_json(filename_json, orient="records", indent=4)
 
         end_time = time.perf_counter() - start_time
-
+        
         print(end_time)
 
         logger.info("Finished processing batch\n")
@@ -137,7 +138,7 @@ class FilesProcessor:
                 raise ValueError("Unsupported file type")
 
             # Go through each row of the dataframe
-            for index, row in df.iterrows():
+            for row_num, row in tqdm(df.iterrows(),total=len(df),desc="Transforming progress"):
                 model_data = self.field_processor_HF.process_row(row)
                 self.processed_models.append(model_data)
 
