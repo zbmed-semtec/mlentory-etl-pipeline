@@ -58,7 +58,9 @@ class GraphHandler:
 
     def update_indexes(self):
         new_models = []
-        for row_num, row in tqdm(self.df.iterrows(), total=len(self.df), desc="Updating indexes"):
+        for row_num, row in tqdm(
+            self.df.iterrows(), total=len(self.df), desc="Updating indexes"
+        ):
 
             # For each row we first create an m4ml:MLModel instance and their respective triplets
             model_uri = self.models_to_index[row_num]
@@ -73,7 +75,7 @@ class GraphHandler:
                 {"query": {"match_phrase": {"db_identifier": str(model_uri.n3())}}},
             )
 
-            print("SEARCH RESULT: ", search_result)
+            # print("SEARCH RESULT: ", search_result)
 
             if not search_result:
                 # Only index if model doesn't exist
@@ -95,7 +97,9 @@ class GraphHandler:
     # Construct all the triplets in the input dataframe
     def update_metadata_graph(self):
 
-        for index, row in tqdm(self.df.iterrows(), total=len(self.df), desc="Updating metadata graph"):
+        for index, row in tqdm(
+            self.df.iterrows(), total=len(self.df), desc="Updating metadata graph"
+        ):
             # For each row we first create an m4ml:MLModel instance and their respective triplets
             model_uri = self.process_model(row)
             self.models_to_index.append(model_uri)
@@ -133,7 +137,7 @@ class GraphHandler:
                 "fair4ml:testedOn",
                 "fair4ml:evaluatedOn",
                 "fair4ml:trainedOn",
-                "codemeta:referencePublication"
+                "codemeta:referencePublication",
             ]:
                 # Go through the different sources that can create information about the entity
                 if type(row[column]) != list and pd.isna(row[column]):
@@ -162,7 +166,7 @@ class GraphHandler:
                                 object=self.text_to_uri_term(entity.replace(" ", "_")),
                                 extraction_info=source,
                             )
-            #Handle dates
+            # Handle dates
             if column in [
                 "schema.org:datePublished",
                 "schema.org:dateCreated",
@@ -174,7 +178,7 @@ class GraphHandler:
                     object=Literal(row[column][0]["data"], datatype=XSD.date),
                     extraction_info=row[column][0],
                 )
-            #Handle text values
+            # Handle text values
             if column in [
                 "schema.org:storageRequirements",
                 "schema.org:name",
@@ -187,7 +191,6 @@ class GraphHandler:
                 "codemeta:readme",
                 "codemeta:issueTracker",
                 "fair4ml:intendedUse",
-                
             ]:
                 if type(row[column]) != list and pd.isna(row[column]):
                     continue

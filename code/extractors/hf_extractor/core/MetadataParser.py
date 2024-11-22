@@ -113,7 +113,9 @@ class MetadataParser:
         HF_df.loc[:, "q_id_30"] = HF_df.loc[:, ("card")]
 
         # Iterate with a progress bar
-        for index, row in tqdm(HF_df.iterrows(), total=len(HF_df), desc="Processing repository weights"):
+        for index, row in tqdm(
+            HF_df.iterrows(), total=len(HF_df), desc="Processing repository weights"
+        ):
             HF_df.loc[index, "q_id_29"] = self.get_repository_weight_HF(
                 HF_df.loc[index, "q_id_0"]
             )
@@ -221,19 +223,25 @@ class MetadataParser:
         questions_to_process = sorted(
             int(q.split("_")[2]) for q in self.available_questions
         )
-        
+
         # Create a dataset with questions and contexts
-        question_context_dataset = self.create_question_context_dataset(HF_df, self.questions, questions_to_process)
+        question_context_dataset = self.create_question_context_dataset(
+            HF_df, self.questions, questions_to_process
+        )
 
         # Process the dataset in batches using the QA pipeline
-        processed_dataset = self.process_question_context_dataset(question_context_dataset, self.qa_pipeline, batch_size=8)
+        processed_dataset = self.process_question_context_dataset(
+            question_context_dataset, self.qa_pipeline, batch_size=8
+        )
 
         # Merge the results back into the original DataFrame
         HF_df = self.merge_answers_into_dataframe(HF_df, processed_dataset)
 
         return HF_df
 
-    def create_question_context_dataset(self,HF_df: pd.DataFrame, questions: List[str], questions_to_process: Set[int]) -> Dataset:
+    def create_question_context_dataset(
+        self, HF_df: pd.DataFrame, questions: List[str], questions_to_process: Set[int]
+    ) -> Dataset:
         """
         Expands the dataframe into a dataset where each row contains a question and a corresponding context.
         """
@@ -242,23 +250,34 @@ class MetadataParser:
             context = row["card"]
             for q_cnt, question in enumerate(questions):
                 if q_cnt in questions_to_process:
-                    data.append({"context": context, "question": question, "row_index": index, "question_id": f"q_id_{q_cnt}"})
-        
+                    data.append(
+                        {
+                            "context": context,
+                            "question": question,
+                            "row_index": index,
+                            "question_id": f"q_id_{q_cnt}",
+                        }
+                    )
+
         return Dataset.from_list(data)
-    
-    def process_question_context_dataset(self,dataset: Dataset, qa_pipeline, batch_size: int = 16) -> Dataset:
+
+    def process_question_context_dataset(
+        self, dataset: Dataset, qa_pipeline, batch_size: int = 16
+    ) -> Dataset:
         """
         Uses the Huggingface pipeline to batch process questions and contexts.
         """
         extraction_time = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-        
+
         def process_batch(batch):
             # Run the pipeline in batch mode
             answers = qa_pipeline(
-                [{"question": q, "context": c} for q, c in zip(batch["question"], 
-                                                               batch["context"])]
+                [
+                    {"question": q, "context": c}
+                    for q, c in zip(batch["question"], batch["context"])
+                ]
             )
-            
+
             # Extract and structure answers
             batch["answer"] = [a["answer"] for a in answers]
             batch["score"] = [a["score"] for a in answers]
@@ -267,7 +286,9 @@ class MetadataParser:
 
         return dataset.map(process_batch, batched=True, batch_size=batch_size)
 
-    def merge_answers_into_dataframe(self,HF_df: pd.DataFrame, processed_dataset: Dataset) -> pd.DataFrame:
+    def merge_answers_into_dataframe(
+        self, HF_df: pd.DataFrame, processed_dataset: Dataset
+    ) -> pd.DataFrame:
         """
         Merges the processed answers back into the original DataFrame.
         """
@@ -277,23 +298,26 @@ class MetadataParser:
         for row_index, group in grouped_answers:
             for _, row in group.iterrows():
                 question_id = row["question_id"]
-                HF_df.at[row_index, question_id] = [{
-                    "data": row["answer"],
-                    "confidence": row["score"],
-                    "extraction_method": "Pipeline",
-                    "extraction_time": row["extraction_time"]
-                }]
-        
+                HF_df.at[row_index, question_id] = [
+                    {
+                        "data": row["answer"],
+                        "confidence": row["score"],
+                        "extraction_method": "Pipeline",
+                        "extraction_time": row["extraction_time"],
+                    }
+                ]
+
         return HF_df
 
-    
     def parse_fields_from_txt_HF(self, HF_df: pd.DataFrame) -> pd.DataFrame:
         questions_to_process = set()
         for q in self.available_questions:
             print(q.split("_")[2])
             questions_to_process.add(int(q.split("_")[2]))
 
-        for index, row in tqdm(HF_df.iterrows(), total=len(HF_df), desc="Parsing text fields"):
+        for index, row in tqdm(
+            HF_df.iterrows(), total=len(HF_df), desc="Parsing text fields"
+        ):
             context = row["card"]  # Getting the context from the "card" column
             # Create an empty dictionary to store answers for each question
             answers = {}
