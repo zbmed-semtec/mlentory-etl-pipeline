@@ -61,7 +61,7 @@ class FileProcessor:
 
                 self.load_processor.update_dbs_with_df(df=m4ml_models_df)
 
-                self.load_processor.print_DB_states()
+                # self.load_processor.print_DB_states()
 
                 # self.processed_files_in_last_batch.append(filename)
                 logger.info(f"Finished processing: {filename}")

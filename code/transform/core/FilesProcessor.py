@@ -112,7 +112,7 @@ class FilesProcessor:
         m4ml_models_df.to_json(filename_json, orient="records", indent=4)
 
         end_time = time.perf_counter() - start_time
-        
+
         print(end_time)
 
         logger.info("Finished processing batch\n")
@@ -138,7 +138,9 @@ class FilesProcessor:
                 raise ValueError("Unsupported file type")
 
             # Go through each row of the dataframe
-            for row_num, row in tqdm(df.iterrows(),total=len(df),desc="Transforming progress"):
+            for row_num, row in tqdm(
+                df.iterrows(), total=len(df), desc="Transforming progress"
+            ):
                 model_data = self.field_processor_HF.process_row(row)
                 self.processed_models.append(model_data)
 
