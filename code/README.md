@@ -17,7 +17,7 @@ If you only want to check that everything runs you can execute the Test script t
 
 1. Create the container network:
 ```console
-docker network create bridge mlentory_network
+docker network create mlentory_network
 ```
 
 2. You need to build the images for the containers in the project, if you have a Nvidia gpu configured use the profile 'gpu' otherwise use the profile 'no_gpu':
