@@ -53,4 +53,4 @@ with DAG(
     )
 
     # Set task dependencies
-    extract_task >> transform_task >> load_task
+    extract_task

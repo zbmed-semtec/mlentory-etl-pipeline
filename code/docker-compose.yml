@@ -3,49 +3,87 @@ version: "3.8"
 services:
   
   # Airflow Scheduler
-  # scheduler:
-  #   container_name: airflow_scheduler
-  #   image: apache/airflow:2.7.1  # Use the latest stable Airflow image
-  #   command: "scheduler"
-  #   environment:
-  #     AIRFLOW__CORE__EXECUTOR: LocalExecutor
-  #     AIRFLOW__CORE__FERNET_KEY: '8EdjyneBuXfD_z20L2OQtQFmJssv6e2qElc-KSBCul8='  # Replace with a generated Fernet key
-  #     AIRFLOW__CORE__SQL_ALCHEMY_CONN: 'postgresql+psycopg2://user:password@postgres:5432/history_DB'
-  #     AIRFLOW__CORE__DAGS_FOLDER: /opt/airflow/dags
-  #     AIRFLOW__WEBSERVER__ENABLE_PROXY_FIX: 'True'
-  #   depends_on:
-  #     - postgres
-  #   volumes:
-  #     - ./scheduler/dags:/opt/airflow/dags  # Folder for your DAGs
-  #     - ./scheduler/logs:/opt/airflow/logs  # Folder for Airflow logs
-  #     - ./scheduler/plugins:/opt/airflow/plugins  # Optional plugins folder
-  #   ports:
-  #     - "8081:8080"  # Airflow Web UI
-  #   networks:
-  #     - mlentory_network
+  scheduler:
+    container_name: airflow_scheduler
+    profiles:
+      - gpu
+      - no_gpu
+      - airflow_test
+    image: apache/airflow:2.10.1  # Use the latest stable Airflow image
+    command: >
+      bash -c "airflow db init &&
+               airflow db check &&
+               airflow users create -r Admin -u admin -e admin@admin.com -f admin -l admin -p admin &&
+               airflow scheduler"
+    environment:
+      AIRFLOW__CORE__EXECUTOR: LocalExecutor
+      AIRFLOW__CORE__FERNET_KEY: ''  # Replace with a generated Fernet key
+      AIRFLOW__CORE__SQL_ALCHEMY_CONN: 'postgresql+psycopg2://airflow:airflow@airflow_postgres:5442/airflow'
+      AIRFLOW__CORE__DAGS_FOLDER: /opt/airflow/dags
+      AIRFLOW__WEBSERVER__ENABLE_PROXY_FIX: 'True'
+    depends_on:
+      - airflow_postgres
+    volumes:
+      - ./scheduler/dags:/opt/airflow/dags  # Folder for your DAGs
+      - ./scheduler/logs:/opt/airflow/logs  # Folder for Airflow logs
+      - ./scheduler/plugins:/opt/airflow/plugins  # Optional plugins folder
+      - ./scheduler/scripts:/opt/airflow/scripts
+    ports:
+      - "8794:8793"
+    networks:
+      - mlentory_network
+    restart: always
 
-  # # Airflow Webserver (for UI)
-  # webserver:
-  #   container_name: airflow_webserver
-  #   image: apache/airflow:2.7.1
-  #   command: "webserver"
-  #   environment:
-  #     AIRFLOW__CORE__EXECUTOR: LocalExecutor
-  #     AIRFLOW__CORE__FERNET_KEY: '8EdjyneBuXfD_z20L2OQtQFmJssv6e2qElc-KSBCul8='  # Same key as scheduler
-  #     AIRFLOW__CORE__SQL_ALCHEMY_CONN: 'postgresql+psycopg2://user:password@postgres:5432/history_DB'
-  #     AIRFLOW__CORE__DAGS_FOLDER: /opt/airflow/dags
-  #     AIRFLOW__WEBSERVER__ENABLE_PROXY_FIX: 'True'
-  #   depends_on:
-  #     - scheduler
-  #     - postgres
-  #   volumes:
-  #     - ./scheduler/dags:/opt/airflow/dags
-  #     - ./scheduler/logs:/opt/airflow/logs
-  #     - ./scheduler/plugins:/opt/airflow/plugins
-  #   ports:
-  #     - "8082:8080"
-  #   networks:
-  #     - mlentory_network
+  # Airflow Webserver (for UI)
+  webserver:
+    container_name: airflow_webserver
+    profiles:
+      - gpu
+      - no_gpu
+      - airflow_test
+    image: apache/airflow:2.10.1
+    command: "webserver"
+    # entrypoint: ./scripts/airflow-entrypoint.sh
+    environment:
+      AIRFLOW__CORE__EXECUTOR: LocalExecutor
+      AIRFLOW__CORE__FERNET_KEY: ''  # Same key as scheduler
+      AIRFLOW__CORE__SQL_ALCHEMY_CONN: 'postgresql+psycopg2://airflow:airflow@airflow_postgres:5442/airflow'
+      AIRFLOW__CORE__DAGS_FOLDER: /opt/airflow/dags
+      AIRFLOW__WEBSERVER__ENABLE_PROXY_FIX: 'True'
+    depends_on:
+      - scheduler
+      - airflow_postgres
+    volumes:
+      - ./scheduler/dags:/opt/airflow/dags
+      - ./scheduler/logs:/opt/airflow/logs
+      - ./scheduler/plugins:/opt/airflow/plugins
+      - ./scheduler/scripts:/opt/airflow/scripts
+    ports:
+      - "8080:8080"
+    networks:
+      - mlentory_network
+    restart: always
+  
+  ### Airflow SQL database
+  airflow_postgres:
+    profiles:
+      - gpu
+      - no_gpu
+      - airflow_test
+    image: postgres:13-alpine
+    container_name: airflow_postgres
+    environment:
+      POSTGRES_USER: airflow
+      POSTGRES_PASSWORD: airflow
+      POSTGRES_DB: airflow
+    ports:
+      - '5442:5442'
+    command: -c config_file=/etc/postgresql/postgresql.conf
+    volumes:
+      - ./scheduler/scripts/postgresql.conf:/etc/postgresql/postgresql.conf
+    #   - ../data/postgres_data:/var/lib/postgresql/data
+    networks:
+      - mlentory_network
 
   # Extractor service
   hf_extractor_with_gpu:
@@ -156,8 +194,8 @@ services:
     # command: ["python3", "main.py"]
     networks:
       - mlentory_network
-  
-  ### SQL database
+
+  ### SQL for storage database
   postgres:
     profiles:
         - gpu
@@ -226,7 +264,7 @@ services:
         soft: -1
         hard: -1
     volumes:
-      - ../data/elasticsearch_data:/usr/share/elasticsearch/data
+      - ../data/elasticsearch_data:/var/lib/elasticsearch/data
     ports:
       - 9200:9200
       - 9300:9300
