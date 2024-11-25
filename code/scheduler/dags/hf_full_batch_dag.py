@@ -1,56 +1,47 @@
 from airflow import DAG
 from airflow.providers.docker.operators.docker import DockerOperator
 from airflow.utils.dates import days_ago
+from airflow.operators.python import PythonOperator
+from airflow.operators.bash_operator import BashOperator
+import docker
+
+
+# Custom Python function to execute a script inside a running container
+def execute_script_in_container(container_name, script_path):
+    client = docker.from_env()
+    container = client.containers.get(container_name)
+    exec_cmd = f"python3 {script_path}"
+    exit_code, output = container.exec_run(exec_cmd)
+    print(output.decode("utf-8"))
+    if exit_code != 0:
+        raise RuntimeError(f"Script failed with exit code {exit_code}")
+
 
 # Default arguments for the DAG
 default_args = {
     "owner": "airflow",
     "depends_on_past": False,
-    "retries": 1,
+    "retries": 0,
 }
 
-# Define the DAG
+# Define DAG
 with DAG(
-    dag_id="data_pipeline_dag",
+    "trigger_full_HF_extraction_GPU",
     default_args=default_args,
-    description="ETL pipeline using Docker containers",
-    schedule_interval=None,  # Trigger manually or adjust as needed
-    start_date=days_ago(1),
+    description="Run a Python script inside a running container",
+    schedule_interval=None,  # Trigger manually
     catchup=False,
 ) as dag:
-
-    # Task 1: Extraction
-    extract_task = DockerOperator(
-        task_id="extract_data",
-        image="your_extraction_container_image",  # Replace with your Docker image
-        api_version="auto",
-        auto_remove=True,
-        docker_url="unix://var/run/docker.sock",  # Docker socket
-        network_mode="bridge",  # Use your preferred network mode
-        command="python extract.py",  # Adjust as per your container's command
-    )
-
-    # Task 2: Transformation
-    transform_task = DockerOperator(
-        task_id="transform_data",
-        image="your_transformation_container_image",
-        api_version="auto",
-        auto_remove=True,
-        docker_url="unix://var/run/docker.sock",
-        network_mode="bridge",
-        command="python transform.py",
-    )
-
-    # Task 3: Loading
-    load_task = DockerOperator(
-        task_id="load_data",
-        image="your_loading_container_image",
-        api_version="auto",
-        auto_remove=True,
-        docker_url="unix://var/run/docker.sock",
-        network_mode="bridge",
-        command="python load.py",
+    t1 = BashOperator(task_id="print_current_date", bash_command="date")
+    # Task: Execute script in a running container
+    run_script = PythonOperator(
+        task_id="hf_gpu",
+        python_callable=execute_script_in_container,
+        op_kwargs={
+            "container_name": "hf_gpu",
+            "script_path": "main.py",  # Path inside the container
+        },
     )
 
     # Set task dependencies
-    extract_task
+    t1 >> run_script

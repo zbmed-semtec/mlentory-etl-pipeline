@@ -15,10 +15,18 @@ If you don't already have Docker, Docker Compose, and Nvdia container toolkit in
 
 If you only want to check that everything runs you can execute the Test script that will build the whole architecture, you can execute *validate_tests.sh* script in the Test folder. Otherwise follow the instructions below:
 
+Be sure to be inside the code folder.
+
 1. Create the container network:
 ```console
 docker network create mlentory_network
 ```
+
+2. Enable the interaction of the containers with the docker engine:
+```console
+sudo chmod 666 /var/run/docker.sock
+```
+
 
 2. You need to build the images for the containers in the project, if you have a Nvidia gpu configured use the profile 'gpu' otherwise use the profile 'no_gpu':
 
