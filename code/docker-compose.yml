@@ -28,6 +28,7 @@ services:
       - ./scheduler/logs:/opt/airflow/logs  # Folder for Airflow logs
       - ./scheduler/plugins:/opt/airflow/plugins  # Optional plugins folder
       - ./scheduler/scripts:/opt/airflow/scripts
+      - //var/run/docker.sock:/var/run/docker.sock 
     ports:
       - "8794:8793"
     networks:
@@ -58,6 +59,7 @@ services:
       - ./scheduler/logs:/opt/airflow/logs
       - ./scheduler/plugins:/opt/airflow/plugins
       - ./scheduler/scripts:/opt/airflow/scripts
+      - //var/run/docker.sock:/var/run/docker.sock
     ports:
       - "8080:8080"
     networks:
