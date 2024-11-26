@@ -26,9 +26,9 @@ default_args = {
 
 # Define DAG
 with DAG(
-    "trigger_full_HF_extraction_GPU",
+    "Test_dag_container",
     default_args=default_args,
-    description="Run a Python script inside a running container",
+    description="Run a Python script inside different running containers",
     schedule_interval=None,  # Trigger manually
     catchup=False,
 ) as dag:
@@ -39,7 +39,16 @@ with DAG(
         python_callable=execute_script_in_container,
         op_kwargs={
             "container_name": "hf_gpu",
-            "script_path": "extract_full.py",  # Path inside the container
+            "script_path": "test_extract.py",  # Path inside the container
+        },
+    )
+
+    transform = PythonOperator(
+        task_id="transform",
+        python_callable=execute_script_in_container,
+        op_kwargs={
+            "container_name": "transform",
+            "script_path": "test_transform.py",  # Path inside the container
         },
     )
 
@@ -48,9 +57,9 @@ with DAG(
         python_callable=execute_script_in_container,
         op_kwargs={
             "container_name": "load",
-            "script_path": "load.py",  # Path inside the container
+            "script_path": "test_load.py",  # Path inside the container
         },
     )
 
     # Set task dependencies
-    t1 >> extract >> load
+    t1 >> extract >> transform >> load
