@@ -87,9 +87,71 @@ services:
     networks:
       - mlentory_network
 
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.3.2
+    profiles:
+      - airflow_test
+    container_name: zookeeper
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    ports:
+      - "2181:2181"
+
+  kafka:
+    image: confluentinc/cp-kafka:7.3.2
+    profiles:
+      - airflow_test
+    container_name: kafka
+    depends_on:
+      - zookeeper
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:29092,PLAINTEXT_HOST://kafka:9092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      # KAFKA_AUTO_CREATE_TOPICS_ENABLE: 'true'
+      # KAFKA_AUTHORIZER_CLASS_NAME: kafka.security.authorizer.AclAuthorizer
+      KAFKA_ALLOW_EVERYONE_IF_NO_ACL_FOUND: "true"
+    # command: "bin/kafka-topics.sh --create --topic hf_events --bootstrap-server localhost:9092"
+    ports:
+      - "9092:9092"
+      - "29092:29092"
+      - "9999:9999"
+    
+
+  init_kafka:
+    profiles:
+      - airflow_test
+    image: confluentinc/cp-kafka:7.3.2
+    container_name: init_kafka
+    depends_on:
+      - kafka
+    entrypoint: [ '/bin/sh', '-c' ]
+    volumes:
+      - ./extractors/hf_extractor:/app
+    command: |
+      "
+      # blocks until kafka is reachable
+      kafka-topics --bootstrap-server kafka:9092 --list
+
+      echo -e 'Creating kafka topics'
+      kafka-topics --bootstrap-server kafka:9092 --create --if-not-exists --topic hf_topic --replication-factor 1 --partitions 1
+
+      echo -e 'Successfully created the following topics:'
+      kafka-topics --bootstrap-server kafka:9092 --list
+
+      tail -f /dev/null
+      "
   # Extractor service
   hf_extractor_with_gpu:
-    profiles: [gpu]
+    profiles:
+      - gpu
+      - airflow_test
+    depends_on:
+      - kafka
     container_name: hf_gpu
     build: 
       context: .
@@ -115,8 +177,8 @@ services:
     # command: ["python3", "ExtractFromDataset.py"]
     # Uncomment this line to develop on the container
     command: ["tail", "-f", "/dev/null"]
-    networks:
-      - mlentory_network
+    # networks:
+    #   - mlentory_network
   
   hf_extractor_with_no_gpu:
     profiles: [no_gpu]
@@ -168,14 +230,15 @@ services:
 
   ### Module in charge of loading the data into the database
   load:    
-    depends_on:
-      - transform
-      - postgres
-      - virtuoso
-      - elastic
+    # depends_on:
+      # - transform
+      # - postgres
+      # - virtuoso
+      # - elastic
     profiles:
       - gpu
       - no_gpu
+      - airflow_test
     container_name: load
     build: 
       context: .

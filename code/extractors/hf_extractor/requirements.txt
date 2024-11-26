@@ -6,3 +6,4 @@ pandas
 mysql-connector-python
 black
 tqdm
+kafka-python
