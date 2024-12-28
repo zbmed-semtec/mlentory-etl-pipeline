@@ -34,23 +34,14 @@ with DAG(
 ) as dag:
     t1 = BashOperator(task_id="print_current_date", bash_command="date")
     # Task: Execute script in a running container
-    extract = PythonOperator(
+    run_script = PythonOperator(
         task_id="hf_gpu",
         python_callable=execute_script_in_container,
         op_kwargs={
             "container_name": "hf_gpu",
-            "script_path": "extract_full.py",  # Path inside the container
-        },
-    )
-
-    load = PythonOperator(
-        task_id="load",
-        python_callable=execute_script_in_container,
-        op_kwargs={
-            "container_name": "load",
-            "script_path": "load.py",  # Path inside the container
+            "script_path": "main.py",  # Path inside the container
         },
     )
 
     # Set task dependencies
-    t1 >> extract >> load
+    t1 >> run_script
