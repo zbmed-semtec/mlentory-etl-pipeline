@@ -94,8 +94,8 @@ def main():
 
             logger.info("\n\n Connected to DBs successfully")
             print("\n\n Connected to DBs successfully")
-            print(load_processor)
-            print(graphHandler)
+            # print(load_processor)
+            # print(graphHandler)
 
             file_processor = FileProcessor(
                 processed_files_log_path="./loading_logs/Processed_files.txt",
@@ -107,7 +107,7 @@ def main():
             )
             observer.start()
 
-            load_processor.clean_DBs()
+            # load_processor.clean_DBs()
 
             while True:
                 time.sleep(0.5)

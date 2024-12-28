@@ -7,6 +7,7 @@ import pandas as pd
 from pandas import Timestamp
 import json
 import os
+from tqdm import tqdm
 from datetime import datetime
 from typing import Callable, List, Dict, Set
 
@@ -57,7 +58,9 @@ class GraphHandler:
 
     def update_indexes(self):
         new_models = []
-        for row_num, row in self.df.iterrows():
+        for row_num, row in tqdm(
+            self.df.iterrows(), total=len(self.df), desc="Updating indexes"
+        ):
 
             # For each row we first create an m4ml:MLModel instance and their respective triplets
             model_uri = self.models_to_index[row_num]
@@ -72,7 +75,7 @@ class GraphHandler:
                 {"query": {"match_phrase": {"db_identifier": str(model_uri.n3())}}},
             )
 
-            print("SEARCH RESULT: ", search_result)
+            # print("SEARCH RESULT: ", search_result)
 
             if not search_result:
                 # Only index if model doesn't exist
@@ -94,7 +97,9 @@ class GraphHandler:
     # Construct all the triplets in the input dataframe
     def update_metadata_graph(self):
 
-        for index, row in self.df.iterrows():
+        for index, row in tqdm(
+            self.df.iterrows(), total=len(self.df), desc="Updating metadata graph"
+        ):
             # For each row we first create an m4ml:MLModel instance and their respective triplets
             model_uri = self.process_model(row)
             self.models_to_index.append(model_uri)
@@ -122,7 +127,7 @@ class GraphHandler:
             )
 
         # Go through all the columns and add the triplets
-        for column in self.df.columns:
+        for column in tqdm(self.df.columns, desc=f"Processing columns for {model_uri}"):
             # if column == "schema.org:name":
             #     continue
             # Handle the cases where a new entity has to be created
@@ -130,6 +135,7 @@ class GraphHandler:
                 "fair4ml:mlTask",
                 "fair4ml:sharedBy",
                 "fair4ml:testedOn",
+                "fair4ml:evaluatedOn",
                 "fair4ml:trainedOn",
                 "codemeta:referencePublication",
             ]:
@@ -160,6 +166,7 @@ class GraphHandler:
                                 object=self.text_to_uri_term(entity.replace(" ", "_")),
                                 extraction_info=source,
                             )
+            # Handle dates
             if column in [
                 "schema.org:datePublished",
                 "schema.org:dateCreated",
@@ -171,12 +178,19 @@ class GraphHandler:
                     object=Literal(row[column][0]["data"], datatype=XSD.date),
                     extraction_info=row[column][0],
                 )
+            # Handle text values
             if column in [
                 "schema.org:storageRequirements",
                 "schema.org:name",
+                "schema.org:author",
+                "schema.org:discussionUrl",
+                "schema.org:identifier",
+                "schema.org:url",
                 "schema.org:releaseNotes",
-                "codemeta:readme",
                 "schema.org:license",
+                "codemeta:readme",
+                "codemeta:issueTracker",
+                "fair4ml:intendedUse",
             ]:
                 if type(row[column]) != list and pd.isna(row[column]):
                     continue
