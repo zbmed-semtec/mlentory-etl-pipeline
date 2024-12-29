@@ -14,57 +14,61 @@ from datetime import datetime
 from tqdm import tqdm
 
 
-class MetadataParser:
+class ModelCardQAParser:
 
     def __init__(
-        self, qa_model: str, path_to_config_data: str = "./../config_data"
+        self,
+        qa_model: str,
+        questions: list[str],
+        tags_language: list[str],
+        tags_libraries: list[str],
+        tags_other: list[str],
+        tags_task: list[str],
     ) -> None:
+        """
+        Initialize the Model Card QA Parser
+        
+        Args:
+            qa_model (str): Model to use for QA-based information extraction
+            questions (list[str]): List of questions to extract information
+            tags_language (list[str]): List of language tags
+            tags_libraries (list[str]): List of library tags
+            tags_other (list[str]): List of other tags
+            tags_task (list[str]): List of task tags
+        """
         # Check for GPU availability
         try:
-            import torch  # Import torch to check for cuda availability
-
+            import torch
             if torch.cuda.is_available():
-                self.device = 0  # Use GPU if available
+                self.device = 0
                 print("\nUSING GPU\n")
             else:
-                self.device = None  # Don't specify device if no GPU
+                self.device = None
                 print("\nNOT USING GPU\n")
         except ModuleNotFoundError:
             # If transformers.torch is not available, assume no GPU
             self.device = None
 
-        # Getting the tags
-        self.tags_language = set(
-            self.load_config_file(f"{path_to_config_data}/tags_language.tsv")
-        )
-        self.tags_libraries = set(
-            self.load_config_file(f"{path_to_config_data}/tags_libraries.tsv")
-        )
-        self.tags_other = set(
-            self.load_config_file(f"{path_to_config_data}/tags_other.tsv")
-        )
-        self.tags_task = set(
-            self.load_config_file(f"{path_to_config_data}/tags_task.tsv")
-        )
-        # Getting the questions
-        self.questions = self.load_config_file(f"{path_to_config_data}/questions.tsv")
-        self.available_questions = set()
-        for id in range(len(self.questions)):
-            self.available_questions.add("q_id_" + str(id))
+        # Store configuration data
+        self.tags_language = set(tag.lower() for tag in tags_language)
+        self.tags_libraries = set(tag.lower() for tag in tags_libraries)
+        self.tags_other = set(tag.lower() for tag in tags_other)
+        self.tags_task = set(tag.lower() for tag in tags_task)
+        self.questions = questions
+        
+        self.available_questions = {f"q_id_{id}" for id in range(len(self.questions))}
 
         # Initializing HF API
         self.hf_api = HfApi()
 
         # Assigning the question answering pipeline
         self.qa_model = qa_model
-        if self.device != None:
-            self.qa_pipeline = pipeline(
-                "question-answering", model=qa_model, device=self.device
-            )
+        if self.device is not None:
+            self.qa_pipeline = pipeline("question-answering", model=qa_model, device=self.device)
         else:
             self.qa_pipeline = pipeline("question-answering", model=qa_model)
 
-    def load_config_file(self, path: str) -> Set[str]:
+    def load_tsv_file_to_list(self, path: str) -> Set[str]:
         config_info = [
             val[0].lower() for val in pd.read_csv(path, sep="\t").values.tolist()
         ]
