@@ -1,6 +1,6 @@
-from core.QueueObserver import QueueObserver
-from core.FilesProcessor import FilesProcessor
-from core.FieldProcessorHF import FieldProcessorHF
+from transform.core.QueueObserver import QueueObserver
+from transform.core.FilesProcessor import FilesProcessor
+from transform.core.FieldProcessorHF import FieldProcessorHF
 import argparse
 import datetime
 import logging
@@ -23,7 +23,7 @@ def main():
     # Setting up logging system
     now = datetime.datetime.now()
     timestamp = now.strftime("%Y-%m-%d_%H-%M-%S")
-    filename = f"./processing_logs/transform_{timestamp}.log"
+    filename = f"./execution_logs/transform_{timestamp}.log"
     logging.basicConfig(
         filename=filename,
         filemode="w",

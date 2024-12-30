@@ -17,20 +17,24 @@ RUN nvcc --version
 RUN pip3 install torch -f https://download.pytorch.org/whl/cu113
 
 # Create necessary directories
-RUN mkdir -p /transform_queue /config_data
+RUN mkdir -p /transform_queue /config_data /load_queue
 
 # Create working directory
 WORKDIR /app
 
 # Copy the package files
 COPY code/extractors /app/extractors
+COPY code/transform /app/transform
 
-# Install the package in development mode
+# Install the packages in development mode
 RUN pip3 install -e /app/extractors
+RUN pip3 install -e /app/transform
 
+# Create processing logs directory for transform package
+# RUN mkdir -p /app/transform/processing_logs
 
 # Copy the run script
-COPY deployment/hf_etl/run.py /app/run.py
+# COPY deployment/hf_etl/run_extract.py /app/run.py
 
 # Default command
 # CMD ["python3", "run.py"]

@@ -13,7 +13,7 @@ setup(
         "tqdm"
     ],
     python_requires=">=3.8.10",
-    author="Your Name",
+    author="Nelson Q",
     author_email="your.email@example.com",
     description="Collection of extractors for model information from different ML platforms",
     long_description=open("README.md").read(),

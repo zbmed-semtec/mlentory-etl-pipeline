@@ -9,10 +9,7 @@ import pandas as pd
 from tqdm import tqdm
 import os
 
-if "app_test" in os.getcwd():
-    from transform.core.FieldProcessorHF import FieldProcessorHF
-else:
-    from core.FieldProcessorHF import FieldProcessorHF
+from .FieldProcessorHF import FieldProcessorHF
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)

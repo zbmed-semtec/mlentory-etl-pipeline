@@ -1,18 +1,10 @@
 from watchdog.events import PatternMatchingEventHandler
 from watchdog.observers import Observer
-
 import os
 import sys
-
-
-# Here we ask if the container is being executed in the app_test dir
-# In case it is we need to import files differently for the testing environment
-if "app_test" in os.getcwd():
-    from transform.core.FilesProcessor import FilesProcessor
-else:
-    from core.FilesProcessor import FilesProcessor
-
 import logging
+
+from .FilesProcessor import FilesProcessor
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)

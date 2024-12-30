@@ -95,11 +95,13 @@ services:
       context: ../
       dockerfile: deployment/hf_etl/Dockerfile.gpu
     volumes:
-      - ../code/extractors:/app/extractors  # Mount the entire package
-      - ../data/configuration:/config_data
+      - ../data/configuration:/app/config_data
       - ../data/transform_queue:/transform_queue
       - ../data/datasets:/datasets
-      - ./hf_etl/run.py:/app/run.py
+      - ../code/extractors:/app/extractors  # Mount the entire package
+      - ../code/transform:/app/transform
+      - ./hf_etl:/app/hf_etl
+      
     deploy:
       resources:
         reservations:
@@ -231,7 +233,7 @@ services:
     profiles:
       - gpu
       - no_gpu
-    image: docker.elastic.co/elasticsearch/elasticsearch:7.6.0
+    image: docker.elastic.co/elasticsearch/elasticsearch:7.10.0
     container_name: elastic
     hostname: elastic
     # privileged: true
