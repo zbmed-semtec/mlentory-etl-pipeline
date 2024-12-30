@@ -19,11 +19,11 @@ class ModelCardQAParser:
     def __init__(
         self,
         qa_model: str,
-        questions: list[str],
-        tags_language: list[str],
-        tags_libraries: list[str],
-        tags_other: list[str],
-        tags_task: list[str],
+        questions: List[str],
+        tags_language: List[str],
+        tags_libraries: List[str],
+        tags_other: List[str],
+        tags_task: List[str],
     ) -> None:
         """
         Initialize the Model Card QA Parser
@@ -97,15 +97,18 @@ class ModelCardQAParser:
         }
 
     def get_repository_weight_HF(self, model_name: str) -> str:
-        model_repo_weight = 0
-        model_tree_file_information = self.hf_api.list_repo_tree(
-            f"{model_name}", recursive=True
-        )
-        for x in list(model_tree_file_information):
-            if isinstance(x, RepoFile):
-                # The weight of each file is in Bytes.
-                model_repo_weight += x.size
-        return f"{model_repo_weight/(math.pow(10,9)):.3f} Gbytes"
+        try:
+            model_repo_weight = 0
+            model_tree_file_information = self.hf_api.list_repo_tree(
+                f"{model_name}", recursive=True
+            )
+            for x in list(model_tree_file_information):
+                if isinstance(x, RepoFile):
+                    # The weight of each file is in Bytes.
+                    model_repo_weight += x.size
+            return f"{model_repo_weight/(math.pow(10,9)):.3f} Gbytes"
+        except:
+            return "Not available"
 
     def parse_known_fields_HF(self, HF_df: pd.DataFrame) -> pd.DataFrame:
         HF_df.loc[:, "q_id_0"] = HF_df.loc[:, ("modelId")]

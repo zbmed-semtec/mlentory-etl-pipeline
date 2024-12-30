@@ -1,4 +1,5 @@
-from core.ModelCardQAParser import ModelCardQAParser
+from extractors.core.ModelCardQAParser import ModelCardQAParser
+from typing import Any, Dict, List, Set, Union
 from datasets import load_dataset
 from datetime import datetime
 import pandas as pd
@@ -8,11 +9,11 @@ class HFExtractor:
     def __init__(
         self,
         qa_model: str = "Intel/dynamic_tinybert",
-        questions: list[str] = None,
-        tags_language: list[str] = None,
-        tags_libraries: list[str] = None,
-        tags_other: list[str] = None,
-        tags_task: list[str] = None,
+        questions: List[str] = None,
+        tags_language: List[str] = None,
+        tags_libraries: List[str] = None,
+        tags_other: List[str] = None,
+        tags_task: List[str] = None,
     ):
         """
         Initialize the HuggingFace extractor
@@ -37,7 +38,7 @@ class HFExtractor:
     def download_models(
         self, 
         num_models: int = 10, 
-        questions: list[str] = None,
+        questions: List[str] = None,
         output_dir: str = "./outputs",
         save_original: bool = True
     ) -> pd.DataFrame:

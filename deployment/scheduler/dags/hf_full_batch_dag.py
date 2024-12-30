@@ -39,7 +39,7 @@ with DAG(
         python_callable=execute_script_in_container,
         op_kwargs={
             "container_name": "hf_gpu",
-            "script_path": "main.py",  # Path inside the container
+            "script_path": "run.py",  # Path inside the container
         },
     )
 

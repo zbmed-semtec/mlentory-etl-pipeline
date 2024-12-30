@@ -1,8 +1,0 @@
-transformers
-datasets
-huggingface-hub
-numpy
-pandas
-mysql-connector-python
-black
-tqdm

@@ -1,4 +1,4 @@
-FROM ubuntu:20.04
+FROM nvidia/cuda:11.2.2-cudnn8-devel-ubuntu20.04
 
 ARG DEBIAN_FRONTEND=noninteractive
 
@@ -11,16 +11,20 @@ RUN apt-get install -y \
     python3-pip \
     && rm -rf /var/lib/apt/lists/*
 
+RUN nvcc --version
+
 RUN pip3 install torch -f https://download.pytorch.org/whl/cu113
 
 COPY extractors/hf_extractor/requirements.txt .
 RUN pip3 install -r requirements.txt
 
-RUN mkdir transform_queue
+# RUN mkdir Transform_Queue
 RUN mkdir app
 
 WORKDIR /app
-COPY extractors/hf_extractor  .
-
+COPY extractors/hf_extractor .
+CMD ["tail", "-f", "/dev/null"]
+# RUN mkdir Config_Data
+# COPY Config_Data ./Config_Data
 # RUN jupyter notebook --ip 0.0.0.0 --port 8888 --no-browser --allow-root
 

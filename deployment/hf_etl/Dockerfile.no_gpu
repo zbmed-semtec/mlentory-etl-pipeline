@@ -1,0 +1,35 @@
+FROM ubuntu:20.04
+
+ARG DEBIAN_FRONTEND=noninteractive
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    wget \
+    curl \
+    git \
+    python3.9 \
+    python3-pip \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install PyTorch CPU version
+RUN pip3 install torch --index-url https://download.pytorch.org/whl/cpu
+
+# Create and set working directory
+WORKDIR /build
+
+# Copy and install the package
+COPY code/extractors /extractors
+RUN pip3 install -e /extractors
+
+# Create necessary directories
+RUN mkdir -p /transform_queue /config_data
+
+# Copy the run script
+COPY deployment/hf_etl/run.py /app/run.py
+
+# Set the working directory for running the script
+WORKDIR /app
+
+# Default command
+# CMD ["python3", "run.py"]
+

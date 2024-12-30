@@ -88,18 +88,18 @@ services:
       - mlentory_network
 
   # Extractor service
-  hf_extractor_with_gpu:
+  hf_etl_with_gpu:
     profiles: [gpu]
     container_name: hf_gpu
     build: 
-      context: .
-      dockerfile: ./extractors/hf_extractor/Dockerfile.gpu  # Path to extractor Dockerfile
-    # Define volumes to mount extractor scripts or dependencies
+      context: ../
+      dockerfile: deployment/hf_etl/Dockerfile.gpu
     volumes:
-      - ./extractors/hf_extractor:/app
+      - ../code/extractors:/app/extractors  # Mount the entire package
+      - ../data/configuration:/config_data
       - ../data/transform_queue:/transform_queue
       - ../data/datasets:/datasets
-      - ./config_data:/config_data
+      - ./hf_etl/run.py:/app/run.py
     deploy:
       resources:
         reservations:
@@ -109,93 +109,85 @@ services:
             capabilities: [gpu]
     dns:
       - 1.1.1.1
-    # depends_on:
-    #   - mysql
-    # Uncomment this line to run the script
-    # command: ["python3", "ExtractFromDataset.py"]
-    # Uncomment this line to develop on the container
-    command: ["tail", "-f", "/dev/null"]
     networks:
       - mlentory_network
-  
-  hf_extractor_with_no_gpu:
+    command: ["tail", "-f", "/dev/null"]
+
+  hf_etl_with_no_gpu:
     profiles: [no_gpu]
     container_name: hf_no_gpu
     build: 
-      context: .
-      dockerfile: ./extractors/hf_extractor/Dockerfile.no_gpu  # Path to extractor Dockerfile
-    # Define volumes to mount extractor scripts or dependencies
+      context: ../
+      dockerfile: deployment/hf_etl/Dockerfile.no_gpu
     volumes:
-      - ./extractors/hf_extractor:/app
+      - ../code/extractors:/app/extractors  # Mount the entire package
+      - ../data/configuration:/config_data
       - ../data/transform_queue:/transform_queue
       - ../data/datasets:/datasets
-      - ./config_data:/config_data
+      - ./hf_etl/run.py:/app/run.py
     dns:
       - 1.1.1.1
-    # Uncomment this line to test the script
-    # command: ["python3", "main.py"]
-    # Uncomment this line to develop on the container
     command: ["tail", "-f", "/dev/null"]
     networks:
       - mlentory_network
 
   ### Module in charge of transforming the data to the RDA FAIR4ML schema
-  transform:
-    profiles:
-      - gpu
-      - no_gpu
-    container_name: transform
-    build: 
-      context: .
-      dockerfile: ./transform/Dockerfile  # Path to extractor Dockerfile
-    # Define volumes to mount extractor scripts or dependencies
-    volumes:
-      - ./transform:/app
-      - ../data/transform_queue:/transform_queue
-      - ../data/load_queue:/load_queue
-      - ../data/datasets:/datasets
-      - ./config_data:/config_data
-    dns:
-      - 1.1.1.1
+  # transform:
+  #   profiles:
+  #     - gpu
+  #     - no_gpu
+  #   container_name: transform
+  #   build: 
+  #     context: .
+  #     dockerfile: ./transform/Dockerfile  # Path to extractor Dockerfile
+  #   # Define volumes to mount extractor scripts or dependencies
+  #   volumes:
+  #     - ./transform:/app
+  #     - ../data/transform_queue:/transform_queue
+  #     - ../data/load_queue:/load_queue
+  #     - ../data/datasets:/datasets
+  #     - ./config_data:/config_data
+  #   dns:
+  #     - 1.1.1.1
 
-    # Uncomment this line to test the script
-    command: ["tail", "-f", "/dev/null"]
-    # command: ["python3", "main.py"]
-    networks:
-      - mlentory_network
-    # Uncomment for production
-    #command: ["python3", "ExtractFromDataset.py"]
+  #   # Uncomment this line to test the script
+  #   command: ["tail", "-f", "/dev/null"]
+  #   # command: ["python3", "main.py"]
+  #   networks:
+  #     - mlentory_network
+  #   # Uncomment for production
+  #   #command: ["python3", "ExtractFromDataset.py"]
 
   ### Module in charge of loading the data into the database
-  load:    
-    depends_on:
-      - transform
-      - postgres
-      - virtuoso
-      - elastic
-    profiles:
-      - gpu
-      - no_gpu
-    container_name: load
-    build: 
-      context: .
-      dockerfile: ./load/Dockerfile  # Path to extractor Dockerfile
-    # Define volumes to mount extractor scripts or dependencies
-    volumes:
-      - ./load:/app
-      - ../data/load_queue:/load_queue
-      - ../data/virtuoso_data/kg_files:/kg_files
-      - ./config_data:/config_data
-      # Necessary to run docker commands inside other containers
-      - /var/run/docker.sock:/var/run/docker.sock 
-    dns:
-      - 1.1.1.1
+  # load:    
+  #   depends_on:
+  #     - transform
+  #     - postgres
+  #     - virtuoso
+  #     - elastic
+  #   profiles:
+  #     - gpu
+  #     - no_gpu
+  #   container_name: load
+  #   build: 
+  #     context: .
+  #     dockerfile: ./load/Dockerfile  # Path to extractor Dockerfile
+  #   # Define volumes to mount extractor scripts or dependencies
+  #   volumes:
+  #     - ./load:/app
+  #     - ../data/load_queue:/load_queue
+  #     - ../data/virtuoso_data/kg_files:/kg_files
+  #     - ./config_data:/config_data
+  #     # Necessary to run docker commands inside other containers
+  #     - /var/run/docker.sock:/var/run/docker.sock 
+  #   dns:
+  #     - 1.1.1.1
 
-    # Uncomment this line to test the script
-    command: ["tail", "-f", "/dev/null"]
-    # command: ["python3", "main.py"]
-    networks:
-      - mlentory_network
+  #   # Uncomment this line to test the script
+  #   command: ["tail", "-f", "/dev/null"]
+  #   # command: ["python3", "main.py"]
+  #   networks:
+  #     - mlentory_network
 
   ### SQL for storage database
   postgres:
@@ -215,14 +207,6 @@ services:
       - ../data/postgres_data:/var/lib/postgresql/data
     networks:
       - mlentory_network
-
-  # anzograph:
-  #   image: cambridgesemantics/anzograph:latest
-  #   ports:
-  #     - "8085:8080"
-  #     - "8443:8443"
-  #   volumes:
-  #     - /DB/anzograph-data:/opt/anzograph-data
 
   ### RDF database
   virtuoso:
@@ -272,13 +256,6 @@ services:
       - 9300:9300
     networks:
       - mlentory_network
-
-# networks:
-#   my-macvlan-net:
-#     external: true
-#     name: my-macvlan-net
-#   host:
-#     external: true
 
 networks:
   mlentory_network:
