@@ -17,7 +17,7 @@ data/virtuoso_data
 data/elasticsearch_data
 data/postgres_data
 data/transform_queue
-data/postgres_data/
+data/postgres_data
 data/load_queue
 
 code/scheduler/logs
@@ -189,3 +189,7 @@ cython_debug/
 #Extensions related to VS code enviroments
 .devcontainer/
 .github/
+
+data/transform_queue/*.csv
+data/transform_queue/*.tsv
+data/transform_queue/*.json
