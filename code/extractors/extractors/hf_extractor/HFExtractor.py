@@ -40,16 +40,18 @@ class HFExtractor:
         num_models: int = 10, 
         questions: List[str] = None,
         output_dir: str = "./outputs",
-        save_original: bool = True
+        save_original: bool = True,
+        save_result_in_json: bool = True
     ) -> pd.DataFrame:
         """
         Download and process model cards from HuggingFace
         
         Args:
             num_models (int): Number of models to process
-            questions (list[str]): List of questions to use for extraction. If None, uses default questions
+            questions (List[str]): List of questions to use for extraction. If None, uses default questions
             output_dir (str): Directory to save the output files
             save_original (bool): Whether to save the original dataset
+            save_result_in_json (bool): Whether to download the dataset in json format in the output directory
             
         Returns:
             pd.DataFrame: Processed dataframe with extracted information
@@ -96,7 +98,8 @@ class HFExtractor:
         if save_original:
             original_path = os.path.join(output_dir, f"{timestamp}_Original_HF_Dataframe.csv")
             original_HF_df.to_csv(original_path, sep="\t")
-            
+        
+        if save_result_in_json:
         processed_path = os.path.join(output_dir, f"{timestamp}_Processed_HF_Dataframe.json")
         HF_df.to_json(path_or_buf=processed_path, orient="records", indent=4)
         

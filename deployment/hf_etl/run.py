@@ -28,8 +28,9 @@ def main():
     # Download and process models
     df = extractor.download_models(
         num_models=5,  # Start with a small number for testing
-        output_dir="/transform_queue",  # Mount point in container
-        save_original=True
+        # output_dir="/transform_queue",  # Mount point in container
+        save_original=True,
+        save_result_in_json=False
     )
     
     print(f"Processed {len(df)} models")

@@ -27,7 +27,8 @@ if __name__ == "__main__":
     df = extractor.download_models(
         num_models=10,
         output_dir="./outputs",
-        save_original=True
+        save_original=True, 
+        save_result_in_json=True
     )
     
     print(f"Processed {len(df)} models")
