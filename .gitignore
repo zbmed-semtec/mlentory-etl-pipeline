@@ -17,6 +17,8 @@ data/virtuoso_data
 data/elasticsearch_data
 data/postgres_data
 data/transform_queue
+data/postgres_data/
+data/load_queue
 
 code/scheduler/logs
 
