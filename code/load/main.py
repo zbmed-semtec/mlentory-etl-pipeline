@@ -1,10 +1,6 @@
-from core.QueueObserver import QueueObserver
-from core.FileProcessor import FileProcessor
-from core.LoadProcessor import LoadProcessor
-from core.dbHandler.RDFHandler import RDFHandler
-from core.dbHandler.SQLHandler import SQLHandler
-from core.dbHandler.IndexHandler import IndexHandler
-from core.GraphHandler import GraphHandler
+from mlentory_loader.core import QueueObserver, FileProcessor, LoadProcessor
+from mlentory_loader.core.db_handler import RDFHandler, SQLHandler, IndexHandler
+from mlentory_loader.core import GraphHandler
 import argparse
 import datetime
 import logging
