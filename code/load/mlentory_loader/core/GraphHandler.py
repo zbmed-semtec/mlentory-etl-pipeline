@@ -11,16 +11,10 @@ from tqdm import tqdm
 from datetime import datetime
 from typing import Callable, List, Dict, Set
 
-if "app_test" in os.getcwd():
-    from load.core.dbHandler.SQLHandler import SQLHandler
-    from load.core.dbHandler.RDFHandler import RDFHandler
-    from load.core.Entities import HFModel
-    from load.core.dbHandler.IndexHandler import IndexHandler
-else:
-    from core.dbHandler.SQLHandler import SQLHandler
-    from core.dbHandler.RDFHandler import RDFHandler
-    from core.Entities import HFModel
-    from core.dbHandler.IndexHandler import IndexHandler
+from mlentory_loader.core.dbHandler.SQLHandler import SQLHandler
+from mlentory_loader.core.dbHandler.RDFHandler import RDFHandler
+from mlentory_loader.core.Entities import HFModel
+from mlentory_loader.core.dbHandler.IndexHandler import IndexHandler
 
 
 class GraphHandler:

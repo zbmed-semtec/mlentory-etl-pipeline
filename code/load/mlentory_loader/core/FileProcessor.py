@@ -9,10 +9,7 @@ import pandas as pd
 import traceback
 import os
 
-if "app_test" in os.getcwd():
-    from load.core.LoadProcessor import LoadProcessor
-else:
-    from core.LoadProcessor import LoadProcessor
+from mlentory_loader.core.LoadProcessor import LoadProcessor
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)

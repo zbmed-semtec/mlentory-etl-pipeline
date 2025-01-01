@@ -20,11 +20,7 @@ from elasticsearch_dsl import (
 )
 import inspect
 
-
-if "app_test" in os.getcwd():
-    from load.core.Entities import HFModel, Model
-else:
-    from core.Entities import HFModel, Model
+from mlentory_loader.core.Entities import HFModel, Model
 
 
 class IndexHandler:

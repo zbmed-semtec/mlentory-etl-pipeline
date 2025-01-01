@@ -8,18 +8,11 @@ from datetime import datetime
 from typing import Callable, List, Dict, Set
 from SPARQLWrapper import SPARQLWrapper, JSON, DIGEST, TURTLE
 
-if "app_test" in os.getcwd():
-    from code.load.core.dbHandler.SQLHandler import SQLHandler
-    from code.load.core.dbHandler.RDFHandler import RDFHandler
-    from code.load.core.dbHandler.IndexHandler import IndexHandler
-    from code.load.core.GraphHandler import GraphHandler
-    from code.load.core.Entities import HFModel
-else:
-    from core.dbHandler.SQLHandler import SQLHandler
-    from core.dbHandler.RDFHandler import RDFHandler
-    from core.dbHandler.IndexHandler import IndexHandler
-    from core.GraphHandler import GraphHandler
-    from core.Entities import HFModel
+from mlentory_loader.core.dbHandler.SQLHandler import SQLHandler
+from mlentory_loader.core.dbHandler.RDFHandler import RDFHandler
+from mlentory_loader.core.dbHandler.IndexHandler import IndexHandler
+from mlentory_loader.core.GraphHandler import GraphHandler
+from mlentory_loader.core.Entities import HFModel
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)

@@ -16,9 +16,6 @@ RUN nvcc --version
 # Install PyTorch with CUDA support
 RUN pip3 install torch -f https://download.pytorch.org/whl/cu113
 
-# Create necessary directories
-RUN mkdir -p /transform_queue /config_data /load_queue
-
 # Create working directory
 WORKDIR /app
 
@@ -29,12 +26,6 @@ RUN pip3 install -e /app/extractors
 COPY code/transform /app/transform
 RUN pip3 install -e /app/transform
 
-# Create processing logs directory for transform package
-# RUN mkdir -p /app/transform/processing_logs
-
-# Copy the run script
-# COPY deployment/hf_etl/run_extract.py /app/run.py
-
-# Default command
-# CMD ["python3", "run.py"]
+COPY code/load /app/load
+RUN pip3 install -e /app/load
 

@@ -4,13 +4,7 @@ from watchdog.observers import Observer
 import os
 import sys
 
-
-# Here we ask if the container is being executed in the app_test dir
-# In case it is we need to import files differently for the testing environment
-if "app_test" in os.getcwd():
-    from code.load.core.FileProcessor import FileProcessor
-else:
-    from core.FileProcessor import FileProcessor
+from mlentory_loader.core.FileProcessor import FileProcessor
 
 import logging
 

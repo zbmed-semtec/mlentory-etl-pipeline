@@ -98,9 +98,13 @@ services:
       - ../data/configuration/hf:/app/configuration/hf
       - ../data/transform_queue:/transform_queue
       - ../data/datasets:/datasets
+      - ../data/virtuoso_data/kg_files:/kg_files
       - ../code/extractors:/app/extractors  # Mount the entire package
       - ../code/transform:/app/transform
+      - ../code/load:/app/load
       - ./hf_etl:/app/hf_etl
+      # Necessary to run docker commands inside other containers
+      - /var/run/docker.sock:/var/run/docker.sock 
       
     deploy:
       resources:
@@ -122,11 +126,13 @@ services:
       context: ../
       dockerfile: deployment/hf_etl/Dockerfile.no_gpu
     volumes:
-      - ../code/extractors:/app/extractors  # Mount the entire package
-      - ../data/configuration:/config_data
+      - ../data/configuration/hf:/app/configuration/hf
       - ../data/transform_queue:/transform_queue
       - ../data/datasets:/datasets
-      - ./hf_etl/run.py:/app/run.py
+      - ../code/extractors:/app/extractors  # Mount the entire package
+      - ../code/transform:/app/transform
+      - ../code/load:/app/load
+      - ./hf_etl:/app/hf_etl
     dns:
       - 1.1.1.1
     command: ["tail", "-f", "/dev/null"]
