@@ -20,8 +20,9 @@ data/transform_queue
 data/postgres_data
 data/load_queue
 
-code/scheduler/logs
-
+deployment/hf_etl/execution_logs/*.log
+deployment/scheduler/logs
+deployment/scheduler/sql_config_files
 .env
 
 tests/Test_files/load_files/virtuoso_data/kg_files/*.ttl

@@ -95,7 +95,7 @@ services:
       context: ../
       dockerfile: deployment/hf_etl/Dockerfile.gpu
     volumes:
-      - ../data/configuration:/app/config_data
+      - ../data/configuration/hf:/app/configuration/hf
       - ../data/transform_queue:/transform_queue
       - ../data/datasets:/datasets
       - ../code/extractors:/app/extractors  # Mount the entire package

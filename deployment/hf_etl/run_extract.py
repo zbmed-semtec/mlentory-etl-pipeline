@@ -7,13 +7,13 @@ def load_tsv_file_to_list(path: str) -> List[str]:
 
 def main():
     # Load configuration data
-    config_path = "../config_data"  # Path to configuration folder
+    config_path = "../configuration"  # Path to configuration folder
     
-    questions = load_tsv_file_to_list(f"{config_path}/questions.tsv")
-    tags_language = load_tsv_file_to_list(f"{config_path}/tags_language.tsv")
-    tags_libraries = load_tsv_file_to_list(f"{config_path}/tags_libraries.tsv")
-    tags_other = load_tsv_file_to_list(f"{config_path}/tags_other.tsv")
-    tags_task = load_tsv_file_to_list(f"{config_path}/tags_task.tsv")
+    questions = load_tsv_file_to_list(f"{config_path}/extractors/hf/questions.tsv")
+    tags_language = load_tsv_file_to_list(f"{config_path}/extractors/hf/tags_language.tsv")
+    tags_libraries = load_tsv_file_to_list(f"{config_path}/extractors/hf/tags_libraries.tsv")
+    tags_other = load_tsv_file_to_list(f"{config_path}/extractors/hf/tags_other.tsv")
+    tags_task = load_tsv_file_to_list(f"{config_path}/extractors/hf/tags_task.tsv")
     
     # Initialize extractor with configuration
     extractor = HFExtractor(

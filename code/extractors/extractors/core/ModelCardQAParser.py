@@ -319,7 +319,7 @@ class ModelCardQAParser:
     def parse_fields_from_txt_HF(self, HF_df: pd.DataFrame) -> pd.DataFrame:
         questions_to_process = set()
         for q in self.available_questions:
-            print(q.split("_")[2])
+            # print(q.split("_")[2])
             questions_to_process.add(int(q.split("_")[2]))
 
         for index, row in tqdm(
