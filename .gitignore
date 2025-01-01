@@ -19,6 +19,10 @@ data/postgres_data
 data/transform_queue
 data/postgres_data
 data/load_queue
+data/transform_queue/*.csv
+data/transform_queue/*.tsv
+data/transform_queue/*.json
+data/transform_queue/
 
 deployment/hf_etl/execution_logs/*.log
 deployment/scheduler/logs
@@ -32,6 +36,10 @@ tests/Test_files/load_files/virtuoso_data/*.pxa
 tests/Test_files/load_files/virtuoso_data/*.trx
 tests/Test_files/load_files/virtuoso_data/*.lck
 tests/Test_files/load_files/elastic/
+
+deployment/hf_etl/outputs/
+data/datasets/
+
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
@@ -191,6 +199,4 @@ cython_debug/
 .devcontainer/
 .github/
 
-data/transform_queue/*.csv
-data/transform_queue/*.tsv
-data/transform_queue/*.json
+
