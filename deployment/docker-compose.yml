@@ -96,10 +96,8 @@ services:
       dockerfile: deployment/hf_etl/Dockerfile.gpu
     volumes:
       - ../data/configuration/hf:/app/configuration/hf
-      - ../data/transform_queue:/transform_queue
-      - ../data/datasets:/datasets
       - ../data/virtuoso_data/kg_files:/kg_files
-      - ../code/extractors:/app/extractors  # Mount the entire package
+      - ../code/extractors:/app/extractors
       - ../code/transform:/app/transform
       - ../code/load:/app/load
       - ./hf_etl:/app/hf_etl

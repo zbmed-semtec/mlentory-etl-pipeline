@@ -7,17 +7,17 @@ services:
     # environment:
     #   - VIRTUOSO_CONTAINER_NAME=test_virtuoso_1
     build: 
-      context: .
-      dockerfile: ./Dockerfile.local  # Path to tests Dockerfile
+      context: ../../../
+      dockerfile: ./tests/config/docker/Dockerfile.local  # Path to tests Dockerfile
     # Define volumes to mount extractor scripts or dependencies
     volumes:
-      - .:/app_test/tests
-      - ../code/transform:/app_test/transform
-      - ../code/extractors:/app_test/extractors
-      - ../code/load:/app_test/load
-      - ../data/transform_queue:/app_test/transform_queue
-      - ../data/load_queue:/app_test/load_queue
-      - ../code/config_data:/app_test/config_data
+      - ../../unit:/app_test/unit_tests
+      - ../../fixtures:/app_test/fixtures
+      - ../../../code/extractors:/app/extractors
+      - ../../../code/transform:/app/transform
+      - ../../../code/load:/app/load
+      - ../../../data/configuration:/app/configuration
+
       - /var/run/docker.sock:/var/run/docker.sock
     # env_file:
     #   - fileName: .env
@@ -39,12 +39,10 @@ services:
     # environment:
     #   - VIRTUOSO_CONTAINER_NAME=tests-virtuoso-1
     volumes:
-      - .:/app_test/tests
+      - ../../unit:/app_test/unit_tests
       - ../code/transform:/app_test/transform
       - ../code/extractors:/app_test/extractors
       - ../code/load:/app_test/load
-      - ../data/transform_queue:/app_test/transform_queue
-      - ../data/load_queue:/app_test/load_queue
       - ../code/config_data:/app_test/config_data
       - /var/run/docker.sock:/var/run/docker.sock
     dns:
@@ -66,30 +64,7 @@ services:
     ports:
       - '5432:5432'
     volumes:
-      - ../code/load/sql_files/test_init.sql:/docker-entrypoint-initdb.d/init.sql   
-
-  # mysql:
-  #   profiles:
-  #     - ci_test
-  #     - test
-  #   image: mysql:latest
-  #   hostname: mysql
-  #   environment:
-  #     MYSQL_ROOT_PASSWORD: test_pass
-  #     MYSQL_DATABASE: test_DB
-  #     MYSQL_USER: test_user
-  #     MYSQL_PASSWORD: test_pass
-  #     MYSQL_USER_1: additional_user1
-  #     MYSQL_PASSWORD_1: password1
-  #     MYSQL_USER_2: additional_user2
-  #     MYSQL_PASSWORD_2: password2
-  #   volumes:
-  #   - ../code/load/sql_files/test_init.sql:/docker-entrypoint-initdb.d/init.sql
-  #   # - ../data/mysql_test_data:/var/lib/mysql
-  #   ports:
-  #     - "42333:3306"
-  #     - "33060:33060"
-  #   command: --init-file /docker-entrypoint-initdb.d/init.sql
+      - ../postgres/sql_files/test_init.sql:/docker-entrypoint-initdb.d/init.sql   
   
   virtuoso:
     profiles:
@@ -104,7 +79,7 @@ services:
     environment:
       DBA_PASSWORD: my_strong_password
     volumes:
-      - ./Test_files/load_files/virtuoso_data:/opt/virtuoso-opensource/database
+      - ../virtuoso:/opt/virtuoso-opensource/database
 
   elastic:
     profiles:
@@ -129,7 +104,7 @@ services:
         soft: -1
         hard: -1
     volumes:
-      - ./Test_files/load_files/elastic:/var/lib/elasticsearch/data
+      - ../elastic:/var/lib/elasticsearch/data
     ports:
       - 9200:9200
       - 9300:9300

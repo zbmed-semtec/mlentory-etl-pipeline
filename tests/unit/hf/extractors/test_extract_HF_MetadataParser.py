@@ -7,7 +7,6 @@ import sys
 
 import sys
 
-sys.path.append(".")
 from extractors.hf_extractor.core.MetadataParser import MetadataParser
 
 

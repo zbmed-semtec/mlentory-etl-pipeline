@@ -7,21 +7,18 @@ RUN curl -sfL -o docker.tgz "https://download.docker.com/linux/static/stable/x86
 tar -xzf docker.tgz docker/docker --strip=1 --directory /usr/local/bin && \
 rm docker.tgz
 
-COPY requirements.txt .
+COPY ./tests/config/requirements.txt .
 RUN pip3 install -r requirements.txt
-  
-RUN mkdir Transform_Queue
-RUN mkdir Load_Queue
 
 WORKDIR /app_test
-COPY ./wait-for-it.sh ./tests/wait-for-it.sh
-RUN chmod +x ./tests/wait-for-it.sh
+COPY ./tests/scripts/wait-for-it.sh ./wait-for-it.sh
+RUN chmod +x ./wait-for-it.sh
 
-COPY code/extractors /app/extractors
-RUN pip3 install -e /app/extractors
+COPY /code/extractors /extractors
+RUN pip3 install -e /extractors
 
-COPY code/transform /app/transform
-RUN pip3 install -e /app/transform
+COPY /code/transform /transform
+RUN pip3 install -e /transform
 
-COPY code/load /app/load
-RUN pip3 install -e /app/load
+COPY /code/load /load
+RUN pip3 install -e /load
