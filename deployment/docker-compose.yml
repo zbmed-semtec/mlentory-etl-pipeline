@@ -211,7 +211,7 @@ services:
     ports:
       - '5432:5432'
     volumes:
-      - ./load/sql_files/init.sql:/docker-entrypoint-initdb.d/init.sql
+      - ../data/configuration/hf/load/sql_files/init.sql:/docker-entrypoint-initdb.d/init.sql
       - ../data/postgres_data:/var/lib/postgresql/data
     networks:
       - mlentory_network

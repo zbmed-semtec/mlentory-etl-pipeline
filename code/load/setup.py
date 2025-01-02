@@ -13,9 +13,9 @@ setup(
         "docker",
         "sparqlwrapper",
         "urllib3<2.0.0",
+        "psycopg2-binary",
         "elasticsearch==7.13.4",
         "elasticsearch-dsl<8.0.0",
-        "psycopg2-binary",
         "tqdm"
     ],
     python_requires=">=3.8.10",
