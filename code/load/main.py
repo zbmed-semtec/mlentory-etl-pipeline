@@ -1,5 +1,5 @@
 from mlentory_loader.core import QueueObserver, FileProcessor, LoadProcessor, GraphHandler
-from mlentory_loader.core.db_handler import RDFHandler, SQLHandler, IndexHandler
+from mlentory_loader.dbHandler import RDFHandler, SQLHandler, IndexHandler
 import argparse
 import datetime
 import logging

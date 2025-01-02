@@ -8,9 +8,9 @@ from datetime import datetime
 from typing import Callable, List, Dict, Set
 from SPARQLWrapper import SPARQLWrapper, JSON, DIGEST, TURTLE
 
-from mlentory_loader.core.dbHandler.SQLHandler import SQLHandler
-from mlentory_loader.core.dbHandler.RDFHandler import RDFHandler
-from mlentory_loader.core.dbHandler.IndexHandler import IndexHandler
+from mlentory_loader.dbHandler.SQLHandler import SQLHandler
+from mlentory_loader.dbHandler.RDFHandler import RDFHandler
+from mlentory_loader.dbHandler.IndexHandler import IndexHandler
 from mlentory_loader.core.GraphHandler import GraphHandler
 from mlentory_loader.core.Entities import HFModel
 
