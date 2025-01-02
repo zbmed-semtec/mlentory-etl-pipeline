@@ -1,8 +1,9 @@
 #!/bin/bash
+cd "$(dirname "$0")/../config/docker"
 docker-compose --profile=ci_test up -d
 
-./wait-for-it.sh mysql:3306
+../scripts/wait-for-it.sh mysql:3306
 
 docker exec ci_test pytest ./tests/
 
-exit $?
+exit $? 
