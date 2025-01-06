@@ -34,7 +34,10 @@ class HFExtractor:
             tags_other=tags_other,
             tags_task=tags_task,
         )
-        
+    
+    def get_hf_dataset(self):
+        return load_dataset("librarian-bots/model_cards_with_metadata")["train"].to_pandas()
+    
     def download_models(
         self, 
         num_models: int = 10, 
@@ -57,8 +60,7 @@ class HFExtractor:
             pd.DataFrame: Processed dataframe with extracted information
         """
         # Load dataset
-        dataset_models = load_dataset("librarian-bots/model_cards_with_metadata")["train"]
-        original_HF_df = dataset_models.to_pandas()
+        original_HF_df = self.get_hf_dataset()
         
         # Slice dataframe if num_models specified
         HF_df = original_HF_df.iloc[0:num_models] if num_models else original_HF_df
@@ -74,10 +76,15 @@ class HFExtractor:
         }
         HF_df = HF_df.assign(**new_columns)
         
+        print("**CHECKING COLUMNS**")
+        print(HF_df.columns)
+        
+        
         # Parse fields
         HF_df = self.parser.parse_fields_from_tags_HF(HF_df=HF_df)
         HF_df = self.parser.parse_known_fields_HF(HF_df=HF_df)
         HF_df = self.parser.parse_fields_from_txt_HF(HF_df=HF_df)
+        
         
         # Clean up columns
         HF_df = HF_df.drop(columns=[
@@ -85,6 +92,7 @@ class HFExtractor:
             "likes", "library_name", "tags", "pipeline_tag",
             "createdAt", "card"
         ])
+        
         
         # Improve column naming
         HF_df.columns = HF_df.columns.map(self._augment_column_name)

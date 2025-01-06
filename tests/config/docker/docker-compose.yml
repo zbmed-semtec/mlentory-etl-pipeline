@@ -4,6 +4,7 @@ services:
   test:
     profiles:
       - test
+    container_name: local_test
     # environment:
     #   - VIRTUOSO_CONTAINER_NAME=test_virtuoso_1
     build: 
@@ -11,12 +12,12 @@ services:
       dockerfile: ./tests/config/docker/Dockerfile.local  # Path to tests Dockerfile
     # Define volumes to mount extractor scripts or dependencies
     volumes:
-      - ../../unit:/app_test/unit_tests
+      - ../../unit:/app_test/unit
       - ../../fixtures:/app_test/fixtures
-      - ../../../code/extractors:/app/extractors
-      - ../../../code/transform:/app/transform
-      - ../../../code/load:/app/load
-      - ../../../data/configuration:/app/configuration
+      - ../../../code/extractors:/app_test/extractors
+      - ../../../code/transform:/app_test/transform
+      - ../../../code/load:/app_test/load
+      - ../../../data/configuration:/app_test/configuration
 
       - /var/run/docker.sock:/var/run/docker.sock
     # env_file:

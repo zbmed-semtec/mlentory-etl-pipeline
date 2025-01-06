@@ -29,13 +29,9 @@ deployment/scheduler/logs
 deployment/scheduler/sql_config_files
 .env
 
-tests/Test_files/load_files/virtuoso_data/kg_files/*.ttl
-tests/Test_files/load_files/virtuoso_data/*.db
-tests/Test_files/load_files/virtuoso_data/*.ini
-tests/Test_files/load_files/virtuoso_data/*.pxa
-tests/Test_files/load_files/virtuoso_data/*.trx
-tests/Test_files/load_files/virtuoso_data/*.lck
-tests/Test_files/load_files/elastic/
+tests/config/virtuoso
+tests/config/postgres
+tests/config/elastic
 
 deployment/hf_etl/outputs/
 data/datasets/

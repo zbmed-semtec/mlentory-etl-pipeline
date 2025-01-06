@@ -14,11 +14,11 @@ WORKDIR /app_test
 COPY ./tests/scripts/wait-for-it.sh ./wait-for-it.sh
 RUN chmod +x ./wait-for-it.sh
 
-COPY /code/extractors /extractors
-RUN pip3 install -e /extractors
+COPY /code/extractors /app_test/extractors
+RUN pip3 install -e /app_test/extractors
 
-COPY /code/transform /transform
-RUN pip3 install -e /transform
+COPY /code/transform /app_test/transform
+RUN pip3 install -e /app_test/transform
 
-COPY /code/load /load
-RUN pip3 install -e /load
+COPY /code/load /app_test/load
+RUN pip3 install -e /app_test/load
