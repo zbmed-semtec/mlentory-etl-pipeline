@@ -136,11 +136,11 @@ class FieldProcessorHF:
         return processed_values
     
     def process_not_extracted(self) -> Dict:
-        return self.add_default_extraction_info(
+        return [self.add_default_extraction_info(
             data="Not extracted",
             extraction_method="None",
             confidence=1.0,
-        )
+        )]
 
     def add_default_extraction_info(
         self, data: str, extraction_method: str, confidence: float

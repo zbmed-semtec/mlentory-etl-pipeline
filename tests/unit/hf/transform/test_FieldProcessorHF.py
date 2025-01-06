@@ -6,11 +6,9 @@ import time
 import pandas as pd
 from datetime import datetime
 from typing import List, Tuple
-
-
-sys.path.append(".")
-from transform.core.FilesProcessor import FilesProcessor
-from transform.core.QueueObserver import QueueObserver, MyQueueEventHandler
+import pytest
+from unittest.mock import Mock
+import json
 from transform.core.FieldProcessorHF import FieldProcessorHF
 
 
@@ -19,47 +17,18 @@ class TestFieldProcessorHF:
     Test class for FieldProcessorHF
     """
 
-    @classmethod
-    def setup_class(self):
-        self.hf_example_file = pd.read_csv(
-            "./tests/Test_files/hf_extracted_example_file.tsv",
-            sep="\t",
-            usecols=lambda x: x != "Unnamed: 0",
-        )
-
     @pytest.fixture
     def setup_field_processor(self) -> FieldProcessorHF:
-        fields_processor_HF = FieldProcessorHF(path_to_config_data="./config_data")
+        current_dir = os.path.dirname(os.path.abspath(__file__))
+        # Navigate up 3 levels and into configuration
+        config_path = os.path.join(current_dir, "..", "..", "..", "configuration", "hf", "transform") 
+        
+        new_schema = pd.read_csv(f"{config_path}/M4ML_schema.tsv", sep="\t")
+        transformations = pd.read_csv(f"{config_path}/column_transformations.csv", lineterminator='\n', sep=",")
+        fields_processor_HF = FieldProcessorHF(new_schema, transformations)
         return fields_processor_HF
 
-    def test_conversion(
-        self, caplog, setup_field_processor: FieldProcessorHF, logger
-    ) -> None:
-        """
-        Test that workers are created on complete batch.
-
-        Args:
-            caplog: pytest caplog fixture for capturing logs
-            setup_field_processor: fixture for setting up the FieldProcessorHF instance
-        """
-        df = self.hf_example_file
-        field_processor = setup_field_processor
-        print("TYPEEEEEEEEEEE", type(setup_field_processor))
-
-        manager = get_context("spawn").Manager()
-        model_list = manager.list()
-        for index, row in df.iterrows():
-            # print(row)
-            m4ml_model_data = field_processor.process_row(row)
-            model_list.append(m4ml_model_data)
-            print("m4ml new row: \n", m4ml_model_data)
-
-        models_m4ml_df = pd.DataFrame(list(model_list))
-
-        print(models_m4ml_df.head())
-
-        # Assert the each file got processed
-        # assert self.check_files_got_processed(file_paths,file_processor)
+    
 
     def test_process_row(self, setup_field_processor: FieldProcessorHF):
         field_processor = setup_field_processor
@@ -247,7 +216,7 @@ class TestFieldProcessorHF:
 
         processed_row = field_processor.process_row(row)
 
-        print("HEYYYYYYY", processed_row["fair4ml:ethicalLegalSocial"])
+        # print("HEYYYYYYY", processed_row["fair4ml:ethicalLegalSocial"])
 
         assert processed_row["fair4ml:ethicalLegalSocial"] == [
             {
@@ -265,6 +234,8 @@ class TestFieldProcessorHF:
                 "extraction_time": curr_date,
             }
         ]
+        print("HEYYYYYYY", processed_row["fair4ml:hasCO2eEmissions"])
+        
         assert processed_row["fair4ml:hasCO2eEmissions"] == [
             {
                 "data": "Not extracted",
@@ -492,19 +463,6 @@ class TestFieldProcessorHF:
             }
         ]
 
-    def test_process_property_invalid_property_name(self, setup_field_processor):
-        field_processor = setup_field_processor
-        property_description_M4ML = pd.Series(
-            {"Property": "invalid_property", "Source": "invalid_source"}
-        )
-        info_HF = pd.Series()
-
-        processed_value = field_processor.process_property(
-            property_description_M4ML, info_HF
-        )
-
-        assert processed_value == ""
-
     def test_process_softwareRequirements(self, setup_field_processor):
         field_processor = setup_field_processor
         curr_date = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
@@ -521,7 +479,9 @@ class TestFieldProcessorHF:
             }
         )
 
-        processed_value = field_processor.process_softwareRequirements(info_HF)
+        field_processor.current_row = info_HF
+        
+        processed_value = field_processor.process_softwareRequirements()
         print("Processed value: ", processed_value)
         assert processed_value == [
             {
@@ -566,7 +526,8 @@ class TestFieldProcessorHF:
             }
         )
 
-        processed_value = field_processor.process_trainedOn(info_HF)
+        field_processor.current_row = info_HF
+        processed_value = field_processor.process_trainedOn()
 
         assert processed_value == [
             {"data": ["dataset1"], "extraction_method": "parsed", "confidence": 1.0},
@@ -589,9 +550,8 @@ class TestFieldProcessorHF:
             }
         )
 
-        processed_value = field_processor.build_HF_link(
-            info_HF, tail_info="/discussions"
-        )
+        field_processor.current_row = info_HF
+        processed_value = field_processor.build_HF_link(tail_info="/discussions")
 
         assert processed_value == [
             {
@@ -616,7 +576,8 @@ class TestFieldProcessorHF:
             }
         )
 
-        processed_value = field_processor.find_value_in_HF(info_HF, "q_id_0")
+        field_processor.current_row = info_HF
+        processed_value = field_processor.find_value_in_HF("q_id_0")
 
         assert processed_value == [
             {"data": "model_name", "extraction_method": "parsed", "confidence": 1.0}
@@ -635,3 +596,102 @@ class TestFieldProcessorHF:
             "confidence": 0.8,
             "extraction_time": processed_value["extraction_time"],
         }
+
+    def test_apply_transformation_basic(self, setup_field_processor):
+        """Test basic transformation without parameters"""
+        field_processor = setup_field_processor
+        
+        # Mock input data
+        row = pd.Series({
+            "q_id_0": [{
+                "data": "test_model",
+                "extraction_method": "parsed",
+                "confidence": 1.0,
+                "extraction_time": "2024-01-01"
+            }]
+        })
+        
+        transformation = pd.Series({
+            'transformation_function': 'find_value_in_HF',
+            'parameters': '{"property_name": "q_id_0"}',
+            'target_column': 'schema.org:name'
+        })
+        
+        result = field_processor.apply_transformation(row, transformation)
+        
+        assert result == [{
+            "data": "test_model",
+            "extraction_method": "parsed",
+            "confidence": 1.0,
+            "extraction_time": "2024-01-01"
+        }]
+
+    def test_apply_transformation_with_link_building(self, setup_field_processor):
+        """Test transformation that builds HF links"""
+        field_processor = setup_field_processor
+        
+        row = pd.Series({
+            "q_id_0": [{
+                "data": "test_model",
+                "extraction_method": "parsed",
+                "confidence": 1.0,
+                "extraction_time": "2024-01-01"
+            }]
+        })
+        
+        transformation = pd.Series({
+            'transformation_function': 'build_HF_link',
+            'parameters': '{"tail_info": "/discussions"}',
+            'target_column': 'schema.org:discussionUrl'
+        })
+        
+        result = field_processor.apply_transformation(row, transformation)
+        
+        assert result[0]["data"] == "https://huggingface.co/test_model/discussions"
+        assert result[0]["extraction_method"] == "Built in transform stage"
+        assert result[0]["confidence"] == 1.0
+
+    def test_apply_transformation_not_extracted(self, setup_field_processor):
+        """Test transformation for not extracted fields"""
+        field_processor = setup_field_processor
+        
+        row = pd.Series()
+        transformation = pd.Series({
+            'transformation_function': 'process_not_extracted',
+            'parameters': None,
+            'target_column': 'fair4ml:hasCO2eEmissions'
+        })
+        
+        result = field_processor.apply_transformation(row, transformation)
+        
+        assert result[0]["data"] == "Not extracted"
+        assert result[0]["extraction_method"] == "None"
+        assert result[0]["confidence"] == 1.0
+
+    def test_apply_transformation_invalid_function(self, setup_field_processor):
+        """Test handling of invalid transformation function"""
+        field_processor = setup_field_processor
+        
+        row = pd.Series()
+        transformation = pd.Series({
+            'transformation_function': 'non_existent_function',
+            'parameters': None,
+            'target_column': 'test'
+        })
+        
+        with pytest.raises(KeyError):
+            field_processor.apply_transformation(row, transformation)
+
+    def test_apply_transformation_invalid_parameters(self, setup_field_processor):
+        """Test handling of invalid JSON parameters"""
+        field_processor = setup_field_processor
+        
+        row = pd.Series()
+        transformation = pd.Series({
+            'transformation_function': 'find_value_in_HF',
+            'parameters': '{invalid_json',
+            'target_column': 'test'
+        })
+        
+        with pytest.raises(json.JSONDecodeError):
+            field_processor.apply_transformation(row, transformation)

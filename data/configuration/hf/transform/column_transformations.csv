@@ -29,6 +29,6 @@ codemeta:readme,build_HF_link,{"tail_info": "/blob/main/README.md"}
 schema.org:discussionUrl,build_HF_link,{"tail_info": "/discussions"}
 schema.org:identifier,build_HF_link,{"tail_info": ""}
 schema.org:url,build_HF_link,{"tail_info": ""}
-fair4ml:trained,process_trainedOn,{}, depends on q_id_4 q_id_6 q_id_7
-fair4ml:softwareRequirements,process_softwareRequirements,{}, depends on q_id_17
+fair4ml:trainedOn,process_trainedOn,{}, depends on q_id_4 q_id_6 q_id_7
+schema.org:softwareRequirements,process_softwareRequirements,{}, depends on q_id_17
 fair4ml:hasCO2eEmissions,process_not_extracted,{}
