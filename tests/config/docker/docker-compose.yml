@@ -65,7 +65,7 @@ services:
     ports:
       - '5432:5432'
     volumes:
-      - ../postgres/sql_files/test_init.sql:/docker-entrypoint-initdb.d/init.sql   
+      - ../../fixtures/dbs/postgres/sql_files/test_init.sql:/docker-entrypoint-initdb.d/init.sql   
   
   virtuoso:
     profiles:
@@ -80,7 +80,7 @@ services:
     environment:
       DBA_PASSWORD: my_strong_password
     volumes:
-      - ../virtuoso:/opt/virtuoso-opensource/database
+      - ../../fixtures/dbs/virtuoso:/opt/virtuoso-opensource/database
 
   elastic:
     profiles:
@@ -105,7 +105,7 @@ services:
         soft: -1
         hard: -1
     volumes:
-      - ../elastic:/var/lib/elasticsearch/data
+      - ../../fixtures/dbs/elastic:/var/lib/elasticsearch/data
     ports:
       - 9200:9200
       - 9300:9300

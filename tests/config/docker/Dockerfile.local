@@ -15,10 +15,15 @@ COPY ./tests/scripts/wait-for-it.sh ./wait-for-it.sh
 RUN chmod +x ./wait-for-it.sh
 
 COPY /code/extractors /app_test/extractors
-RUN pip3 install -e /app_test/extractors
+WORKDIR /app_test/extractors
+RUN pip3 install -e .
 
 COPY /code/transform /app_test/transform
-RUN pip3 install -e /app_test/transform
+WORKDIR /app_test/transform
+RUN pip3 install -e .
 
 COPY /code/load /app_test/load
-RUN pip3 install -e /app_test/load
+WORKDIR /app_test/load
+RUN pip3 install -e .
+
+WORKDIR /app_test
