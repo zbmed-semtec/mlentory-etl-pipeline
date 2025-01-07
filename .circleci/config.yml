@@ -41,7 +41,7 @@ jobs:
           command: |
             chmod +x ./validate_tests.sh
             chmod +x ./wait-for-it.sh
-          working_directory: ./tests
+          working_directory: ./tests/scripts
       - run:
           name: Check linting in the code folder
           command: |
@@ -51,11 +51,11 @@ jobs:
       - run:
           name: Build the container architecture
           command: docker-compose --profile test build
-          working_directory: ./tests
+          working_directory: ./tests/config/docker
       - run:
           name: Run the project tests.
-          working_directory: ./tests
           command: sh validate_tests.sh
+          working_directory: ./tests/scripts
       # - docker-compose logs -f
 
 

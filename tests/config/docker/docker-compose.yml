@@ -34,17 +34,16 @@ services:
       - ci_test
     container_name: ci_test
     build: 
-      context: .
-      dockerfile: ./Dockerfile.remote  # Path to test Dockerfile
-    # Define volumes to mount extractor scripts or dependencies
-    # environment:
-    #   - VIRTUOSO_CONTAINER_NAME=tests-virtuoso-1
+      context: ../../../
+      dockerfile: ./tests/config/docker/Dockerfile.remote  # Path to test Dockerfile
     volumes:
-      - ../../unit:/app_test/unit_tests
-      - ../code/transform:/app_test/transform
-      - ../code/extractors:/app_test/extractors
-      - ../code/load:/app_test/load
-      - ../code/config_data:/app_test/config_data
+      - ../../unit:/app_test/unit
+      - ../../fixtures:/app_test/fixtures
+      - ../../config:/app_test/config
+      - ../../../code/extractors:/app_test/extractors
+      - ../../../code/transform:/app_test/transform
+      - ../../../code/load:/app_test/load
+
       - /var/run/docker.sock:/var/run/docker.sock
     dns:
       - 1.1.1.1
