@@ -54,7 +54,7 @@ jobs:
           working_directory: ./tests/config/docker
       - run:
           name: Run the project tests.
-          command: sh validate_tests.sh
+          command: bash validate_tests.sh
           working_directory: ./tests/scripts
       # - docker-compose logs -f
 
