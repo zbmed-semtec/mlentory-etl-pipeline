@@ -14,10 +14,10 @@ services:
     volumes:
       - ../../unit:/app_test/unit
       - ../../fixtures:/app_test/fixtures
+      - ../../config:/app_test/config
       - ../../../code/extractors:/app_test/extractors
       - ../../../code/transform:/app_test/transform
       - ../../../code/load:/app_test/load
-      - ../../../data/configuration:/app_test/configuration
 
       - /var/run/docker.sock:/var/run/docker.sock
     # env_file:

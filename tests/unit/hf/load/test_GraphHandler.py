@@ -13,22 +13,22 @@ from rdflib import Graph, URIRef, Literal, BNode
 from datetime import datetime
 
 sys.path.append(".")
-from load.core.GraphHandler import GraphHandler
-from load.core.dbHandler.SQLHandler import SQLHandler
-from load.core.dbHandler.RDFHandler import RDFHandler
-from load.core.dbHandler.IndexHandler import IndexHandler
+from mlentory_loader.core import GraphHandler
+from mlentory_loader.dbHandler import RDFHandler, SQLHandler, IndexHandler
 
 
 class TestGraphHandler:
     """
     Test class for GraphHandler
     """
-
+    
     @classmethod
     def setup_class(self):
-        self.m4ml_example_dataframe = pd.read_json(
-            "./tests/Test_files/load_files/hf_transformed_fair4ml_example.json"
-        )
+        """
+        Setup the class
+        """
+        current_dir = os.path.dirname(os.path.abspath(__file__))
+        self.source_path = os.path.join(current_dir, "..", "..", "..")
 
     @pytest.fixture
     def setup_sql_handler(self) -> SQLHandler:
@@ -47,7 +47,7 @@ class TestGraphHandler:
 
     @pytest.fixture
     def setup_virtuoso_handler(self) -> RDFHandler:
-        kg_files_directory = "./tests/Test_files/load_files/virtuoso_data/kg_files"
+        kg_files_directory = f"{self.source_path}/fixtures/dbs/virtuoso/kg_files"
 
         rdfHandler = RDFHandler(
             container_name="virtuoso",
@@ -80,13 +80,21 @@ class TestGraphHandler:
         mock_SQLHandler = Mock(spec=SQLHandler)
         mock_RDFHandler = Mock(spec=RDFHandler)
         mock_IndexHandler = Mock(spec=IndexHandler)
+        
+        
         graph_handler = GraphHandler(
             mock_SQLHandler,
             mock_RDFHandler,
             mock_IndexHandler,
-            kg_files_directory="./tests/Test_files/load_files/virtuoso_data/kg_files",
+            kg_files_directory=f"{self.source_path}/fixtures/dbs/virtuoso/kg_files",
         )
-        graph_handler.load_df(self.m4ml_example_dataframe)
+        
+        
+        m4ml_example_dataframe = pd.read_json(
+            f"{self.source_path}/fixtures/data/hf_transformed_fair4ml_example.json"
+        )
+        
+        graph_handler.load_df(m4ml_example_dataframe)
         return graph_handler
 
     @pytest.fixture
@@ -254,7 +262,7 @@ class TestGraphHandler:
         graph_handler = setup_graph_handler
         # Read dataframe from json file
         self.create_graph(
-            source_file_path="./tests/Test_files/load_files/hf_transformed_fair4ml_example_small_1.json",
+            source_file_path=f"{self.source_path}/fixtures/data/hf_transformed_fair4ml_example_small_1.json",
             graph_handler=graph_handler,
         )
 
@@ -273,7 +281,7 @@ class TestGraphHandler:
         # the same models are loaded again but with changes in their properties.
         graph_handler = setup_graph_handler
         self.create_graph(
-            source_file_path="./tests/Test_files/load_files/hf_transformed_fair4ml_example_small_1.json",
+            source_file_path=f"{self.source_path}/fixtures/data/hf_transformed_fair4ml_example_small_1.json",
             graph_handler=graph_handler,
         )
 
@@ -288,7 +296,7 @@ class TestGraphHandler:
         )
 
         self.create_graph(
-            source_file_path="./tests/Test_files/load_files/hf_transformed_fair4ml_example_small_2.json",
+            source_file_path=f"{self.source_path}/fixtures/data/hf_transformed_fair4ml_example_small_2.json",
             graph_handler=graph_handler,
         )
 
@@ -305,7 +313,7 @@ class TestGraphHandler:
     def test_small_graph_add_new_models(self, setup_graph_handler: GraphHandler):
         graph_handler = setup_graph_handler
         self.create_graph(
-            source_file_path="./tests/Test_files/load_files/hf_transformed_fair4ml_example_small_1.json",
+            source_file_path=f"{self.source_path}/fixtures/data/hf_transformed_fair4ml_example_small_1.json",
             graph_handler=graph_handler,
         )
         self.assert_dbs_states(
@@ -319,7 +327,7 @@ class TestGraphHandler:
         )
 
         self.create_graph(
-            source_file_path="./tests/Test_files/load_files/hf_transformed_fair4ml_example_small_3.json",
+            source_file_path=f"{self.source_path}/fixtures/data/hf_transformed_fair4ml_example_small_3.json",
             graph_handler=graph_handler,
         )
 
@@ -338,7 +346,7 @@ class TestGraphHandler:
     ):
         graph_handler = setup_graph_handler
         self.create_graph(
-            source_file_path="./tests/Test_files/load_files/hf_transformed_fair4ml_example_small_1.json",
+            source_file_path=f"{self.source_path}/fixtures/data/hf_transformed_fair4ml_example_small_1.json",
             graph_handler=graph_handler,
         )
 
@@ -353,7 +361,7 @@ class TestGraphHandler:
         )
 
         self.create_graph(
-            source_file_path="./tests/Test_files/load_files/hf_transformed_fair4ml_example_small_3.json",
+            source_file_path=f"{self.source_path}/fixtures/data/hf_transformed_fair4ml_example_small_3.json",
             graph_handler=graph_handler,
         )
 
@@ -368,7 +376,7 @@ class TestGraphHandler:
         )
 
         self.create_graph(
-            source_file_path="./tests/Test_files/load_files/hf_transformed_fair4ml_example_small_2.json",
+            source_file_path=f"{self.source_path}/fixtures/data/hf_transformed_fair4ml_example_small_2.json",
             graph_handler=graph_handler,
         )
 
@@ -436,7 +444,7 @@ class TestGraphHandler:
     def test_small_graph_multiple_deprecations(self, setup_graph_handler: GraphHandler):
         graph_handler = setup_graph_handler
         self.create_graph(
-            source_file_path="./tests/Test_files/load_files/hf_transformed_fair4ml_example_small_1.json",
+            source_file_path=f"{self.source_path}/fixtures/data/hf_transformed_fair4ml_example_small_1.json",
             graph_handler=graph_handler,
         )
 
@@ -451,7 +459,7 @@ class TestGraphHandler:
         )
 
         self.create_graph(
-            source_file_path="./tests/Test_files/load_files/hf_transformed_fair4ml_example_small_4.json",
+            source_file_path=f"{self.source_path}/fixtures/data/hf_transformed_fair4ml_example_small_4.json",
             graph_handler=graph_handler,
         )
 
@@ -468,7 +476,7 @@ class TestGraphHandler:
     def test_large_dataset(self, setup_graph_handler: GraphHandler):
         graph_handler = setup_graph_handler
         self.create_graph(
-            "./tests/Test_files/load_files/hf_transformed_fair4ml_example.json",
+            f"{self.source_path}/fixtures/data/hf_transformed_fair4ml_example.json",
             graph_handler,
         )
 

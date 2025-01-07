@@ -21,7 +21,7 @@ class TestFieldProcessorHF:
     def setup_field_processor(self) -> FieldProcessorHF:
         current_dir = os.path.dirname(os.path.abspath(__file__))
         # Navigate up 3 levels and into configuration
-        config_path = os.path.join(current_dir, "..", "..", "..", "configuration", "hf", "transform") 
+        config_path = os.path.join(current_dir, "..", "..", "..", "config", "hf", "transform") 
         
         new_schema = pd.read_csv(f"{config_path}/M4ML_schema.tsv", sep="\t")
         transformations = pd.read_csv(f"{config_path}/column_transformations.csv", lineterminator='\n', sep=",")

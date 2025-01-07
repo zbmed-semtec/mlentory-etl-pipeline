@@ -1,13 +1,14 @@
+import numpy as np
+np.float_ = np.float64
 import pytest
-import sys
+import os
 import pandas as pd
 from typing import List, Tuple
 from unittest.mock import Mock
 from pandas import Timestamp
 
-sys.path.append(".")
-from load.core.dbHandler.IndexHandler import IndexHandler
-from load.core.GraphHandler import GraphHandler
+from mlentory_loader.core import GraphHandler
+from mlentory_loader.dbHandler import IndexHandler
 
 
 class TestIndexHandler:
@@ -17,14 +18,17 @@ class TestIndexHandler:
 
     @classmethod
     def setup_class(self):
+        current_dir = os.path.dirname(os.path.abspath(__file__))
+        self.source_path = os.path.join(current_dir, "..", "..", "..")
+        
         self.m4ml_example_dataframe = pd.read_json(
-            "./tests/Test_files/load_files/hf_transformed_fair4ml_example.json"
+            f"{self.source_path}/fixtures/data/hf_transformed_fair4ml_example.json"
         )
         self.graph_handler = GraphHandler(
             SQLHandler=Mock(),
             RDFHandler=Mock(),
             IndexHandler=Mock(),
-            kg_files_directory="./tests/Test_files/load_files/kg_files",
+            kg_files_directory=f"{self.source_path}/fixtures/dbs/virtuoso/kg_files",
         )
 
     @pytest.fixture

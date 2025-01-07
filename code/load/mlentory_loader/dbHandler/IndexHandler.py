@@ -1,7 +1,7 @@
 import os
 import numpy as np
-
 np.float_ = np.float64
+
 import pandas as pd
 from elasticsearch import Elasticsearch
 from elasticsearch_dsl import Search, Q, tokenizer

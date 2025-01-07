@@ -48,16 +48,13 @@ class TestModelCardQAParser:
         print(current_dir)
         
         
-        config_path = os.path.join(current_dir, "..", "..", "..", "configuration")  # Navigate up 3 levels and into configuration
-    
-        # For debugging, you can print the resolved path
-        print(f"Looking for config files in: {config_path}")
+        config_path = os.path.join(current_dir, "..", "..", "..", "config", "hf", "extract")  # Navigate up 3 levels and into configuration
 
-        questions = load_tsv_file_to_list(os.path.join(config_path, "hf", "extract", "questions.tsv"))
-        tags_language = load_tsv_file_to_list(os.path.join(config_path, "hf", "extract", "tags_language.tsv"))
-        tags_libraries = load_tsv_file_to_list(os.path.join(config_path, "hf", "extract", "tags_libraries.tsv"))
-        tags_other = load_tsv_file_to_list(os.path.join(config_path, "hf", "extract", "tags_other.tsv"))
-        tags_task = load_tsv_file_to_list(os.path.join(config_path, "hf", "extract", "tags_task.tsv"))
+        questions = load_tsv_file_to_list(os.path.join(config_path, "questions.tsv"))
+        tags_language = load_tsv_file_to_list(os.path.join(config_path, "tags_language.tsv"))
+        tags_libraries = load_tsv_file_to_list(os.path.join(config_path, "tags_libraries.tsv"))
+        tags_other = load_tsv_file_to_list(os.path.join(config_path, "tags_other.tsv"))
+        tags_task = load_tsv_file_to_list(os.path.join(config_path, "tags_task.tsv"))
         
         # Initialize extractor with configuration
         parser = ModelCardQAParser(

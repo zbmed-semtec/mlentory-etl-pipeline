@@ -1,5 +1,6 @@
 import pytest
 import sys
+import os
 from rdflib import Graph, URIRef, Literal
 import pytest
 import pandas as pd
@@ -7,9 +8,7 @@ from unittest.mock import Mock, patch
 from typing import Dict, Any
 import psycopg2
 
-
-sys.path.append(".")
-from load.core.dbHandler.SQLHandler import SQLHandler
+from mlentory_loader.dbHandler.SQLHandler import SQLHandler
 
 
 class TestSQLHandler:

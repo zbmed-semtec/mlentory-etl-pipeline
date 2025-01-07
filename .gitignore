@@ -29,9 +29,9 @@ deployment/scheduler/logs
 deployment/scheduler/sql_config_files
 .env
 
-tests/config/virtuoso
-tests/config/postgres
-tests/config/elastic
+tests/fixtures/dbs/virtuoso
+tests/fixtures/dbs/postgres
+tests/fixtures/dbs/elastic
 
 deployment/hf_etl/outputs/
 data/datasets/

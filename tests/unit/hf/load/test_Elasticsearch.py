@@ -1,5 +1,4 @@
 import numpy as np
-
 np.float_ = np.float64
 import pytest
 from elasticsearch import Elasticsearch
@@ -24,22 +23,23 @@ from elasticsearch_dsl import (
 class TestElasticsearch:
     @pytest.fixture
     def es_client(self):
-        # Connect to the Elasticsearch container
-        # client = Elasticsearch(["http://elastic:9200"])
+        """
+        Create a new Elasticsearch client
+        """
         client = Elasticsearch(
             [{"host": "elastic", "port": 9200, "scheme": "http"}],
             basic_auth=("elastic", "changeme"),
         )
 
-        # print(client.info())
         yield client
         # Clean up all indexes after test
         self.clean_indices(client)
 
-        # client.indices.refresh()
-
     @pytest.fixture
     def book_es_client(self, es_client):
+        """
+        Create a new index and add some documents to it
+        """
 
         Book.init(index="book_index", using=es_client)
 
@@ -199,21 +199,15 @@ class TestElasticsearch:
 
         assert result["hits"]["total"]["value"] == 2
 
-        # q = Q("nested", path="author", query=Q("match", author__name="Author2"))
-        # s = Search(using=book_es_client, index="book_index").query(q)
-
         s = (
             Search(using=book_es_client, index="book_index")
             .query(Q("match", title="Boo"))
             .query(
                 Q("nested", path="author", query=Q("range", author__age={"gte": 40}))
             )
-            # .filter("range", author__age={"gte": 40})
         )
 
         result = s.execute()
-
-        # print("INDEX Mapping: ", book_es_client.indices.get_mapping(index="book_index"))
 
         assert result["hits"]["total"]["value"] == 2
 
@@ -227,8 +221,6 @@ class TestElasticsearch:
         documents = result["hits"]["hits"]
 
         for doc in documents:
-            # dict_keys(['_index', '_type', '_id', '_score', '_source'])
-
             print(doc["_type"])
             print(doc["_source"])
 

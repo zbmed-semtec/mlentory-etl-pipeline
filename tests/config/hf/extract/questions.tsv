@@ -1,0 +1,32 @@
+0
+What is the name of the model?
+What user shared the model?
+When was the model created/uploaded?
+What tasks can the model solve?
+What datasets was the model trained on?
+What was the split distribution for the datasets?
+What datasets were used to finetune the model?
+What datasets were used to retrain the model?
+What model is used as the base model?
+What evaluation metrics were used?
+What were the values of the evaluation metrics?
+What hyperparameters were optimized during the training process?
+What hyperparameters values were selected?
+What publications are related to the model?
+Where is the model deployed?
+What use license is associated with the model?
+What languages does the model work with?
+What software libraries were used for the model to work?
+Who created the model?
+What other datasets where used to test the model?
+What is the intended use of the model?
+What are the risks and biases of the model?
+How can the model be executed?
+What are the processor requirements to run the model?
+Who are the authors of the model?
+What are the conditions of access of the model?
+When was the last time the model was updated?
+How is the project being funded?
+What is the current version of the Model?
+What are the memory requirements of the model?
+What are the README.md file associated with the model?
