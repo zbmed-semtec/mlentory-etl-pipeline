@@ -7,6 +7,8 @@ cd "$SCRIPT_DIR/../config/docker"
 docker-compose --profile=test build
 docker-compose --profile=test up -d
 
+"$SCRIPT_DIR/wait-for-it.sh" postgres:5432
+
 docker exec local_test pytest ./unit
 
 EXIT_CODE=$?

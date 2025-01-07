@@ -14,10 +14,6 @@ docker exec ci_test pytest ./unit
 
 EXIT_CODE=$?
 
-
-
-
-
 docker-compose --profile=ci_test down
 
 exit $EXIT_CODE
