@@ -50,7 +50,7 @@ jobs:
           working_directory: ./tests
       - run:
           name: Build the container architecture
-          command: docker-compose --profile test build
+          command: docker-compose --profile ci_test build
           working_directory: ./tests/config/docker
       - run:
           name: Run the project tests.
