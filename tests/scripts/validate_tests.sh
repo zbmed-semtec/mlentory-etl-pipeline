@@ -8,9 +8,15 @@ docker-compose --profile=ci_test up -d
 
 "$SCRIPT_DIR/wait-for-it.sh" postgres:5432
 
+docker logs postgres
+
 docker exec ci_test pytest ./unit
 
 EXIT_CODE=$?
+
+
+
+
 
 docker-compose --profile=ci_test down
 
