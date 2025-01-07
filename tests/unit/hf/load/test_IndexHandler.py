@@ -1,4 +1,5 @@
 import numpy as np
+
 np.float_ = np.float64
 import pytest
 import os
@@ -20,7 +21,7 @@ class TestIndexHandler:
     def setup_class(self):
         current_dir = os.path.dirname(os.path.abspath(__file__))
         self.source_path = os.path.join(current_dir, "..", "..", "..")
-        
+
         self.m4ml_example_dataframe = pd.read_json(
             f"{self.source_path}/fixtures/data/hf_transformed_fair4ml_example.json"
         )

@@ -24,7 +24,7 @@ def setup_logging():
     base_log_path = "./hf_etl/execution_logs"
     os.makedirs(base_log_path, exist_ok=True)
     logging_filename = f"{base_log_path}/transform_{timestamp}.log"
-    
+
     logging.basicConfig(
         filename=logging_filename,
         filemode="w",
@@ -34,13 +34,14 @@ def setup_logging():
     logger = logging.getLogger(__name__)
     logger.setLevel(logging.INFO)
 
+
 def initialize_extractor(config_path: str):
     """
     Initializes the extractor with the configuration data.
-    
+
     Args:
         config_path (str): The path to the configuration data.
-        
+
     Returns:
         HFExtractor: The extractor instance.
     """
@@ -58,13 +59,14 @@ def initialize_extractor(config_path: str):
         tags_task=tags_task,
     )
 
+
 def initialize_load_processor(kg_files_directory: str):
     """
     Initializes the load processor with the configuration data.
-    
+
     Args:
         kg_files_directory (str): The path to the kg files directory.
-        
+
     Returns:
         LoadProcessor: The load processor instance.
     """
@@ -101,35 +103,40 @@ def initialize_load_processor(kg_files_directory: str):
 
     # Initializing the load processor
     return LoadProcessor(
-            SQLHandler=sqlHandler,
-            RDFHandler=rdfHandler,
-            IndexHandler=elasticsearchHandler,
-            GraphHandler=graphHandler,
-            kg_files_directory=kg_files_directory,
-        )
-    
+        SQLHandler=sqlHandler,
+        RDFHandler=rdfHandler,
+        IndexHandler=elasticsearchHandler,
+        GraphHandler=graphHandler,
+        kg_files_directory=kg_files_directory,
+    )
+
+
 def main():
     setup_logging()
     # Load configuration data
     config_path = "./configuration/hf"  # Path to configuration folder
-    kg_files_directory = "./../kg_files" # Path to kg files directory
-    
+    kg_files_directory = "./../kg_files"  # Path to kg files directory
+
     extractor = initialize_extractor(config_path)
-    
+
     # Download and process models
     extracted_df = extractor.download_models(
         num_models=5,  # Start with a small number for testing
         # output_dir="/transform_queue",  # Mount point in container
         save_original=False,
-        save_result_in_json=False
+        save_result_in_json=False,
     )
-    
+
     # Initializing the updater
     new_schema = pd.read_csv(f"{config_path}/transform/M4ML_schema.tsv", sep="\t")
-    transformations = pd.read_csv(f"{config_path}/transform/column_transformations.csv", lineterminator='\n', sep=",")
+    transformations = pd.read_csv(
+        f"{config_path}/transform/column_transformations.csv",
+        lineterminator="\n",
+        sep=",",
+    )
     fields_processor_HF = FieldProcessorHF(new_schema, transformations)
     processed_models = []
-    
+
     for row_num, row in tqdm(
         extracted_df.iterrows(), total=len(extracted_df), desc="Transforming progress"
     ):
@@ -137,11 +144,10 @@ def main():
         processed_models.append(model_data)
 
     m4ml_models_df = pd.DataFrame(list(processed_models))
-    
+
     # Initialize the load processor
     load_processor = initialize_load_processor(kg_files_directory)
     load_processor.update_dbs_with_df(df=m4ml_models_df)
-    
 
 
 if __name__ == "__main__":

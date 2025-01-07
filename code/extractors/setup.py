@@ -10,7 +10,7 @@ setup(
         "datasets",
         "torch",
         "huggingface-hub",
-        "tqdm"
+        "tqdm",
     ],
     python_requires=">=3.8.10",
     author="Nelson Q",
@@ -25,4 +25,4 @@ setup(
         "Programming Language :: Python :: 3.10",
         "Programming Language :: Python :: 3.11",
     ],
-) 
+)

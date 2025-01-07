@@ -27,7 +27,7 @@ class ModelCardQAParser:
     ) -> None:
         """
         Initialize the Model Card QA Parser
-        
+
         Args:
             qa_model (str): Model to use for QA-based information extraction
             questions (list[str]): List of questions to extract information
@@ -39,6 +39,7 @@ class ModelCardQAParser:
         # Check for GPU availability
         try:
             import torch
+
             if torch.cuda.is_available():
                 self.device = 0
                 print("\nUSING GPU\n")
@@ -55,7 +56,7 @@ class ModelCardQAParser:
         self.tags_other = set(tag.lower() for tag in tags_other)
         self.tags_task = set(tag.lower() for tag in tags_task)
         self.questions = questions
-        
+
         self.available_questions = {f"q_id_{id}" for id in range(len(self.questions))}
 
         # Initializing HF API
@@ -64,7 +65,9 @@ class ModelCardQAParser:
         # Assigning the question answering pipeline
         self.qa_model = qa_model
         if self.device is not None:
-            self.qa_pipeline = pipeline("question-answering", model=qa_model, device=self.device)
+            self.qa_pipeline = pipeline(
+                "question-answering", model=qa_model, device=self.device
+            )
         else:
             self.qa_pipeline = pipeline("question-answering", model=qa_model)
 

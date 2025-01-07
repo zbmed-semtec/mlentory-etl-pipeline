@@ -18,7 +18,7 @@ class FieldProcessorHF:
     def __init__(self, new_schema: pd.DataFrame, transformations: pd.DataFrame):
         """
         Initialize the FieldProcessorHF with configuration data.
-        
+
         Args:
             new_schema (pd.DataFrame): The new schema to be used
             transformations (pd.DataFrame): The transformations to be applied
@@ -27,32 +27,32 @@ class FieldProcessorHF:
         self.transformations = transformations
         # Map of available transformation functions
         self.transformation_functions = {
-            'find_value_in_HF': self.find_value_in_HF,
-            'build_HF_link': self.build_HF_link,
-            'process_trainedOn': self.process_trainedOn,
-            'process_softwareRequirements': self.process_softwareRequirements,
-            'process_not_extracted': self.process_not_extracted
+            "find_value_in_HF": self.find_value_in_HF,
+            "build_HF_link": self.build_HF_link,
+            "process_trainedOn": self.process_trainedOn,
+            "process_softwareRequirements": self.process_softwareRequirements,
+            "process_not_extracted": self.process_not_extracted,
         }
-        
+
         self.current_row = None
-    
+
     def process_row(self, row: pd.Series) -> pd.Series:
         """
         Process a row using the transformation mappings.
         """
         result = pd.Series()
-        
+
         # Apply each transformation
         for _, transform in self.transformations.iterrows():
-            target_column = transform['target_column']
+            target_column = transform["target_column"]
             result[target_column] = self.apply_transformation(row, transform)
-            
+
         return result
 
     def apply_transformation(self, row: pd.Series, transformation: pd.Series) -> Any:
         """
         Apply a transformation to a row based on the transformation configuration.
-        
+
         Args:
             row: Input row containing source data
             transformation: Series containing transformation configuration
@@ -60,16 +60,15 @@ class FieldProcessorHF:
             Transformed value
         """
         self.current_row = row
-        func_name = transformation['transformation_function']
+        func_name = transformation["transformation_function"]
         func = self.transformation_functions[func_name]
-        
+
         # Parse parameters if they exist
         params = {}
-        if pd.notna(transformation['parameters']):
-            params = json.loads(transformation['parameters'])
-        
-        return func(**params)
+        if pd.notna(transformation["parameters"]):
+            params = json.loads(transformation["parameters"])
 
+        return func(**params)
 
     def find_value_in_HF(self, property_name: str):
         """
@@ -81,7 +80,9 @@ class FieldProcessorHF:
         """
 
         prefix = property_name
-        column_with_prefix = list(filter(lambda x: x.startswith(prefix), self.current_row.index))
+        column_with_prefix = list(
+            filter(lambda x: x.startswith(prefix), self.current_row.index)
+        )
         processed_value = self.current_row[column_with_prefix[0]]
         return processed_value
 
@@ -94,7 +95,6 @@ class FieldProcessorHF:
         link = "https://huggingface.co/" + model_name + tail_info
         # print("Link: ",link)
         return [self.add_default_extraction_info(link, "Built in transform stage", 1.0)]
-
 
     def process_softwareRequirements(self) -> List:
 
@@ -134,13 +134,15 @@ class FieldProcessorHF:
         processed_values.extend(q7_values)
 
         return processed_values
-    
+
     def process_not_extracted(self) -> Dict:
-        return [self.add_default_extraction_info(
-            data="Not extracted",
-            extraction_method="None",
-            confidence=1.0,
-        )]
+        return [
+            self.add_default_extraction_info(
+                data="Not extracted",
+                extraction_method="None",
+                confidence=1.0,
+            )
+        ]
 
     def add_default_extraction_info(
         self, data: str, extraction_method: str, confidence: float

@@ -1,3 +1,3 @@
 from .HFExtractor import HFExtractor
 
-__all__ = ['HFExtractor']
+__all__ = ["HFExtractor"]

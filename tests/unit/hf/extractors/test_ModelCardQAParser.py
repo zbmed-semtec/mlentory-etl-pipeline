@@ -28,10 +28,10 @@ class TestModelCardQAParser:
             tags_language=["en", "fr", "es"],
             tags_libraries=["pytorch", "tensorflow"],
             tags_other=["other-tag"],
-            tags_task=["text-classification", "translation"]
+            tags_task=["text-classification", "translation"],
         )
         return parser
-    
+
     @pytest.fixture
     def parser_full(self) -> ModelCardQAParser:
         """
@@ -40,22 +40,28 @@ class TestModelCardQAParser:
         Returns:
             ModelCardQAParser: An ModelCardQAParser instance
         """
+
         def load_tsv_file_to_list(path: str) -> List[str]:
             return [val[0] for val in pd.read_csv(path, sep="\t").values.tolist()]
-        
+
         current_dir = os.path.dirname(os.path.abspath(__file__))
         print("Current directory:")
         print(current_dir)
-        
-        
-        config_path = os.path.join(current_dir, "..", "..", "..", "config", "hf", "extract")  # Navigate up 3 levels and into configuration
+
+        config_path = os.path.join(
+            current_dir, "..", "..", "..", "config", "hf", "extract"
+        )  # Navigate up 3 levels and into configuration
 
         questions = load_tsv_file_to_list(os.path.join(config_path, "questions.tsv"))
-        tags_language = load_tsv_file_to_list(os.path.join(config_path, "tags_language.tsv"))
-        tags_libraries = load_tsv_file_to_list(os.path.join(config_path, "tags_libraries.tsv"))
+        tags_language = load_tsv_file_to_list(
+            os.path.join(config_path, "tags_language.tsv")
+        )
+        tags_libraries = load_tsv_file_to_list(
+            os.path.join(config_path, "tags_libraries.tsv")
+        )
         tags_other = load_tsv_file_to_list(os.path.join(config_path, "tags_other.tsv"))
         tags_task = load_tsv_file_to_list(os.path.join(config_path, "tags_task.tsv"))
-        
+
         # Initialize extractor with configuration
         parser = ModelCardQAParser(
             qa_model="Intel/dynamic_tinybert",
@@ -65,10 +71,12 @@ class TestModelCardQAParser:
             tags_other=tags_other,
             tags_task=tags_task,
         )
-        
+
         return parser
 
-    def add_base_questions(self, df: pd.DataFrame, parser_simple: ModelCardQAParser) -> pd.DataFrame:
+    def add_base_questions(
+        self, df: pd.DataFrame, parser_simple: ModelCardQAParser
+    ) -> pd.DataFrame:
         """
         Add base questions to a DataFrame
 
@@ -85,7 +93,9 @@ class TestModelCardQAParser:
         }
         return df.assign(**new_columns)
 
-    def test_add_default_extraction_info(self, parser_simple: ModelCardQAParser) -> None:
+    def test_add_default_extraction_info(
+        self, parser_simple: ModelCardQAParser
+    ) -> None:
         """
         Test the add_default_extraction_info method
 
@@ -96,14 +106,16 @@ class TestModelCardQAParser:
         extraction_method = "parser_method"
         confidence = 0.95
 
-        info_dict = parser_simple.add_default_extraction_info(data, extraction_method, confidence)
+        info_dict = parser_simple.add_default_extraction_info(
+            data, extraction_method, confidence
+        )
 
         assert isinstance(info_dict, dict)
         assert info_dict["data"] == data
         assert info_dict["extraction_method"] == extraction_method
         assert info_dict["confidence"] == confidence
         assert "extraction_time" in info_dict
-    
+
     # Check that all the results are being added the extraction info
 
     def test_parse_known_fields_HF(self, parser_full: ModelCardQAParser) -> None:
@@ -121,7 +133,7 @@ class TestModelCardQAParser:
             "last_modified": ["2023-02-01", "2023-02-02"],
             "card": ["card text 1", "card text 2"],
             "tags": [["pytorch", "en"], ["tensorflow", "fr"]],
-            "pipeline_tag": ["text-classification", "translation"]
+            "pipeline_tag": ["text-classification", "translation"],
         }
         mock_df = pd.DataFrame(data)
         mock_df = self.add_base_questions(mock_df, parser_full)
@@ -135,8 +147,7 @@ class TestModelCardQAParser:
         assert parsed_df.loc[0, "q_id_2"][0]["data"] == "2023-01-01"
         assert parsed_df.loc[0, "q_id_26"][0]["data"] == "2023-02-01"
         assert parsed_df.loc[0, "q_id_30"][0]["data"] == "card text 1"
-        
-    
+
     def test_parse_known_fields_HF_empty_dataframe_fails(
         self, parser_full: ModelCardQAParser
     ) -> None:
@@ -170,9 +181,9 @@ class TestModelCardQAParser:
         with pytest.raises(KeyError):
             parsed_df = parser_full.parse_known_fields_HF(HF_df=mock_df.copy())
 
-    
-
-    def test_parse_known_fields_HF_default_info(self, parser_full: ModelCardQAParser) -> None:
+    def test_parse_known_fields_HF_default_info(
+        self, parser_full: ModelCardQAParser
+    ) -> None:
         """
         Test that parse_known_fields_HF adds the expected default info to the DataFrame
 
@@ -208,9 +219,11 @@ class TestModelCardQAParser:
         # Mock DataFrame with tags
         data = {
             "modelId": ["model1"],
-            "tags": [["pytorch", "en", "dataset:dataset1", "license:MIT", "arxiv:1234.5678"]],
+            "tags": [
+                ["pytorch", "en", "dataset:dataset1", "license:MIT", "arxiv:1234.5678"]
+            ],
             "pipeline_tag": ["text-classification"],
-            "card": ["card text"]
+            "card": ["card text"],
         }
         mock_df = pd.DataFrame(data)
         mock_df = self.add_base_questions(mock_df, parser_full)
@@ -225,7 +238,7 @@ class TestModelCardQAParser:
         assert "MIT" in parsed_df.loc[0, "q_id_15"][0]["data"]
         assert "1234.5678" in parsed_df.loc[0, "q_id_13"][0]["data"]
         assert "text classification" in parsed_df.loc[0, "q_id_3"][0]["data"]
-    
+
     def test_parse_fields_from_tags_one_model_all_tags(
         self, parser_full: ModelCardQAParser
     ) -> None:
@@ -342,7 +355,7 @@ class TestModelCardQAParser:
         Args:
             parser (ModelCardQAParser): The ModelCardQAParser object
         """
-        
+
         data = {
             "modelId": ["m1"],
             "tags": [
@@ -397,7 +410,7 @@ class TestModelCardQAParser:
         assert "extraction_time" in answer[0]
         assert answer[0]["data"] == "BERT"
         assert answer[0]["confidence"] > 0.5
-    
+
     def test_answer_multiple_questions(self, parser_full: ModelCardQAParser):
         """
         Tests the answer_question method of the parser class for various scenarios.
@@ -468,7 +481,7 @@ class TestModelCardQAParser:
         assert parsed_df.loc[0, "q_id_11"][0]["data"] == "learning rate and batch size"
         assert parsed_df.loc[0, "q_id_11"][0]["confidence"] > 0.8
         assert parsed_df.loc[0, "q_id_5"][0]["confidence"] < 0.4
-    
+
     # def test_parse_known_fields_HF_finetuned_model(
     #     self, parser_full: ModelCardQAParser
     # ) -> None:

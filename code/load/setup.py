@@ -16,7 +16,7 @@ setup(
         "psycopg2-binary",
         "elasticsearch==7.13.4",
         "elasticsearch-dsl<8.0.0",
-        "tqdm"
+        "tqdm",
     ],
     python_requires=">=3.8.10",
     author="Nelson Q",
@@ -24,4 +24,4 @@ setup(
     description="Loading component for MLENTORY",
     long_description=open("README.md").read(),
     long_description_content_type="text/markdown",
-) 
+)

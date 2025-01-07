@@ -1,8 +1,10 @@
 import pandas as pd
 from extractors.hf_extractor import HFExtractor
 
+
 def load_tsv_file_to_list(path: str) -> list[str]:
     return [val[0] for val in pd.read_csv(path, sep="\t").values.tolist()]
+
 
 if __name__ == "__main__":
     # Load configuration data
@@ -12,7 +14,7 @@ if __name__ == "__main__":
     tags_libraries = load_tsv_file_to_list(f"{config_path}/tags_libraries.tsv")
     tags_other = load_tsv_file_to_list(f"{config_path}/tags_other.tsv")
     tags_task = load_tsv_file_to_list(f"{config_path}/tags_task.tsv")
-    
+
     # Initialize extractor with configuration
     extractor = HFExtractor(
         qa_model="Intel/dynamic_tinybert",
@@ -22,15 +24,15 @@ if __name__ == "__main__":
         tags_other=tags_other,
         tags_task=tags_task,
     )
-    
+
     # Download and process models
     df = extractor.download_models(
         num_models=10,
         output_dir="./outputs",
-        save_original=True, 
-        save_result_in_json=True
+        save_original=True,
+        save_result_in_json=True,
     )
-    
+
     print(f"Processed {len(df)} models")
     print("\nSample results:")
     print(df.head())

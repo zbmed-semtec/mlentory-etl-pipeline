@@ -1,3 +1,3 @@
 from .ModelCardQAParser import ModelCardQAParser
 
-__all__ = ['ModelCardQAParser']
+__all__ = ["ModelCardQAParser"]

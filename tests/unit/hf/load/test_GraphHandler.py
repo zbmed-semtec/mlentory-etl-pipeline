@@ -21,7 +21,7 @@ class TestGraphHandler:
     """
     Test class for GraphHandler
     """
-    
+
     @classmethod
     def setup_class(self):
         """
@@ -80,20 +80,18 @@ class TestGraphHandler:
         mock_SQLHandler = Mock(spec=SQLHandler)
         mock_RDFHandler = Mock(spec=RDFHandler)
         mock_IndexHandler = Mock(spec=IndexHandler)
-        
-        
+
         graph_handler = GraphHandler(
             mock_SQLHandler,
             mock_RDFHandler,
             mock_IndexHandler,
             kg_files_directory=f"{self.source_path}/fixtures/dbs/virtuoso/kg_files",
         )
-        
-        
+
         m4ml_example_dataframe = pd.read_json(
             f"{self.source_path}/fixtures/data/hf_transformed_fair4ml_example.json"
         )
-        
+
         graph_handler.load_df(m4ml_example_dataframe)
         return graph_handler
 
