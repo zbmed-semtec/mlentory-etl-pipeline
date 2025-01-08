@@ -4,6 +4,7 @@ import datetime
 from typing import List
 from tqdm import tqdm
 import os
+import argparse
 
 from extractors.hf_extractor import HFExtractor
 from transform.core.FieldProcessorHF import FieldProcessorHF
@@ -111,8 +112,38 @@ def initialize_load_processor(kg_files_directory: str):
     )
 
 
+def parse_args():
+    parser = argparse.ArgumentParser(description='HuggingFace ETL Process')
+    parser.add_argument('--save-extraction', 
+                       action='store_true',
+                       default=False,
+                       help='Save the results of the extraction phase')
+    parser.add_argument('--save-transformation', 
+                       action='store_true',
+                       default=False,
+                       help='Save the results of the transformation phase')
+    parser.add_argument('--save-load-data', 
+                       action='store_true',
+                       default=False,
+                       help='Save the data that will be loaded into the database')
+    parser.add_argument('--from-date',
+                       type=lambda s: datetime.datetime.strptime(s, '%Y-%m-%d'),
+                       default=datetime.datetime(2000, 1, 1),
+                       help='Download models from this date (format: YYYY-MM-DD)')
+    parser.add_argument('--num-models',
+                       type=int,
+                       default=5,
+                       help='Number of models to download')
+    parser.add_argument('--output-dir',
+                       default='./output',
+                       help='Directory to save intermediate results')
+    return parser.parse_args()
+
+
 def main():
+    args = parse_args()
     setup_logging()
+    
     # Load configuration data
     config_path = "./configuration/hf"  # Path to configuration folder
     kg_files_directory = "./../kg_files"  # Path to kg files directory
@@ -121,11 +152,16 @@ def main():
 
     # Download and process models
     extracted_df = extractor.download_models(
-        num_models=5,  # Start with a small number for testing
-        # output_dir="/transform_queue",  # Mount point in container
+        num_models=args.num_models,  # Start with a small number for testing
+        from_date=args.from_date,  # Pass the from_date parameter
         save_original=False,
         save_result_in_json=False,
     )
+
+    if args.save_extraction:
+        output_path = f"{args.output_dir}/extraction_results.csv"
+        extracted_df.to_csv(output_path, index=False)
+        print(f"Saved extraction results to {output_path}")
 
     # Initializing the updater
     new_schema = pd.read_csv(f"{config_path}/transform/M4ML_schema.tsv", sep="\t")
@@ -145,9 +181,21 @@ def main():
 
     m4ml_models_df = pd.DataFrame(list(processed_models))
 
+    if args.save_transformation:
+        output_path = f"{args.output_dir}/transformation_results.csv"
+        m4ml_models_df.to_csv(output_path, index=False)
+        print(f"Saved transformation results to {output_path}")
+
     # Initialize the load processor
     load_processor = initialize_load_processor(kg_files_directory)
+    
     load_processor.update_dbs_with_df(df=m4ml_models_df)
+    
+    if args.save_load_data:
+        output_path = f"{args.output_dir}/load_data.csv"
+        m4ml_models_df.to_csv(output_path, index=False)
+        print(f"Saved load data to {output_path}")
+    
 
 
 if __name__ == "__main__":
