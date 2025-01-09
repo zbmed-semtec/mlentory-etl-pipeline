@@ -163,7 +163,7 @@ def main():
         extracted_df.to_csv(output_path, index=False)
         print(f"Saved extraction results to {output_path}")
 
-    # Initializing the updater
+    # Initializing the transformation
     new_schema = pd.read_csv(f"{config_path}/transform/M4ML_schema.tsv", sep="\t")
     transformations = pd.read_csv(
         f"{config_path}/transform/column_transformations.csv",
