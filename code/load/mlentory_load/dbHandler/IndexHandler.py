@@ -21,7 +21,7 @@ from elasticsearch_dsl import (
 )
 import inspect
 
-from mlentory_loader.core.Entities import HFModel, Model
+from mlentory_load.core.Entities import HFModel, Model
 
 
 class IndexHandler:

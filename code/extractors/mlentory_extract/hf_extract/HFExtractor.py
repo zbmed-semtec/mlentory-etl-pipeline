@@ -1,9 +1,10 @@
-from extractors.core.ModelCardQAParser import ModelCardQAParser
 from typing import Any, Dict, List, Set, Union
 from datasets import load_dataset
 from datetime import datetime
 import pandas as pd
 import os
+
+from mlentory_extract.core.ModelCardQAParser import ModelCardQAParser
 
 
 class HFExtractor:

@@ -6,8 +6,8 @@ from typing import List
 import pytest
 from unittest.mock import Mock, MagicMock
 
-from extractors.hf_extractor.HFExtractor import HFExtractor
-from extractors.core.ModelCardQAParser import ModelCardQAParser
+from mlentory_extract.hf_extractor.HFExtractor import HFExtractor
+from mlentory_extract.core.ModelCardQAParser import ModelCardQAParser
 
 
 class TestHFExtractor:

@@ -6,10 +6,10 @@ from tqdm import tqdm
 import os
 import argparse
 
-from extractors.hf_extractor import HFExtractor
-from transform.core.FieldProcessorHF import FieldProcessorHF
-from mlentory_loader.core import LoadProcessor, GraphHandler
-from mlentory_loader.dbHandler import RDFHandler, SQLHandler, IndexHandler
+from mlentory_extract.hf_extract import HFExtractor
+from mlentory_transform.hf_transform.FieldProcessorHF import FieldProcessorHF
+from mlentory_load.core import LoadProcessor, GraphHandler
+from mlentory_load.dbHandler import RDFHandler, SQLHandler, IndexHandler
 
 
 def load_tsv_file_to_list(path: str) -> List[str]:

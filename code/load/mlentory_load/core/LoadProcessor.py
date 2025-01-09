@@ -8,9 +8,9 @@ from datetime import datetime
 from typing import Callable, List, Dict, Set
 from SPARQLWrapper import SPARQLWrapper, JSON, DIGEST, TURTLE
 
-from mlentory_loader.dbHandler import SQLHandler, RDFHandler, IndexHandler
-from mlentory_loader.core.GraphHandler import GraphHandler
-from mlentory_loader.core.Entities import HFModel
+from mlentory_load.dbHandler import SQLHandler, RDFHandler, IndexHandler
+from mlentory_load.core.GraphHandler import GraphHandler
+from mlentory_load.core.Entities import HFModel
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)

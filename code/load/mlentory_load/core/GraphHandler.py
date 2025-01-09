@@ -11,8 +11,8 @@ from tqdm import tqdm
 from datetime import datetime
 from typing import Callable, List, Dict, Set
 
-from mlentory_loader.dbHandler import SQLHandler, RDFHandler, IndexHandler
-from mlentory_loader.core.Entities import HFModel
+from mlentory_load.dbHandler import SQLHandler, RDFHandler, IndexHandler
+from mlentory_load.core.Entities import HFModel
 
 
 class GraphHandler:
