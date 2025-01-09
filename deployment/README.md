@@ -6,17 +6,18 @@ This folder contains all the necessary configuration files and scripts to deploy
 
 ```
 deployment/
-├── docker-compose.yml # Main container orchestration file
-├── hf_etl/ # HuggingFace ETL service
-│ ├── Dockerfile.gpu # Dockerfile for GPU-enabled container
-│ ├── Dockerfile.no_gpu # Dockerfile for CPU-only container
+├── docker-compose.yml                    # Main container orchestration file
+├── hf_etl/                               # HuggingFace ETL service
+│ ├── Dockerfile.gpu 
+│ ├── Dockerfile.no_gpu
 │ └── run_extract_transform_load.py
-├── scheduler/ # Airflow scheduler configuration
-├── dags/ # Airflow DAG definitions
-├── logs/ # Airflow logs
-├── plugins/ # Airflow plugins
-├── scripts/ # Airflow scripts
-└── requirements.txt # Python dependencies for scheduler
+├── scheduler/                            # Airflow scheduler configuration
+│ ├── dags/
+│ ├── logs/
+│ ├── plugins/
+│ ├── scripts/
+│ └── requirements.txt
+└── requirements.txt
 ```
 
 ## Prerequisites

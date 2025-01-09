@@ -10,6 +10,7 @@ from mlentory_extract.hf_extract import HFExtractor
 from mlentory_transform.hf_transform.FieldProcessorHF import FieldProcessorHF
 from mlentory_load.core import LoadProcessor, GraphHandler
 from mlentory_load.dbHandler import RDFHandler, SQLHandler, IndexHandler
+from mlentory_transform.hf_transform.TransformHF import TransformHF
 
 
 def load_tsv_file_to_list(path: str) -> List[str]:
@@ -148,53 +149,32 @@ def main():
     config_path = "./configuration/hf"  # Path to configuration folder
     kg_files_directory = "./../kg_files"  # Path to kg files directory
 
+    # Extract
     extractor = initialize_extractor(config_path)
-
-    # Download and process models
     extracted_df = extractor.download_models(
-        num_models=args.num_models,  # Start with a small number for testing
-        from_date=args.from_date,  # Pass the from_date parameter
-        save_original=False,
+        num_models=args.num_models,
+        from_date=args.from_date,
+        save_original=args.save_extraction,
         save_result_in_json=False,
     )
 
-    if args.save_extraction:
-        output_path = f"{args.output_dir}/extraction_results.csv"
-        extracted_df.to_csv(output_path, index=False)
-        print(f"Saved extraction results to {output_path}")
-
-    # Initializing the transformation
+    # Transform
     new_schema = pd.read_csv(f"{config_path}/transform/M4ML_schema.tsv", sep="\t")
     transformations = pd.read_csv(
         f"{config_path}/transform/column_transformations.csv",
         lineterminator="\n",
         sep=",",
     )
-    fields_processor_HF = FieldProcessorHF(new_schema, transformations)
-    processed_models = []
+    transformer = TransformHF(new_schema, transformations)
+    m4ml_models_df = transformer.transform(
+        extracted_df,
+        save_output=args.save_transformation,
+        output_dir=args.output_dir
+    )
 
-    for row_num, row in tqdm(
-        extracted_df.iterrows(), total=len(extracted_df), desc="Transforming progress"
-    ):
-        model_data = fields_processor_HF.process_row(row)
-        processed_models.append(model_data)
-
-    m4ml_models_df = pd.DataFrame(list(processed_models))
-
-    if args.save_transformation:
-        output_path = f"{args.output_dir}/transformation_results.csv"
-        m4ml_models_df.to_csv(output_path, index=False)
-        print(f"Saved transformation results to {output_path}")
-
-    # Initialize the load processor
+    # Load
     load_processor = initialize_load_processor(kg_files_directory)
-    
     load_processor.update_dbs_with_df(df=m4ml_models_df)
-    
-    if args.save_load_data:
-        output_path = f"{args.output_dir}/load_data.csv"
-        m4ml_models_df.to_csv(output_path, index=False)
-        print(f"Saved load data to {output_path}")
     
 
 

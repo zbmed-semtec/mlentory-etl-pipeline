@@ -49,6 +49,7 @@ class HFExtractor:
         output_dir: str = "./outputs",
         save_original: bool = True,
         save_result_in_json: bool = True,
+        from_date: str = None,
     ) -> pd.DataFrame:
         """
         Download and process model cards from HuggingFace
@@ -59,7 +60,7 @@ class HFExtractor:
             output_dir (str): Directory to save the output files
             save_original (bool): Whether to save the original dataset
             save_result_in_json (bool): Whether to download the dataset in json format in the output directory
-
+            from_date (datetime.date): Filter models by date
         Returns:
             pd.DataFrame: Processed dataframe with extracted information
         """
