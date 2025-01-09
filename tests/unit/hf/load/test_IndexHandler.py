@@ -29,7 +29,7 @@ class TestIndexHandler:
             SQLHandler=Mock(),
             RDFHandler=Mock(),
             IndexHandler=Mock(),
-            kg_files_directory=f"{self.source_path}/fixtures/dbs/virtuoso/kg_files",
+            kg_files_directory=f"{self.source_path}/integration/dbs/virtuoso/kg_files",
         )
 
     @pytest.fixture

@@ -10,7 +10,7 @@ This [TDD](https://docs.google.com/document/d/1aczsHqJ5xxc9Gdd9wC_sfutz1yVUgNJ7W
 
 ## Run The Project
 There are different things you can execute in this project.
-- The first one is the whole ETL pipeline, which is the main component of the project. See instructions here: [ETL Pipeline](code/README.md)
+- The first one is the whole ETL pipeline, which is the main component of the project. See instructions here: [ETL Pipeline](deployment/README.md)
 - The second one is the test component, which is the component that tests the ETL pipeline. See instructions here: [Test Component](tests/README.md)
 
 ## Background
@@ -95,21 +95,38 @@ The project structure is the following:
 │   ├── README.md
 │   ├── docker-compose.yml
 │   └── requirements.txt
-└── tests
-    ├── Dockerfile.local
-    ├── Dockerfile.remote
-    ├── README.md
-    ├── Test_files
-    ├── __pycache__
-    ├── conftest.py
-    ├── docker-compose.yml
-    ├── pytest.ini
-    ├── requirements.txt
-    ├── test_extract_HF_MetadataParser.py
-    ├── ...
-    ├── test_transform_QueueObserver.py
-    ├── validate_tests.sh
-    └── wait-for-it.sh
+└──tests/
+    ├── unit/                     
+    │   ├── hf/
+    │   └── oml/
+    │
+    ├── fixtures/
+    │   ├── data/
+    │   └── mocks/
+    │
+    ├── integration/
+    │   ├── api/
+    │   ├── database/
+    │   │   ├── postgres/
+    │   │   ├── elastic/
+    │   │   └── virtuoso/
+    │   └── pipeline
+    │
+    ├── config/
+    │   ├── docker/
+    |   ├── codecove
+    |   ├── hf
+    |   ├── oml
+    │   └── pytest.ini
+    │
+    ├── scripts/
+    │   ├── validate_tests.sh
+    │   ├── local_validate_tests.sh
+    │   └── wait-for-it.sh
+    │
+    └── utils/
+        ├── conftest.py
+        └── check_licenses.py
 ```
 
 

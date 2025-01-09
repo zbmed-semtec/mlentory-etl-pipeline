@@ -28,11 +28,11 @@ deployment/hf_etl/execution_logs/*.log
 deployment/scheduler/logs
 deployment/scheduler/sql_config_files
 .env
-tests/fixtures/dbs/virtuoso/*
-tests/fixtures/dbs/virtuoso/kg_files/*.ttl
-!tests/fixtures/dbs/virtuoso/kg_files/
+tests/integration/dbs/virtuoso/*
+tests/integration/dbs/virtuoso/kg_files/*.ttl
+!tests/integration/dbs/virtuoso/kg_files/
 # tests/fixtures/dbs/postgres
-tests/fixtures/dbs/elastic
+tests/integration/dbs/elastic
 
 deployment/hf_etl/outputs/
 data/datasets/

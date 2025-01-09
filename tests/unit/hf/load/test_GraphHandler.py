@@ -47,7 +47,7 @@ class TestGraphHandler:
 
     @pytest.fixture
     def setup_virtuoso_handler(self) -> RDFHandler:
-        kg_files_directory = f"{self.source_path}/fixtures/dbs/virtuoso/kg_files"
+        kg_files_directory = f"{self.source_path}/integration/dbs/virtuoso/kg_files"
 
         rdfHandler = RDFHandler(
             container_name="virtuoso",
@@ -85,7 +85,7 @@ class TestGraphHandler:
             mock_SQLHandler,
             mock_RDFHandler,
             mock_IndexHandler,
-            kg_files_directory=f"{self.source_path}/fixtures/dbs/virtuoso/kg_files",
+            kg_files_directory=f"{self.source_path}/integration/dbs/virtuoso/kg_files",
         )
 
         m4ml_example_dataframe = pd.read_json(
