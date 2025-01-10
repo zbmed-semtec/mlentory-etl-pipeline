@@ -30,8 +30,11 @@ In the end, the system and the data it collects will help researchers and other 
 
 The project architecture is the following:
 
-<img src="docs/Readme_images/MLentory Backend TDD Diagrams-Main_component_interaction_Diagram_v2.png"/>
-<p style="text-align: center; font-size: 0.8em; color: #cccccc">Figure 3. Deployment Diagram of the whole ETL pipeline.</p>
+<img src="docs/Readme_images/MLentory Backend TDD Diagrams-Main_component_interaction_Diagram_v3.png"/>
+<p style="text-align: center; font-size: 0.8em; color: #cccccc">Figure 3. Diagram of the whole ETL pipeline.</p>
+
+<img src="docs/Readme_images/MLentory Backend TDD Diagrams-General MLentory diagram_v3.png"/>
+<p style="text-align: center; font-size: 0.8em; color: #cccccc">Figure 4. Another view of the ETL pipeline.</p>
 
 The ETL pipeline is composed of 4 main components:
 
@@ -55,7 +58,8 @@ Will be a container in charge of launching the pipelines in the right order, and
 
 The project structure is the following:
 
-- A [code](/code/) folder where the code of the ETL pipeline is located.
+- A [code](/code/) folder where the python packages of the project are located.
+- A [deployment](/deployment/) folder where the execution files for the ETL pipeline are located, also the docker-compose.yml to bring up the whole system.
 - A [playground](/playground/) folder where we test and get familiar with the different technologies used in the project.
 - A [data](/data/) Where you can find data folders that are used in the different sections of the project.
 - A [docs](/docs/) folder where you can find resources related to the project like diagrams, functions, and documentation.
@@ -68,19 +72,20 @@ The project structure is the following:
 ├── README.md
 ├── code
 │   ├── README.md
-│   ├── config_data
-│   ├── cuda-keyring_1.1-1_all.deb
-│   ├── docker-compose.yml
 │   ├── extractors
 │   ├── load
 │   └── transform
+├── deployment
+│   ├── README.md
+│   ├── hf_etl
+│   ├── scheduler
+│   ├── docker-compose.yml
+│   └── requirements.txt
 ├── data
-│   ├── anzograph_data
+│   ├── configuration
 │   ├── datasets
-│   ├── load_queue
-│   ├── mysql_data
-│   ├── mysql_test_data
-│   ├── transform_queue
+│   ├── elasticsearch_data
+│   ├── postgres_data
 │   └── virtuoso_data
 ├── docs
 │   ├── Analysis_graphs
