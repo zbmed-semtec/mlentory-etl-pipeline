@@ -7,6 +7,21 @@ from .FieldProcessorHF import FieldProcessorHF
 
 
 class TransformHF:
+    """
+    A class for transforming HuggingFace model metadata into a standardized schema.
+
+    This class provides functionality to:
+    - Transform extracted model data into a target schema
+    - Apply field-level transformations
+    - Save transformed data in various formats
+    - Track transformation progress
+
+    Attributes:
+        new_schema (pd.DataFrame): Target schema for the transformed data
+        transformations (pd.DataFrame): Transformation rules to apply
+        fields_processor (FieldProcessorHF): Processor for field-level transformations
+    """
+
     def __init__(self, new_schema: pd.DataFrame, transformations: pd.DataFrame):
         """
         Initialize the HuggingFace transformer with schema and transformations.
@@ -28,16 +43,24 @@ class TransformHF:
         """
         Transform the extracted data into the target schema.
 
+        This method:
+        1. Processes each row of the input DataFrame
+        2. Applies the specified transformations
+        3. Optionally saves the results to a file
+        4. Shows progress using tqdm
+
         Args:
             extracted_df (pd.DataFrame): DataFrame containing extracted model data
-            save_output_in_json (bool, optional): Whether to save the transformed data. Defaults to False.
-            output_dir (str, optional): Directory to save the transformed data. Required if save_output is True.
+            save_output_in_json (bool, optional): Whether to save the transformed data.
+                Defaults to False.
+            output_dir (str, optional): Directory to save the transformed data.
+                Required if save_output_in_json is True.
 
         Returns:
             pd.DataFrame: Transformed DataFrame conforming to the target schema
 
         Raises:
-            ValueError: If save_output is True but output_dir is not provided
+            ValueError: If save_output_in_json is True but output_dir is not provided
         """
         if (save_output_in_json == True) and (output_dir is None):
             raise ValueError("output_dir must be provided when save_output is True")

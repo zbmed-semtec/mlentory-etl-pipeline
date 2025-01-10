@@ -12,7 +12,19 @@ logger.setLevel(logging.INFO)
 
 class FieldProcessorHF:
     """
-    This class processes the fields of the incoming tsv files and maps it to the M4ML schema.
+    A class for processing fields from HuggingFace model data and mapping them to a target schema.
+
+    This class provides functionality to:
+    - Process individual fields using configurable transformations
+    - Apply custom transformation functions to fields
+    - Handle metadata extraction and formatting
+    - Support batch processing of model data
+
+    Attributes:
+        M4ML_schema (pd.DataFrame): Target schema for the transformed data
+        transformations (pd.DataFrame): Mapping of source to target fields with transformation rules
+        transformation_functions (dict): Available transformation functions
+        current_row (pd.Series): Currently processed row of data
     """
 
     def __init__(self, new_schema: pd.DataFrame, transformations: pd.DataFrame):
@@ -20,8 +32,8 @@ class FieldProcessorHF:
         Initialize the FieldProcessorHF with configuration data.
 
         Args:
-            new_schema (pd.DataFrame): The new schema to be used
-            transformations (pd.DataFrame): The transformations to be applied
+            new_schema (pd.DataFrame): The target schema to transform data into
+            transformations (pd.DataFrame): The transformation rules to apply
         """
         self.M4ML_schema = new_schema
         self.transformations = transformations
@@ -38,7 +50,13 @@ class FieldProcessorHF:
 
     def process_row(self, row: pd.Series) -> pd.Series:
         """
-        Process a row using the transformation mappings.
+        Process a single row of data using the defined transformation mappings.
+
+        Args:
+            row (pd.Series): Input row containing source data
+
+        Returns:
+            pd.Series: Transformed row conforming to target schema
         """
         result = pd.Series()
 
@@ -51,13 +69,14 @@ class FieldProcessorHF:
 
     def apply_transformation(self, row: pd.Series, transformation: pd.Series) -> Any:
         """
-        Apply a transformation to a row based on the transformation configuration.
+        Apply a specific transformation to a row based on the transformation configuration.
 
         Args:
-            row: Input row containing source data
-            transformation: Series containing transformation configuration
+            row (pd.Series): Input row containing source data
+            transformation (pd.Series): Series containing transformation configuration
+
         Returns:
-            Transformed value
+            pd.DataFrame: Transformed value according to the specified transformation
         """
         self.current_row = row
         func_name = transformation["transformation_function"]
@@ -72,9 +91,11 @@ class FieldProcessorHF:
 
     def find_value_in_HF(self, property_name: str):
         """
-        Find the value of a property in a HF object.
+        Find the value of a property in a HuggingFace object.
+
         Args:
             property_name (str): The name of the property to find
+
         Returns:
             str: The value of the property
         """
@@ -88,7 +109,13 @@ class FieldProcessorHF:
 
     def build_HF_link(self, tail_info: str) -> str:
         """
-        Build the distribution link of a HF model.
+        Build the distribution link of a HuggingFace model.
+
+        Args:
+            tail_info (str): Additional path information to append to the base URL
+
+        Returns:
+            str: Complete HuggingFace model link
         """
 
         model_name = self.find_value_in_HF("q_id_0")[0]["data"]
@@ -97,6 +124,12 @@ class FieldProcessorHF:
         return [self.add_default_extraction_info(link, "Built in transform stage", 1.0)]
 
     def process_softwareRequirements(self) -> List:
+        """
+        Process software requirements for the model.
+
+        Returns:
+            List: List of software requirements with extraction metadata
+        """
 
         q17_values = self.find_value_in_HF("q_id_17")
 
@@ -114,14 +147,15 @@ class FieldProcessorHF:
 
     def process_trainedOn(self) -> List:
         """
-        Process the trainedOn property of a HF object.
-        To process this proper we take into account 3 different values.
-        1. Q4 What datasets was the model trained on?
-        2. Q6 What datasets were used to finetune the model?
-        3. Q7 What datasets were used to retrain the model?
+        Process the trainedOn property by aggregating the values from Q4, Q6, and Q7.
 
-        Return:
-            str -- A string representing the list of datasets used to train the model.
+        Processes three different values:
+        1. Q4: What datasets was the model trained on?
+        2. Q6: What datasets were used to finetune the model?
+        3. Q7: What datasets were used to retrain the model?
+
+        Returns:
+            List: Combined list of datasets used for training
         """
         q4_values = self.find_value_in_HF("q_id_4")
         q6_values = self.find_value_in_HF("q_id_6")
@@ -136,6 +170,12 @@ class FieldProcessorHF:
         return processed_values
 
     def process_not_extracted(self) -> Dict:
+        """
+        Handle fields that couldn't be extracted.
+
+        Returns:
+            Dict: Default metadata for non-extracted fields
+        """
         return [
             self.add_default_extraction_info(
                 data="Not extracted",
@@ -147,6 +187,17 @@ class FieldProcessorHF:
     def add_default_extraction_info(
         self, data: str, extraction_method: str, confidence: float
     ) -> Dict:
+        """
+        Create standardized metadata for extracted information.
+
+        Args:
+            data (str): The extracted information
+            extraction_method (str): Method used for extraction
+            confidence (float): Confidence score of the extraction
+
+        Returns:
+            Dict: Standardized metadata dictionary
+        """
         return {
             "data": data,
             "extraction_method": extraction_method,

@@ -23,7 +23,7 @@ class ModelCardQAParser:
     - Parse known fields from HuggingFace datasets
     - Process tags and metadata
     - Handle batch processing of questions
-    
+
     Attributes:
         device: GPU device ID if available, None otherwise
         tags_language (set): Set of supported language tags

@@ -34,17 +34,17 @@ class HFExtractor:
         Initialize the HuggingFace extractor.
 
         Args:
-            qa_model (str, optional): The model to use for text extraction. 
+            qa_model (str, optional): The model to use for text extraction.
                 Defaults to "Intel/dynamic_tinybert".
-            questions (List[str], optional): List of questions for extraction. 
+            questions (List[str], optional): List of questions for extraction.
                 Defaults to None.
-            tags_language (List[str], optional): List of language tags. 
+            tags_language (List[str], optional): List of language tags.
                 Defaults to None.
-            tags_libraries (List[str], optional): List of library tags. 
+            tags_libraries (List[str], optional): List of library tags.
                 Defaults to None.
-            tags_other (List[str], optional): List of other tags. 
+            tags_other (List[str], optional): List of other tags.
                 Defaults to None.
-            tags_task (List[str], optional): List of task tags. 
+            tags_task (List[str], optional): List of task tags.
                 Defaults to None.
         """
         self.parser = ModelCardQAParser(
@@ -86,17 +86,17 @@ class HFExtractor:
         4. Saves results in the specified format
 
         Args:
-            num_models (int, optional): Number of models to process. 
+            num_models (int, optional): Number of models to process.
                 Defaults to 10.
-            questions (List[str], optional): Custom questions for extraction. 
+            questions (List[str], optional): Custom questions for extraction.
                 Defaults to None.
-            output_dir (str, optional): Directory to save output files. 
+            output_dir (str, optional): Directory to save output files.
                 Defaults to "./outputs".
-            save_raw_data (bool, optional): Whether to save original dataset. 
+            save_raw_data (bool, optional): Whether to save original dataset.
                 Defaults to False.
-            save_result_in_json (bool, optional): Whether to save results as JSON. 
+            save_result_in_json (bool, optional): Whether to save results as JSON.
                 Defaults to True.
-            from_date (str, optional): Filter models by date. 
+            from_date (str, optional): Filter models by date.
                 Defaults to None.
 
         Returns:

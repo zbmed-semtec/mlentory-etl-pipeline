@@ -1,102 +1,105 @@
-# Transform Package
+# MLentory Transform
 
-A Python package for transforming ML model metadata from different sources into the M4ML schema.
-
-## Overview
-
-The transform package is part of an ETL pipeline for ML model metadata. It processes extracted metadata from HuggingFace and transforms it into a standardized M4ML schema format. The package implements a queue-based system that monitors a directory for new files and processes them automatically.
-
-## Features
-
-- Parallel processing of multiple files
-- Configurable batch processing
-- Standardized transformation to M4ML schema
-- Comprehensive logging system
+A Python package for transforming ML model metadata from different sources into standardized schemas.
 
 ## Installation
-
-The package requires Python 3.8.10 or later. To install the package:
 
 ```bash
 pip install -e .
 ```
+
+## Overview
+
+The MLentory Transform package is designed to transform extracted ML model metadata into standardized formats. It currently supports transforming HuggingFace model metadata using configurable transformation rules and schemas.
+
+## Features
+
+- Transform HuggingFace model metadata into standardized schemas
+- Configurable transformation rules
+- Support for custom field processing
+- JSON output format
+- Progress tracking with tqdm
 
 ## Usage
 
 ### Basic Usage
 
 ```python
-from transform import QueueObserver, FilesProcessor, FieldProcessorHF
+from mlentory_transform.hf_transform import TransformHF
+import pandas as pd
 
-# Initialize the field processor
-field_processor = FieldProcessorHF(path_to_config_data="path/to/config")
+# Load your schema and transformations
+new_schema = pd.read_csv("path/to/schema.tsv", sep="\t")
+transformations = pd.read_csv("path/to/transformations.tsv", sep="\t")
 
-# Initialize the files processor
-files_processor = FilesProcessor(
-    num_workers=4,
-    next_batch_proc_time=30,
-    processed_files_log_path="./processing_logs/Processed_files.txt",
-    load_queue_path="./load_queue",
-    field_processor_HF=field_processor
+# Initialize transformer
+transformer = TransformHF(
+    new_schema=new_schema,
+    transformations=transformations
 )
 
-# Initialize and start the queue observer
-observer = QueueObserver(watch_dir="./transform_queue", files_processor=files_processor)
-observer.start()
+# Transform extracted data
+transformed_df = transformer.transform(
+    extracted_df=your_extracted_data,
+    save_output_in_json=True,
+    output_dir="./outputs"
+)
 ```
 
-### Command Line Usage
+## Configuration Files
 
-The package includes a command-line interface:
+The package requires two main configuration files:
 
-```bash
-python -m transform.main --folder /path/to/watch/directory
-```
+1. **Schema Definition (TSV)**
+   - Defines the target schema structure
+   - Example:
+   ```tsv
+   column_name    data_type    description
+   model_name     string       Name of the model
+   created_date   datetime     Creation date of the model
+   ```
 
-## Directory Structure
+2. **Transformations (TSV)**
+   - Defines how source fields map to target schema
+   - Example:
+   ```tsv
+   source_column    target_column    transformation_function    parameters
+   q_id_0          model_name       find_value_in_HF          {"property_name": "q_id_0"}
+   q_id_2          created_date     find_value_in_HF          {"property_name": "q_id_2"}
+   ```
 
-- `/transform_queue`: Directory monitored for new files to process
-- `/config_data`: Contains configuration files including M4ML schema
-- `/load_queue`: Output directory for transformed files
-- `/processing_logs`: Contains processing logs and record of processed files
-- `/execution_logs`: Contains execution logs with detailed information about the transform process
+## Available Transformation Functions
 
-## Configuration
+- `find_value_in_HF`: Extract values from HuggingFace properties
+- `build_HF_link`: Construct HuggingFace model links
+- `process_trainedOn`: Process training dataset information
+- `process_softwareRequirements`: Process software requirements
+- `process_not_extracted`: Handle unextracted fields
 
-The package requires:
-- M4ML schema configuration file in TSV format
-- Input directory for monitoring (`transform_queue`)
-- Output directory for transformed files (`load_queue`)
-- Directory for logs (`processing_logs` and `execution_logs`)
+## Requirements
 
-## Docker Support
-
-The package can be run in a Docker container. A Dockerfile is provided in the repository.
-
-To build and run with Docker:
-
-```bash
-docker build -t transform .
-docker run -v /path/to/transform_queue:/transform_queue \
-          -v /path/to/config_data:/config_data \
-          -v /path/to/load_queue:/load_queue \
-          transform
-```
-
-## Logging
-
-The package implements two types of logging:
-1. Execution logs: General runtime information and errors
-2. Processing logs: Detailed information about processed files
-
-Logs are stored in their respective directories with timestamps for easy tracking.
-
-## Dependencies
-
-Main dependencies include:
+- Python >= 3.8.10
 - pandas
-- watchdog
-- rdflib
 - tqdm
+- transformers
+- watchdog
+- datasets
+- huggingface-hub
+- Other dependencies listed in setup.py
 
-For a complete list of dependencies, see `setup.py`.
+## Package Structure
+
+```
+mlentory_transform/
+├── hf_transform/
+│   ├── __init__.py
+│   ├── TransformHF.py
+│   └── FieldProcessorHF.py
+```
+
+## Output
+
+The transformed data can be saved in JSON format with timestamps. Example output path:
+```
+./outputs/2024-03-21_14-30-00_transformation_results.json
+```
