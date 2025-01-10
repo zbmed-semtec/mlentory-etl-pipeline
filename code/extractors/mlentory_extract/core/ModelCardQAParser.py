@@ -23,7 +23,7 @@ class ModelCardQAParser:
     - Parse known fields from HuggingFace datasets
     - Process tags and metadata
     - Handle batch processing of questions
-
+    
     Attributes:
         device: GPU device ID if available, None otherwise
         tags_language (set): Set of supported language tags
@@ -155,15 +155,6 @@ class ModelCardQAParser:
         }
 
     def get_repository_weight_HF(self, model_name: str) -> str:
-        """
-        Calculate the total size of a HuggingFace model repository.
-
-        Args:
-            model_name (str): Name of the model repository
-
-        Returns:
-            str: Repository size in GB, or "Not available" if calculation fails
-        """
         try:
             model_repo_weight = 0
             model_tree_file_information = self.hf_api.list_repo_tree(

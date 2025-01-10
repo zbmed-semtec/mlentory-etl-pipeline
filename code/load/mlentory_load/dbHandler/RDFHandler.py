@@ -5,14 +5,42 @@ from rdflib import Graph
 
 
 class RDFHandler:
+    """
+    Handler for RDF triple store operations using Virtuoso.
+
+    This class provides functionality to:
+    - Manage RDF graphs in Virtuoso
+    - Execute SPARQL queries
+    - Handle Docker container operations
+    - Process TTL files
+
+    Attributes:
+        container_name (str): Docker container name
+        _user (str): Virtuoso username
+        _password (str): Virtuoso password
+        kg_files_directory (str): Directory for knowledge graph files
+        sparql_endpoint (str): SPARQL endpoint URL
+        client: Docker client instance
+    """
+
     def __init__(
         self,
-        container_name,
-        _user,
-        _password,
-        kg_files_directory,
-        sparql_endpoint,
+        container_name: str,
+        _user: str,
+        _password: str,
+        kg_files_directory: str,
+        sparql_endpoint: str,
     ):
+        """
+        Initialize RDFHandler with connection parameters.
+
+        Args:
+            container_name (str): Docker container name
+            _user (str): Virtuoso username
+            _password (str): Virtuoso password
+            kg_files_directory (str): Directory for knowledge graph files
+            sparql_endpoint (str): SPARQL endpoint URL
+        """
         self.container_name = container_name
         self._user = _user
         self._password = _password
@@ -21,6 +49,7 @@ class RDFHandler:
         self.client = docker.from_env()
 
     def reset_db(self):
+        """Reset the RDF database to its initial state."""
         container = self.client.containers.get(self.container_name)
 
         sql_command = f""" exec=\"RDF_GLOBAL_RESET ();\""""
@@ -28,13 +57,13 @@ class RDFHandler:
         result = container.exec_run(command)
         print(result)
 
-    def load_graph(self, ttl_file_path, graph_identifier: str):
+    def load_graph(self, ttl_file_path: str, graph_identifier: str):
         """
-        Uploads a TTL file containing a graph to a RDF database instance running in a Docker container.
+        Load a TTL file into the RDF store.
 
         Args:
-            ttl_file_path: Path to the TTL file on the host machine.
-            graph_identifier: Identifier of the graph to load the data into.
+            ttl_file_path (str): Path to TTL file
+            graph_identifier (str): URI for the target graph
         """
         container = self.client.containers.get(self.container_name)
         new_ttl_file_path = f"{self.kg_files_directory}/{ttl_file_path.split('/')[-1]}"
@@ -81,15 +110,15 @@ class RDFHandler:
         result = container.exec_run(command)
 
     def delete_graph(
-        self, ttl_file_path, graph_identifier: str, deprecated_graph_identifier: str
+        self, ttl_file_path: str, graph_identifier: str, deprecated_graph_identifier: str
     ):
         """
-        Deletes all triplets associated with the graph in the TTL file in the instance running in a Docker container.
+        Delete triples from a graph based on TTL file.
 
         Args:
-            ttl_file_path: Path to the TTL file on the host machine.
-            graph_identifier: Identifier of the main graph to delete from.
-            deprecated_graph_identifier: Identifier of the graph containing deprecated triplets.
+            ttl_file_path (str): Path to TTL file
+            graph_identifier (str): URI of main graph
+            deprecated_graph_identifier (str): URI of deprecated graph
         """
         container = self.client.containers.get(self.container_name)
         new_ttl_file_path = f"{self.kg_files_directory}/{ttl_file_path.split('/')[-1]}"
@@ -111,9 +140,16 @@ class RDFHandler:
         command = f"""isql -S 1111 -U {self._user} -P {self._password} {sql_command}"""
         result = container.exec_run(command)
 
-    def delete_triple(self, sparql_endpoint, subject, predicate, object, graph_iri):
+    def delete_triple(self, sparql_endpoint: str, subject: str, predicate: str, object: str, graph_iri: str):
         """
-        Deletes a triple from the graph.
+        Delete a specific triple from the graph.
+
+        Args:
+            sparql_endpoint (str): SPARQL endpoint URL
+            subject (str): Triple subject
+            predicate (str): Triple predicate
+            object (str): Triple object
+            graph_iri (str): Graph URI
         """
         sparql = SPARQLWrapper(sparql_endpoint)
         sparql.setHTTPAuth(DIGEST)
@@ -132,7 +168,17 @@ class RDFHandler:
 
         return g
 
-    def query(self, sparql_endpoint, query):
+    def query(self, sparql_endpoint: str, query: str):
+        """
+        Execute a SPARQL query.
+
+        Args:
+            sparql_endpoint (str): SPARQL endpoint URL
+            query (str): SPARQL query string
+
+        Returns:
+            Graph: Query results as RDF graph
+        """
         sparql = SPARQLWrapper(sparql_endpoint)
         sparql.setHTTPAuth(DIGEST)
         sparql.setCredentials(self._user, self._password)

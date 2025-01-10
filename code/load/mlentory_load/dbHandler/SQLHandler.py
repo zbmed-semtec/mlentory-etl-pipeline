@@ -4,7 +4,33 @@ from typing import Callable, List, Dict, Set, Any
 
 
 class SQLHandler:
+    """
+    Handler for SQL database operations.
+
+    This class provides functionality to:
+    - Manage database connections
+    - Execute CRUD operations
+    - Handle batch operations
+    - Clean and reset database state
+
+    Attributes:
+        host (str): Database host address
+        user (str): Database username
+        password (str): Database password
+        database (str): Database name
+        connection: Active database connection
+    """
+
     def __init__(self, host: str, user: str, password: str, database: str):
+        """
+        Initialize SQLHandler with connection parameters.
+
+        Args:
+            host (str): Database host address
+            user (str): Database username
+            password (str): Database password
+            database (str): Database name
+        """
         self.host = host
         self.user = user
         self.password = password
@@ -12,9 +38,7 @@ class SQLHandler:
         self.connection = None
 
     def connect(self) -> None:
-        """
-        Establishes a connection to the MySQL database.
-        """
+        """Establish connection to the PostgreSQL database."""
         self.connection = psycopg2.connect(
             host=self.host,
             user=self.user,
@@ -23,22 +47,20 @@ class SQLHandler:
         )
 
     def disconnect(self) -> None:
-        """
-        Closes the connection to the MySQL database if it exists.
-        """
+        """Close the active database connection if it exists."""
         if self.connection:
             self.connection.close()
 
     def insert(self, table: str, data: Dict[str, Any]) -> int:
         """
-        Inserts a new record into the specified table.
+        Insert a new record into the specified table.
 
         Args:
-            table (str): The name of the table to insert into.
-            data (Dict[str, Any]): A dictionary containing column names and values to insert.
+            table (str): Target table name
+            data (Dict[str, Any]): Column names and values to insert
 
         Returns:
-            int: The ID of the last inserted row.
+            int: ID of the inserted row
         """
         cursor = self.connection.cursor()
         placeholders = ", ".join(["%s"] * len(data))
@@ -52,14 +74,14 @@ class SQLHandler:
 
     def query(self, sql: str, params: Dict[str, Any] = None) -> pd.DataFrame:
         """
-        Executes a SQL query and returns the result as a pandas DataFrame.
+        Execute a SQL query and return results as DataFrame.
 
         Args:
-            sql (str): The SQL query to execute.
-            params (Dict[str, Any], optional): A dictionary of parameters to be used in the query.
+            sql (str): SQL query to execute
+            params (Dict[str, Any], optional): Query parameters
 
         Returns:
-            pd.DataFrame: A DataFrame containing the query results.
+            pd.DataFrame: Query results as DataFrame
         """
         cursor = self.connection.cursor()
         cursor.execute(sql, params or ())
@@ -70,11 +92,11 @@ class SQLHandler:
 
     def delete(self, table: str, condition: str) -> None:
         """
-        Deletes records from the specified table based on the given condition.
+        Delete records from a table based on condition.
 
         Args:
-            table (str): The name of the table to delete from.
-            condition (str): The WHERE clause specifying which records to delete.
+            table (str): Target table name
+            condition (str): WHERE clause for deletion
         """
         cursor = self.connection.cursor()
         sql = f'DELETE FROM "{table}" WHERE {condition}'
@@ -84,12 +106,12 @@ class SQLHandler:
 
     def update(self, table: str, data: Dict[str, Any], condition: str) -> None:
         """
-        Updates records in the specified table based on the given condition.
+        Update records in a table based on condition.
 
         Args:
-            table (str): The name of the table to update.
-            data (Dict[str, Any]): A dictionary containing column names and new values to update.
-            condition (str): The WHERE clause specifying which records to update.
+            table (str): Target table name
+            data (Dict[str, Any]): New values to set
+            condition (str): WHERE clause for update
         """
         cursor = self.connection.cursor()
         set_clause = ", ".join([f'"{key}" = %s' for key in data.keys()])
@@ -100,10 +122,10 @@ class SQLHandler:
 
     def execute_sql(self, sql: str) -> None:
         """
-        Executes a SQL query without returning any results.
+        Execute a SQL query without returning results.
 
         Args:
-            sql (str): The SQL query to execute.
+            sql (str): SQL query to execute
         """
         cursor = self.connection.cursor()
         cursor.execute(sql)
@@ -111,6 +133,8 @@ class SQLHandler:
         cursor.close()
 
     def delete_all_tables(self):
+        """Delete all tables in the database."""
+        
         cursor = self.connection.cursor()
         cursor.execute(
             """
@@ -129,9 +153,8 @@ class SQLHandler:
         cursor.close()
 
     def clean_all_tables(self):
-        """
-        Deletes all rows from all tables in the database while preserving table structures.
-        """
+        """Remove all data from tables while preserving structure."""
+        
         cursor = self.connection.cursor()
         cursor.execute(
             """

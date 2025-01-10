@@ -16,6 +16,25 @@ from mlentory_load.core.Entities import HFModel
 
 
 class GraphHandler:
+    """
+    Handler for graph operations and version control across databases.
+
+    This class manages:
+    - Graph construction and updates
+    - Version control of triples
+    - Synchronization between databases
+    - Metadata tracking
+
+    Attributes:
+        SQLHandler (SQLHandler): Handler for SQL operations
+        RDFHandler (RDFHandler): Handler for RDF operations
+        IndexHandler (IndexHandler): Handler for search index
+        kg_files_directory (str): Directory for knowledge graph files
+        platform (str): Platform identifier (e.g., "hugging_face")
+        graph_identifier (str): URI for main graph
+        deprecated_graph_identifier (str): URI for deprecated triples
+    """
+
     def __init__(
         self,
         SQLHandler: SQLHandler,
@@ -26,6 +45,18 @@ class GraphHandler:
         graph_identifier: str = "http://example.com/data_1",
         deprecated_graph_identifier: str = "http://example.com/data_2",
     ):
+        """
+        Initialize GraphHandler with handlers and configuration.
+
+        Args:
+            SQLHandler (SQLHandler): SQL database handler
+            RDFHandler (RDFHandler): RDF store handler
+            IndexHandler (IndexHandler): Search index handler
+            kg_files_directory (str): Path to graph files
+            platform (str): Platform identifier
+            graph_identifier (str): Main graph URI
+            deprecated_graph_identifier (str): Deprecated graph URI
+        """
         self.df_to_transform = None
         self.SQLHandler = SQLHandler
         self.RDFHandler = RDFHandler
@@ -42,9 +73,23 @@ class GraphHandler:
         self.df = pd.DataFrame()
 
     def load_df(self, df: pd.DataFrame):
+        """
+        Load DataFrame for processing.
+
+        Args:
+            df (pd.DataFrame): Data to be processed
+        """
         self.df = df
 
     def update_graph(self):
+        """
+        Update graphs across all databases.
+        
+        This method:
+        1. Updates metadata graph
+        2. Updates current graph
+        3. Updates search indices
+        """
         # This graph updates the metadata of the triplets and identifies which triplets are new and which ones are not longer valid
         self.update_metadata_graph()
         # This update uses the new_triplets and the old_triplets list to update the current version of the graph.
@@ -53,6 +98,7 @@ class GraphHandler:
         self.update_indexes()
 
     def update_indexes(self):
+        """Update search indices with new and modified models."""
         new_models = []
         for row_num, row in tqdm(
             self.df.iterrows(), total=len(self.df), desc="Updating indexes"
@@ -92,6 +138,14 @@ class GraphHandler:
 
     # Construct all the triplets in the input dataframe
     def update_metadata_graph(self):
+        """
+        Update metadata graph with new information.
+        
+        This method:
+        1. Processes each model
+        2. Updates triplet metadata
+        3. Handles deprecation of old data
+        """
 
         for index, row in tqdm(
             self.df.iterrows(), total=len(self.df), desc="Updating metadata graph"
@@ -108,6 +162,15 @@ class GraphHandler:
         self.curr_update_date = None
 
     def process_model(self, row):
+        """
+        Process a single model row into graph triplets.
+
+        Args:
+            row (pd.Series): Model data to process
+
+        Returns:
+            URIRef: URI reference for the processed model
+        """
         model_uri = self.text_to_uri_term(str(row["schema.org:name"][0]["data"]))
 
         self.process_triplet(
@@ -360,6 +423,14 @@ class GraphHandler:
         self.SQLHandler.execute_sql(update_query)
 
     def update_current_graph(self):
+        """
+        Update the current graph with new triplets.
+        
+        This method:
+        1. Creates new triplets graph
+        2. Creates deprecated triplets graph
+        3. Updates the RDF store
+        """
         new_triplets_graph = rdflib.Graph(identifier=self.graph_identifier)
         new_triplets_graph.bind("fair4ml", URIRef("http://fair4ml.com/"))
         new_triplets_graph.bind("codemeta", URIRef("http://codemeta.com/"))
@@ -409,10 +480,10 @@ class GraphHandler:
 
     def get_current_graph(self) -> Graph:
         """
-        Retrieves the current version of the RDF graph from the database.
+        Retrieve current version of the RDF graph.
 
         Returns:
-            rdflib.Graph: The current graph with all active triplets
+            Graph: Current active graph with all valid triplets
         """
         current_graph = rdflib.Graph(identifier=self.graph_identifier)
         current_graph.bind("fair4ml", URIRef("http://fair4ml.com/"))

@@ -14,7 +14,19 @@ logger.setLevel(logging.INFO)
 
 class LoadProcessor:
     """
-    This class is responsible for loading the data into the different databases.
+    Main processor for loading and synchronizing model metadata across databases.
+
+    This class coordinates the loading of data into different database systems:
+    - PostgreSQL for relational data
+    - Virtuoso for RDF graphs
+    - Elasticsearch for search indexing
+
+    Attributes:
+        SQLHandler (SQLHandler): Handler for PostgreSQL operations
+        RDFHandler (RDFHandler): Handler for Virtuoso RDF store
+        IndexHandler (IndexHandler): Handler for Elasticsearch
+        GraphHandler (GraphHandler): Handler for graph operations
+        kg_files_directory (str): Directory for knowledge graph files
     """
 
     def __init__(
@@ -26,7 +38,14 @@ class LoadProcessor:
         kg_files_directory: str,
     ):
         """
-        Initializes a new LoadProcessor instance.
+        Initialize LoadProcessor with database handlers.
+
+        Args:
+            SQLHandler (SQLHandler): PostgreSQL handler
+            RDFHandler (RDFHandler): RDF store handler
+            IndexHandler (IndexHandler): Elasticsearch handler
+            GraphHandler (GraphHandler): Graph operations handler
+            kg_files_directory (str): Path to knowledge graph files
         """
         self.SQLHandler = SQLHandler
         self.SQLHandler.connect()
@@ -35,13 +54,26 @@ class LoadProcessor:
         self.GraphHandler = GraphHandler
         self.kg_files_directory = kg_files_directory
 
-    def update_dbs_with_df(self, df):
+    def update_dbs_with_df(self, df: DataFrame):
+        """
+        Update all databases with new data from DataFrame.
+
+        Args:
+            df (DataFrame): Data to be loaded into databases
+        """
 
         # The graph handler updates the SQL and RDF databases with the new data
         self.GraphHandler.load_df(df)
         self.GraphHandler.update_graph()
 
     def load_df(self, df: DataFrame, output_ttl_file_path: str = None):
+        """
+        Load DataFrame into databases and optionally save TTL file.
+
+        Args:
+            df (DataFrame): Data to be loaded
+            output_ttl_file_path (str, optional): Path to save TTL output
+        """
         self.update_dbs_with_df(df)
 
         if output_ttl_file_path is not None:
@@ -54,6 +86,7 @@ class LoadProcessor:
             current_graph.serialize(output_ttl_file_path, format="turtle")
 
     def print_DB_states(self):
+        """Print current state of all databases for debugging."""
         triplets_df = self.GraphHandler.SQLHandler.query('SELECT * FROM "Triplet"')
         ranges_df = self.GraphHandler.SQLHandler.query('SELECT * FROM "Version_Range"')
         extraction_info_df = self.GraphHandler.SQLHandler.query(
@@ -85,6 +118,7 @@ class LoadProcessor:
         print("Check Elasticsearch: ", result, "\n")
 
     def clean_DBs(self):
+        """Clean all databases, removing existing data."""
         self.RDFHandler.reset_db()
         self.IndexHandler.clean_indices()
         self.SQLHandler.clean_all_tables()
