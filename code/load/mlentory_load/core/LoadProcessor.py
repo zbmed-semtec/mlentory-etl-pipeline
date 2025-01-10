@@ -1,16 +1,12 @@
 import os
 import shutil
 from rdflib.graph import Graph, ConjunctiveGraph
-import docker
-import subprocess
 import logging
 from datetime import datetime
 from typing import Callable, List, Dict, Set
-from SPARQLWrapper import SPARQLWrapper, JSON, DIGEST, TURTLE
-
+from pandas import DataFrame
 from mlentory_load.dbHandler import SQLHandler, RDFHandler, IndexHandler
 from mlentory_load.core.GraphHandler import GraphHandler
-from mlentory_load.core.Entities import HFModel
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -45,6 +41,18 @@ class LoadProcessor:
         self.GraphHandler.load_df(df)
         self.GraphHandler.update_graph()
 
+    def load_df(self, df: DataFrame, output_ttl_file_path: str = None):
+        self.update_dbs_with_df(df)
+
+        if output_ttl_file_path is not None:
+            print("OUTPUT TTL FILE PATH\n", output_ttl_file_path)
+            current_graph = self.GraphHandler.get_current_graph()
+            current_date = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+            output_ttl_file_path = os.path.join(
+                output_ttl_file_path, f"{current_date}_mlentory_graph.ttl"
+            )
+            current_graph.serialize(output_ttl_file_path, format="turtle")
+
     def print_DB_states(self):
         triplets_df = self.GraphHandler.SQLHandler.query('SELECT * FROM "Triplet"')
         ranges_df = self.GraphHandler.SQLHandler.query('SELECT * FROM "Version_Range"')
@@ -56,10 +64,7 @@ class LoadProcessor:
         print("SQL RANGES\n", ranges_df)
         print("SQL EXTRACTION INFO\n", extraction_info_df)
 
-        result_graph = self.GraphHandler.RDFHandler.query(
-            "http://virtuoso:8890/sparql",
-            """CONSTRUCT { ?s ?p ?o } WHERE {GRAPH <http://example.com/data_1> {?s ?p ?o}}""",
-        )
+        result_graph = self.GraphHandler.get_current_graph()
 
         print("VIRTUOSO TRIPlETS\n")
         for i, (s, p, o) in enumerate(result_graph):

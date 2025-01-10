@@ -47,7 +47,7 @@ class HFExtractor:
         num_models: int = 10,
         questions: List[str] = None,
         output_dir: str = "./outputs",
-        save_original: bool = True,
+        save_raw_data: bool = False,
         save_result_in_json: bool = True,
         from_date: str = None,
     ) -> pd.DataFrame:
@@ -58,7 +58,7 @@ class HFExtractor:
             num_models (int): Number of models to process
             questions (List[str]): List of questions to use for extraction. If None, uses default questions
             output_dir (str): Directory to save the output files
-            save_original (bool): Whether to save the original dataset
+            save_raw_data (bool): Whether to save the original dataset
             save_result_in_json (bool): Whether to download the dataset in json format in the output directory
             from_date (datetime.date): Filter models by date
         Returns:
@@ -114,7 +114,7 @@ class HFExtractor:
 
         timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
 
-        if save_original:
+        if save_raw_data:
             original_path = os.path.join(
                 output_dir, f"{timestamp}_Original_HF_Dataframe.csv"
             )

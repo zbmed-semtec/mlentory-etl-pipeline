@@ -17,7 +17,7 @@ def load_tsv_file_to_list(path: str) -> List[str]:
     return [val[0] for val in pd.read_csv(path, sep="\t").values.tolist()]
 
 
-def setup_logging():
+def setup_logging() -> logging.Logger:
     """
     Sets up the logging system.
     """
@@ -37,7 +37,7 @@ def setup_logging():
     logger.setLevel(logging.INFO)
 
 
-def initialize_extractor(config_path: str):
+def initialize_extractor(config_path: str) -> HFExtractor:
     """
     Initializes the extractor with the configuration data.
 
@@ -62,7 +62,26 @@ def initialize_extractor(config_path: str):
     )
 
 
-def initialize_load_processor(kg_files_directory: str):
+def initialize_transform_hf(config_path: str) -> TransformHF:
+    """
+    Initializes the transformer with the configuration data.
+
+    Args:
+        config_path (str): The path to the configuration data.
+
+    Returns:
+        TransformHF: The transformer instance.
+    """
+    new_schema = pd.read_csv(f"{config_path}/transform/M4ML_schema.tsv", sep="\t")
+    transformations = pd.read_csv(
+        f"{config_path}/transform/column_transformations.csv",
+        lineterminator="\n",
+        sep=",",
+    )
+    return TransformHF(new_schema, transformations)
+
+
+def initialize_load_processor(kg_files_directory: str) -> LoadProcessor:
     """
     Initializes the load processor with the configuration data.
 
@@ -101,6 +120,8 @@ def initialize_load_processor(kg_files_directory: str):
         RDFHandler=rdfHandler,
         IndexHandler=elasticsearchHandler,
         kg_files_directory=kg_files_directory,
+        graph_identifier="http://mlentory.com/mlentory_graph",
+        deprecated_graph_identifier="http://mlentory.com/deprecated_mlentory_graph",
     )
 
     # Initializing the load processor
@@ -113,39 +134,54 @@ def initialize_load_processor(kg_files_directory: str):
     )
 
 
-def parse_args():
-    parser = argparse.ArgumentParser(description='HuggingFace ETL Process')
-    parser.add_argument('--save-extraction', 
-                       action='store_true',
-                       default=False,
-                       help='Save the results of the extraction phase')
-    parser.add_argument('--save-transformation', 
-                       action='store_true',
-                       default=False,
-                       help='Save the results of the transformation phase')
-    parser.add_argument('--save-load-data', 
-                       action='store_true',
-                       default=False,
-                       help='Save the data that will be loaded into the database')
-    parser.add_argument('--from-date',
-                       type=lambda s: datetime.datetime.strptime(s, '%Y-%m-%d'),
-                       default=datetime.datetime(2000, 1, 1),
-                       help='Download models from this date (format: YYYY-MM-DD)')
-    parser.add_argument('--num-models',
-                       type=int,
-                       default=5,
-                       help='Number of models to download')
-    parser.add_argument('--output-dir',
-                       default='./output',
-                       help='Directory to save intermediate results')
+def parse_args() -> argparse.Namespace:
+    """
+    Parses the command line arguments.
+
+    Returns:
+        argparse.Namespace: The parsed arguments.
+    """
+    parser = argparse.ArgumentParser(description="HuggingFace ETL Process")
+    parser.add_argument(
+        "--save-extraction",
+        action="store_true",
+        default=False,
+        help="Save the results of the extraction phase",
+    )
+    parser.add_argument(
+        "--save-transformation",
+        action="store_true",
+        default=False,
+        help="Save the results of the transformation phase",
+    )
+    parser.add_argument(
+        "--save-load-data",
+        action="store_true",
+        default=False,
+        help="Save the data that will be loaded into the database",
+    )
+    parser.add_argument(
+        "--from-date",
+        type=lambda s: datetime.datetime.strptime(s, "%Y-%m-%d"),
+        default=datetime.datetime(2000, 1, 1),
+        help="Download models from this date (format: YYYY-MM-DD)",
+    )
+    parser.add_argument(
+        "--num-models", type=int, default=5, help="Number of models to download"
+    )
+    parser.add_argument(
+        "--output-dir",
+        default="./hf_etl/outputs/files",
+        help="Directory to save intermediate results",
+    )
     return parser.parse_args()
 
 
 def main():
     args = parse_args()
     setup_logging()
-    
-    # Load configuration data
+
+    # Setup configuration data
     config_path = "./configuration/hf"  # Path to configuration folder
     kg_files_directory = "./../kg_files"  # Path to kg files directory
 
@@ -154,28 +190,22 @@ def main():
     extracted_df = extractor.download_models(
         num_models=args.num_models,
         from_date=args.from_date,
-        save_original=args.save_extraction,
-        save_result_in_json=False,
+        save_result_in_json=args.save_extraction,
+        save_raw_data=False,
     )
 
     # Transform
-    new_schema = pd.read_csv(f"{config_path}/transform/M4ML_schema.tsv", sep="\t")
-    transformations = pd.read_csv(
-        f"{config_path}/transform/column_transformations.csv",
-        lineterminator="\n",
-        sep=",",
-    )
-    transformer = TransformHF(new_schema, transformations)
+    transformer = initialize_transform_hf(config_path)
     m4ml_models_df = transformer.transform(
         extracted_df,
-        save_output=args.save_transformation,
-        output_dir=args.output_dir
+        save_output_in_json=args.save_transformation,
+        output_dir=args.output_dir,
     )
 
     # Load
     load_processor = initialize_load_processor(kg_files_directory)
-    load_processor.update_dbs_with_df(df=m4ml_models_df)
-    
+    load_processor.load_df(df=m4ml_models_df, output_ttl_file_path=args.output_dir)
+    load_processor.print_DB_states()
 
 
 if __name__ == "__main__":

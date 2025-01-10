@@ -23,6 +23,8 @@ class GraphHandler:
         IndexHandler: IndexHandler,
         kg_files_directory: str = "./../kg_files",
         platform: str = "hugging_face",
+        graph_identifier: str = "http://example.com/data_1",
+        deprecated_graph_identifier: str = "http://example.com/data_2",
     ):
         self.df_to_transform = None
         self.SQLHandler = SQLHandler
@@ -30,6 +32,8 @@ class GraphHandler:
         self.IndexHandler = IndexHandler
         self.kg_files_directory = kg_files_directory
         self.platform = platform
+        self.graph_identifier = graph_identifier
+        self.deprecated_graph_identifier = deprecated_graph_identifier
         self.new_triplets = []
         self.old_triplets = []
         self.models_to_index = []
@@ -356,15 +360,14 @@ class GraphHandler:
         self.SQLHandler.execute_sql(update_query)
 
     def update_current_graph(self):
-
-        new_triplets_graph = rdflib.Graph(identifier="http://example.com/data_1")
+        new_triplets_graph = rdflib.Graph(identifier=self.graph_identifier)
         new_triplets_graph.bind("fair4ml", URIRef("http://fair4ml.com/"))
         new_triplets_graph.bind("codemeta", URIRef("http://codemeta.com/"))
         new_triplets_graph.bind("schema", URIRef("https://schema.org/"))
         new_triplets_graph.bind("mlentory", URIRef("https://mlentory.com/"))
         new_triplets_graph.bind("prov", URIRef("http://www.w3.org/ns/prov#"))
 
-        old_triplets_graph = rdflib.Graph(identifier="http://example.com/data_2")
+        old_triplets_graph = rdflib.Graph(identifier=self.deprecated_graph_identifier)
         old_triplets_graph.bind("fair4ml", URIRef("http://fair4ml.com/"))
         old_triplets_graph.bind("codemeta", URIRef("http://codemeta.com/"))
         old_triplets_graph.bind("schema", URIRef("https://schema.org/"))
@@ -385,7 +388,10 @@ class GraphHandler:
             destination=path_new_triplets_graph, format="turtle"
         )
 
-        self.RDFHandler.load_graph(ttl_file_path=path_new_triplets_graph)
+        self.RDFHandler.load_graph(
+            ttl_file_path=path_new_triplets_graph,
+            graph_identifier=self.graph_identifier,
+        )
 
         if len(old_triplets_graph) > 0:
             path_old_triplets_graph = os.path.join(
@@ -395,7 +401,39 @@ class GraphHandler:
                 destination=path_old_triplets_graph, format="turtle"
             )
 
-            self.RDFHandler.delete_graph(ttl_file_path=path_old_triplets_graph)
+            self.RDFHandler.delete_graph(
+                ttl_file_path=path_old_triplets_graph,
+                graph_identifier=self.graph_identifier,
+                deprecated_graph_identifier=self.deprecated_graph_identifier,
+            )
+
+    def get_current_graph(self) -> Graph:
+        """
+        Retrieves the current version of the RDF graph from the database.
+
+        Returns:
+            rdflib.Graph: The current graph with all active triplets
+        """
+        current_graph = rdflib.Graph(identifier=self.graph_identifier)
+        current_graph.bind("fair4ml", URIRef("http://fair4ml.com/"))
+        current_graph.bind("codemeta", URIRef("http://codemeta.com/"))
+        current_graph.bind("schema", URIRef("https://schema.org/"))
+        current_graph.bind("mlentory", URIRef("https://mlentory.com/"))
+        current_graph.bind("prov", URIRef("http://www.w3.org/ns/prov#"))
+
+        query = f"""
+        CONSTRUCT {{ ?s ?p ?o }}
+        WHERE {{
+            GRAPH <{self.graph_identifier}> {{
+                ?s ?p ?o
+            }}
+        }}
+        """
+
+        result_graph = self.RDFHandler.query(self.RDFHandler.sparql_endpoint, query)
+        current_graph += result_graph
+
+        return current_graph
 
     def n3_to_term(self, n3):
         return from_n3(n3.encode("unicode_escape").decode("unicode_escape"))

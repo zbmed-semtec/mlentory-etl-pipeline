@@ -28,16 +28,13 @@ class RDFHandler:
         result = container.exec_run(command)
         print(result)
 
-    def load_graph(self, ttl_file_path):
+    def load_graph(self, ttl_file_path, graph_identifier: str):
         """
         Uploads a TTL file containing a graph to a RDF database instance running in a Docker container.
 
         Args:
             ttl_file_path: Path to the TTL file on the host machine.
-            kg_files_directory: Directory where the TTL file will be located.
-            container_name: Name of the Docker container.
-            _user:  username.
-            _password:  password.
+            graph_identifier: Identifier of the graph to load the data into.
         """
         container = self.client.containers.get(self.container_name)
         new_ttl_file_path = f"{self.kg_files_directory}/{ttl_file_path.split('/')[-1]}"
@@ -47,12 +44,11 @@ class RDFHandler:
         sql_command = f""" exec=\"DELETE FROM DB.DBA.LOAD_LIST; 
                                 ld_dir('/opt/virtuoso-opensource/database/kg_files',
                                 '{ttl_file_path.split('/')[-1]}',
-                                'http://example.com/data_1');
+                                '{graph_identifier}');
                                 DB.DBA.rdf_loader_run();
                                 checkpoint;\""""
 
         command = f"""isql -S 1111 -U {self._user} -P {self._password} {sql_command}"""
-
         result = container.exec_run(command)
 
     def upload_rdf_file(self, rdf_file_path, container_rdf_folder, graph_iri):
@@ -84,16 +80,16 @@ class RDFHandler:
 
         result = container.exec_run(command)
 
-    def delete_graph(self, ttl_file_path):
+    def delete_graph(
+        self, ttl_file_path, graph_identifier: str, deprecated_graph_identifier: str
+    ):
         """
-        Deletes all triplets associated with the graph in the TTL file in the  instance running in a Docker container.
+        Deletes all triplets associated with the graph in the TTL file in the instance running in a Docker container.
 
         Args:
             ttl_file_path: Path to the TTL file on the host machine.
-            kg_files_directory: Directory where the TTL file will be located.
-            container_name: Name of the Docker container.
-            _user:  username.
-            _password:  password.
+            graph_identifier: Identifier of the main graph to delete from.
+            deprecated_graph_identifier: Identifier of the graph containing deprecated triplets.
         """
         container = self.client.containers.get(self.container_name)
         new_ttl_file_path = f"{self.kg_files_directory}/{ttl_file_path.split('/')[-1]}"
@@ -102,18 +98,17 @@ class RDFHandler:
         sql_command = f""" exec=\"
                                 ld_dir('/opt/virtuoso-opensource/database/kg_files',
                                 '{ttl_file_path.split('/')[-1]}',
-                                'http://example.com/data_2');
+                                '{deprecated_graph_identifier}');
                                 DB.DBA.rdf_loader_run();
                                 log_enable(3,1);
                                 Delete from rdf_quad a 
                                 where exists (select * from rdf_quad b
                                 where a.s = b.s and a.p = b.p and a.o = b.o 
-                                and b.g = iri_to_id('http://example.com/data_2')
-                                and a.g = iri_to_id('http://example.com/data_1'));\"
+                                and b.g = iri_to_id('{deprecated_graph_identifier}')
+                                and a.g = iri_to_id('{graph_identifier}'));\"
                         """
 
         command = f"""isql -S 1111 -U {self._user} -P {self._password} {sql_command}"""
-
         result = container.exec_run(command)
 
     def delete_triple(self, sparql_endpoint, subject, predicate, object, graph_iri):
