@@ -8,6 +8,19 @@ from mlentory_extract.core.ModelCardQAParser import ModelCardQAParser
 
 
 class HFExtractor:
+    """
+    A class for extracting and processing model information from HuggingFace.
+
+    This class provides functionality to:
+    - Download model information from HuggingFace
+    - Process model cards using QA techniques
+    - Extract structured information from model metadata
+    - Save results in various formats
+
+    Attributes:
+        parser (ModelCardQAParser): Parser instance for extracting information
+    """
+
     def __init__(
         self,
         qa_model: str = "Intel/dynamic_tinybert",
@@ -18,15 +31,21 @@ class HFExtractor:
         tags_task: List[str] = None,
     ):
         """
-        Initialize the HuggingFace extractor
+        Initialize the HuggingFace extractor.
 
         Args:
-            qa_model (str): The model to use for text extraction
-            questions (list[str]): List of questions for extraction
-            tags_language (list[str]): List of language tags
-            tags_libraries (list[str]): List of library tags
-            tags_other (list[str]): List of other tags
-            tags_task (list[str]): List of task tags
+            qa_model (str, optional): The model to use for text extraction. 
+                Defaults to "Intel/dynamic_tinybert".
+            questions (List[str], optional): List of questions for extraction. 
+                Defaults to None.
+            tags_language (List[str], optional): List of language tags. 
+                Defaults to None.
+            tags_libraries (List[str], optional): List of library tags. 
+                Defaults to None.
+            tags_other (List[str], optional): List of other tags. 
+                Defaults to None.
+            tags_task (List[str], optional): List of task tags. 
+                Defaults to None.
         """
         self.parser = ModelCardQAParser(
             qa_model=qa_model,
@@ -37,7 +56,13 @@ class HFExtractor:
             tags_task=tags_task,
         )
 
-    def get_hf_dataset(self):
+    def get_hf_dataset(self) -> pd.DataFrame:
+        """
+        Retrieve the HuggingFace dataset containing model card information.
+
+        Returns:
+            pd.DataFrame: DataFrame containing model card information from HuggingFace
+        """
         return load_dataset("librarian-bots/model_cards_with_metadata")[
             "train"
         ].to_pandas()
@@ -52,17 +77,30 @@ class HFExtractor:
         from_date: str = None,
     ) -> pd.DataFrame:
         """
-        Download and process model cards from HuggingFace
+        Download and process model cards from HuggingFace.
+
+        This method performs the following steps:
+        1. Downloads model card information from HuggingFace
+        2. Processes the specified number of models
+        3. Extracts information using the QA model
+        4. Saves results in the specified format
 
         Args:
-            num_models (int): Number of models to process
-            questions (List[str]): List of questions to use for extraction. If None, uses default questions
-            output_dir (str): Directory to save the output files
-            save_raw_data (bool): Whether to save the original dataset
-            save_result_in_json (bool): Whether to download the dataset in json format in the output directory
-            from_date (datetime.date): Filter models by date
+            num_models (int, optional): Number of models to process. 
+                Defaults to 10.
+            questions (List[str], optional): Custom questions for extraction. 
+                Defaults to None.
+            output_dir (str, optional): Directory to save output files. 
+                Defaults to "./outputs".
+            save_raw_data (bool, optional): Whether to save original dataset. 
+                Defaults to False.
+            save_result_in_json (bool, optional): Whether to save results as JSON. 
+                Defaults to True.
+            from_date (str, optional): Filter models by date. 
+                Defaults to None.
+
         Returns:
-            pd.DataFrame: Processed dataframe with extracted information
+            pd.DataFrame: Processed DataFrame containing extracted information
         """
         # Load dataset
         original_HF_df = self.get_hf_dataset()
@@ -129,7 +167,18 @@ class HFExtractor:
         return HF_df
 
     def _augment_column_name(self, name: str) -> str:
-        """Add question text to column names for better readability"""
+        """
+        Add question text to column names for better readability.
+
+        This method transforms column names like 'q_id_0' to include the actual question text,
+        making the output more human-readable.
+
+        Args:
+            name (str): Original column name
+
+        Returns:
+            str: Augmented column name including the question text if applicable
+        """
         if "q_id" in name:
             num_id = int(name.split("_")[2])
             return name + "_" + self.parser.questions[num_id]

@@ -15,6 +15,27 @@ from tqdm import tqdm
 
 
 class ModelCardQAParser:
+    """
+    A parser for extracting structured information from model cards using question-answering techniques.
+
+    This class provides functionality to:
+    - Extract information using a QA model
+    - Parse known fields from HuggingFace datasets
+    - Process tags and metadata
+    - Handle batch processing of questions
+    
+    Attributes:
+        device: GPU device ID if available, None otherwise
+        tags_language (set): Set of supported language tags
+        tags_libraries (set): Set of supported ML library tags
+        tags_other (set): Set of miscellaneous tags
+        tags_task (set): Set of supported ML task tags
+        questions (list): List of questions for information extraction
+        available_questions (set): Set of question IDs that haven't been processed
+        hf_api: HuggingFace API client
+        qa_model (str): Name of the QA model being used
+        qa_pipeline: Transformer pipeline for question answering
+    """
 
     def __init__(
         self,
@@ -72,6 +93,15 @@ class ModelCardQAParser:
             self.qa_pipeline = pipeline("question-answering", model=qa_model)
 
     def load_tsv_file_to_list(self, path: str) -> Set[str]:
+        """
+        Load a TSV file and return its contents as a set of lowercase strings.
+
+        Args:
+            path (str): Path to the TSV file
+
+        Returns:
+            Set[str]: Set of lowercase strings from the first column of the TSV
+        """
         config_info = [
             val[0].lower() for val in pd.read_csv(path, sep="\t").values.tolist()
         ]
@@ -79,6 +109,20 @@ class ModelCardQAParser:
         return config_info
 
     def answer_question(self, question: str, context: str) -> str:
+        """
+        Extract answer for a given question from the provided context.
+
+        Args:
+            question (str): Question to be answered
+            context (str): Text context to extract answer from
+
+        Returns:
+            list: List containing a dictionary with answer details:
+                - data: The extracted answer
+                - extraction_method: Name of the QA model used
+                - confidence: Confidence score of the answer
+                - extraction_time: Timestamp of extraction
+        """
         answer = self.qa_pipeline({"question": question, "context": context})
         return [
             {
@@ -92,6 +136,17 @@ class ModelCardQAParser:
     def add_default_extraction_info(
         self, data: str, extraction_method: str, confidence: float
     ) -> Dict:
+        """
+        Create a standardized dictionary for extraction metadata.
+
+        Args:
+            data (str): The extracted information
+            extraction_method (str): Method used for extraction
+            confidence (float): Confidence score of the extraction
+
+        Returns:
+            dict: Dictionary containing extraction metadata
+        """
         return {
             "data": data,
             "extraction_method": extraction_method,
@@ -100,6 +155,15 @@ class ModelCardQAParser:
         }
 
     def get_repository_weight_HF(self, model_name: str) -> str:
+        """
+        Calculate the total size of a HuggingFace model repository.
+
+        Args:
+            model_name (str): Name of the model repository
+
+        Returns:
+            str: Repository size in GB, or "Not available" if calculation fails
+        """
         try:
             model_repo_weight = 0
             model_tree_file_information = self.hf_api.list_repo_tree(
@@ -114,6 +178,15 @@ class ModelCardQAParser:
             return "Not available"
 
     def parse_known_fields_HF(self, HF_df: pd.DataFrame) -> pd.DataFrame:
+        """
+        Parse known fields from HuggingFace dataset into standardized format.
+
+        Args:
+            HF_df (pd.DataFrame): DataFrame containing HuggingFace model information
+
+        Returns:
+            pd.DataFrame: DataFrame with parsed known fields
+        """
         HF_df.loc[:, "q_id_0"] = HF_df.loc[:, ("modelId")]
         HF_df.loc[:, "q_id_1"] = HF_df.loc[:, ("author")]
         HF_df.loc[:, "q_id_2"] = HF_df.loc[:, ("createdAt")].apply(lambda x: str(x))
@@ -162,6 +235,15 @@ class ModelCardQAParser:
         return HF_df
 
     def parse_fields_from_tags_HF(self, HF_df: pd.DataFrame) -> pd.DataFrame:
+        """
+        Extract information from HuggingFace model tags.
+
+        Args:
+            HF_df (pd.DataFrame): DataFrame containing HuggingFace model information
+
+        Returns:
+            pd.DataFrame: DataFrame with parsed tag information
+        """
 
         for index, row in HF_df.iterrows():
             for tag in row["tags"]:
@@ -229,6 +311,15 @@ class ModelCardQAParser:
         return HF_df
 
     def batched_parse_fields_from_txt_HF(self, HF_df: pd.DataFrame) -> pd.DataFrame:
+        """
+        Process text fields in batches using the QA pipeline.
+
+        Args:
+            HF_df (pd.DataFrame): DataFrame containing model information
+
+        Returns:
+            pd.DataFrame: DataFrame with extracted information from text fields
+        """
         # Create a set of questions to process
         questions_to_process = sorted(
             int(q.split("_")[2]) for q in self.available_questions
@@ -253,7 +344,15 @@ class ModelCardQAParser:
         self, HF_df: pd.DataFrame, questions: List[str], questions_to_process: Set[int]
     ) -> Dataset:
         """
-        Expands the dataframe into a dataset where each row contains a question and a corresponding context.
+        Create a dataset of question-context pairs for batch processing.
+
+        Args:
+            HF_df (pd.DataFrame): DataFrame containing model information
+            questions (List[str]): List of questions to process
+            questions_to_process (Set[int]): Set of question IDs to process
+
+        Returns:
+            Dataset: HuggingFace dataset containing question-context pairs
         """
         data = []
         for index, row in HF_df.iterrows():
@@ -275,7 +374,15 @@ class ModelCardQAParser:
         self, dataset: Dataset, qa_pipeline, batch_size: int = 16
     ) -> Dataset:
         """
-        Uses the Huggingface pipeline to batch process questions and contexts.
+        Process a dataset of questions and contexts using the QA pipeline.
+
+        Args:
+            dataset (Dataset): Dataset containing question-context pairs
+            qa_pipeline: HuggingFace pipeline for question answering
+            batch_size (int, optional): Size of batches for processing. Defaults to 16.
+
+        Returns:
+            Dataset: Dataset with added answer information
         """
         extraction_time = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
 
@@ -300,7 +407,14 @@ class ModelCardQAParser:
         self, HF_df: pd.DataFrame, processed_dataset: Dataset
     ) -> pd.DataFrame:
         """
-        Merges the processed answers back into the original DataFrame.
+        Merge processed answers back into the original DataFrame.
+
+        Args:
+            HF_df (pd.DataFrame): Original DataFrame
+            processed_dataset (Dataset): Dataset containing processed answers
+
+        Returns:
+            pd.DataFrame: DataFrame with merged answer information
         """
         # Group answers by row_index and question_id
         grouped_answers = processed_dataset.to_pandas().groupby("row_index")
@@ -320,6 +434,15 @@ class ModelCardQAParser:
         return HF_df
 
     def parse_fields_from_txt_HF(self, HF_df: pd.DataFrame) -> pd.DataFrame:
+        """
+        Extract information from text fields using QA model.
+
+        Args:
+            HF_df (pd.DataFrame): DataFrame containing model information
+
+        Returns:
+            pd.DataFrame: DataFrame with extracted information from text fields
+        """
         questions_to_process = set()
         for q in self.available_questions:
             # print(q.split("_")[2])

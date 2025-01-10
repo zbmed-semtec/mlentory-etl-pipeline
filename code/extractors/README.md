@@ -1,6 +1,6 @@
-# Extractors
+# MLentory Extract
 
-A package for extracting model information from different platforms.
+A package for extracting model information from different ML platforms.
 
 ## Installation
 
@@ -13,7 +13,7 @@ pip install -e .
 1. **Basic Usage**:
 
 ```python
-from extractors.hf_extractor import HFExtractor
+from mlentory_extract.hf_extract import HFExtractor
 
 # Initialize extractor
 extractor = HFExtractor(
@@ -29,13 +29,16 @@ extractor = HFExtractor(
 df = extractor.download_models(
     num_models=10,
     output_dir="./outputs",
-    save_original=True
+    save_raw_data=True,
+    save_result_in_json=True
 )
+```
 
 2. **Using with Configuration Files**:
+
 ```python
 import pandas as pd
-from extractors.hf_extractor import HFExtractor
+from mlentory_extract.hf_extract import HFExtractor
 
 def load_tsv_file_to_list(path: str) -> list[str]:
     return [val[0] for val in pd.read_csv(path, sep="\t").values.tolist()]
@@ -57,6 +60,95 @@ extractor = HFExtractor(
     tags_other=tags_other,
     tags_task=tags_task
 )
+
+# Process models with additional options
+df = extractor.download_models(
+    num_models=10,
+    output_dir="./outputs",
+    save_raw_data=True,        # Save original dataset
+    save_result_in_json=True,  # Save results in JSON format
+    from_date="2024-01-01"    # Filter models by date
+)
 ```
+
+## Configuration Files
+
+The package uses TSV (Tab-Separated Values) files for configuration. Each file should contain one item per line. Here are examples of the expected format:
+
+1. **questions.tsv** - Questions for information extraction:
+```tsv
+What is the name of the model?
+What user shared the model?
+What tasks can the model solve?
+What datasets was the model trained on?
+```
+
+2. **tags_language.tsv** - Supported language tags:
+```tsv
+en
+zh
+de
+es
+fr
+```
+
+3. **tags_libraries.tsv** - Supported ML libraries:
+```tsv
+PyTorch
+TensorFlow
+JAX
+Transformers
+Diffusers
+```
+
+4. **tags_task.tsv** - Supported ML tasks:
+```tsv
+Image Classification
+Object Detection
+Text Classification
+Question Answering
+Translation
+```
+
+5. **tags_other.tsv** - Other relevant tags:
+```tsv
+Inference Endpoints
+AutoTrain Compatible
+Has a Space
+4-bit precision
+8-bit precision
+```
+
+Configuration files should be placed in a directory structure like:
+```
+config_data/
+├── questions.tsv
+├── tags_language.tsv
+├── tags_libraries.tsv
+├── tags_other.tsv
+└── tags_task.tsv
+```
+
+## Package Structure
+
+```
+mlentory_extract/
+├── core/
+│   ├── __init__.py
+│   └── ModelCardQAParser.py
+└── hf_extract/
+    ├── __init__.py
+    └── HFExtractor.py
+```
+
+## Requirements
+
+- Python >= 3.8.10
+- pandas
+- transformers
+- datasets
+- torch
+- huggingface-hub
+- tqdm
 
 

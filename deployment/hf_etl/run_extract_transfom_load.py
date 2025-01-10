@@ -167,7 +167,7 @@ def parse_args() -> argparse.Namespace:
         help="Download models from this date (format: YYYY-MM-DD)",
     )
     parser.add_argument(
-        "--num-models", type=int, default=5, help="Number of models to download"
+        "--num-models", type=int, default=10, help="Number of models to download"
     )
     parser.add_argument(
         "--output-dir",
@@ -204,6 +204,7 @@ def main():
 
     # Load
     load_processor = initialize_load_processor(kg_files_directory)
+    # load_processor.clean_DBs()
     load_processor.load_df(df=m4ml_models_df, output_ttl_file_path=args.output_dir)
     load_processor.print_DB_states()
 
