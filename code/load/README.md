@@ -4,8 +4,31 @@ A Python package for loading and managing ML model metadata across multiple data
 
 ## Installation
 
+If you want to install the load package in your local machine you can run the following command:
 ```bash
 pip install -e .
+```
+
+If you want to use a docker container to install the load package you can create a new Dockerfile:
+
+```
+FROM python:3.10
+
+COPY ./load/ /app
+WORKDIR /app
+
+RUN pip install -e .
+
+# Let the container run indefinitely, this is useful to keep the container running after the installation is finished.
+
+CMD ["tail", "-f", "/dev/null"]
+```
+
+Then you can build the docker image and install the package:
+```bash
+docker build -t mlentory_load .
+docker run -it mlentory_load
+docker exec -it mlentory_load /bin/bash
 ```
 
 ## Overview
@@ -54,6 +77,12 @@ MLentory Load manages the storage and synchronization of ML model metadata acros
    - Coordinates database operations
    - Manages data flow
    - Handles batch processing
+
+## Prerequisites
+
+You need to have the require databases running and the required credentials to connect to them in order to run the load package.
+
+If you want to setup your own databases you can follow the instructions in the [deployment documentation](deployment/README.md). In the docker-compose.yml file you can find examples of the required databases and their credentials, and how to set them up.
 
 ## Usage
 

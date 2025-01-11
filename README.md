@@ -135,6 +135,31 @@ The project structure is the following:
 ```
 
 
+## Contribute to the project
+
+If you are an external contributor from ZB MED you can fork the project and create a pull request.
+Otherwise you can contact the ZB MED Semantic Technologies team to get access to the project directly.
+
+Every time you want add a new feature or fix a bug you need to do the following:
+1. Create a new branch with the name of the feature or bug you are fixing.
+2. After making your changes you need to run the tests and make sure they pass.
+    - You can run the tests by running the *validate_tests.sh* script in the Test folder.
+3. Make sure to check the format of the code using black.
+    - You can use black with the following command in the root folder of the project:
+        ```
+        black .
+        ```
+        You can run this command inside any instance/container that has access to the project files, and has python with black installed.
+4. Commit your changes with a descriptive message and remember to use the [gitemoji format](https://gitmoji.dev/).
+    - here an  example of a commit message:
+        ```
+        git commit -m "🐛 fix data leakage in the data extraction pipeline"
+        ```
+        By using the 🐛 symbol you can make clear you are solving a bug.
+
+5. Push your changes to your branch.
+6. Create a pull request to the main branch explaining the changes you made.
+
 
 ## Acknowledgements
 

@@ -4,8 +4,31 @@ A package for extracting model information from different ML platforms.
 
 ## Installation
 
+If you want to install the load package in your local machine you can run the following command:
 ```bash
 pip install -e .
+```
+
+If you want to use a docker container to install the load package you can create a new Dockerfile:
+
+```
+FROM python:3.10
+
+COPY ./extractors/ /app
+WORKDIR /app
+
+RUN pip install -e .
+
+# Let the container run indefinitely, this is useful to keep the container running after the installation is finished.
+
+CMD ["tail", "-f", "/dev/null"]
+```
+
+Then you can build the docker image and install the package:
+```bash
+docker build -t mlentory_extract .
+docker run -it mlentory_extract
+docker exec -it mlentory_extract /bin/bash
 ```
 
 ## Usage
