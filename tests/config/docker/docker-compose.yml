@@ -14,6 +14,7 @@ services:
     volumes:
       - ../../unit:/app_test/unit
       - ../../fixtures:/app_test/fixtures
+      - ../../integration:/app_test/integration
       - ../../config:/app_test/config
       - ../../../code/extractors:/app_test/extractors
       - ../../../code/transform:/app_test/transform
@@ -39,6 +40,7 @@ services:
     volumes:
       - ../../unit:/app_test/unit
       - ../../fixtures:/app_test/fixtures
+      - ../../integration:/app_test/integration
       - ../../config:/app_test/config
       - ../../../code/extractors:/app_test/extractors
       - ../../../code/transform:/app_test/transform

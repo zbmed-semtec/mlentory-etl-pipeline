@@ -1,4 +1,3 @@
-from multiprocessing import Process, Pool, set_start_method, get_context
 import pytest
 import sys
 import os
@@ -9,7 +8,7 @@ from typing import List, Tuple
 import pytest
 from unittest.mock import Mock
 import json
-from transform.core.FieldProcessorHF import FieldProcessorHF
+from mlentory_transform.hf_transform.FieldProcessorHF import FieldProcessorHF
 
 
 class TestFieldProcessorHF:

@@ -6,8 +6,8 @@ from typing import List
 import pytest
 from unittest.mock import Mock, MagicMock
 
-from mlentory_extract.hf_extractor.HFExtractor import HFExtractor
-from mlentory_extract.core.ModelCardQAParser import ModelCardQAParser
+from mlentory_extract.hf_extract import HFExtractor
+from mlentory_extract.core import ModelCardQAParser
 
 
 class TestHFExtractor:
@@ -160,7 +160,7 @@ class TestHFExtractor:
         df = extractor_empty.download_models(
             num_models=1,
             output_dir="./test_outputs",
-            save_original=False,
+            save_raw_data=False,
             save_result_in_json=False,
         )
 
@@ -190,7 +190,7 @@ class TestHFExtractor:
         """
         # Mock the load_dataset function
         monkeypatch.setattr(
-            "extractors.hf_extractor.HFExtractor.get_hf_dataset",
+            "mlentory_extract.hf_extract.HFExtractor.get_hf_dataset",
             lambda self: mock_dataset,
         )
         extractor_empty.parser = mock_parser
@@ -200,7 +200,7 @@ class TestHFExtractor:
         df = extractor_empty.download_models(
             num_models=1,
             output_dir=str(output_dir),
-            save_original=True,
+            save_raw_data=True,
             save_result_in_json=True,
         )
 
@@ -218,7 +218,7 @@ class TestHFExtractor:
         """
         # Mock the load_dataset function
         monkeypatch.setattr(
-            "extractors.hf_extractor.HFExtractor.get_hf_dataset",
+            "mlentory_extract.hf_extract.HFExtractor.get_hf_dataset",       
             lambda self: mock_dataset,
         )
 
@@ -236,7 +236,7 @@ class TestHFExtractor:
         # Check that we're in the expected test folder
 
         df = extractor_full.download_models(
-            num_models=1, save_original=False, save_result_in_json=False
+            num_models=1, save_raw_data=False, save_result_in_json=False
         )
 
         # Check that each cell contains the expected extraction info structure

@@ -73,7 +73,7 @@ class HFExtractor:
         questions: List[str] = None,
         output_dir: str = "./outputs",
         save_raw_data: bool = False,
-        save_result_in_json: bool = True,
+        save_result_in_json: bool = False,
         from_date: str = None,
     ) -> pd.DataFrame:
         """

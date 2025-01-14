@@ -13,8 +13,8 @@ from rdflib import Graph, URIRef, Literal, BNode
 from datetime import datetime
 
 sys.path.append(".")
-from mlentory_loader.core import GraphHandler
-from mlentory_loader.dbHandler import RDFHandler, SQLHandler, IndexHandler
+from mlentory_load.core import GraphHandler
+from mlentory_load.dbHandler import RDFHandler, SQLHandler, IndexHandler
 
 
 class TestGraphHandler:
@@ -80,12 +80,14 @@ class TestGraphHandler:
         mock_SQLHandler = Mock(spec=SQLHandler)
         mock_RDFHandler = Mock(spec=RDFHandler)
         mock_IndexHandler = Mock(spec=IndexHandler)
+        
+        kg_files_directory = os.path.join(self.source_path, "integration", "dbs", "virtuoso", "kg_files")
 
         graph_handler = GraphHandler(
             mock_SQLHandler,
             mock_RDFHandler,
             mock_IndexHandler,
-            kg_files_directory=f"{self.source_path}/integration/dbs/virtuoso/kg_files",
+            kg_files_directory=kg_files_directory,
         )
 
         m4ml_example_dataframe = pd.read_json(

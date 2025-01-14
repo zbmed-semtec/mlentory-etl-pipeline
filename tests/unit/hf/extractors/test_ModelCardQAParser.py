@@ -5,8 +5,7 @@ import pytest
 from typing import List
 import os
 
-from extractors.core.ModelCardQAParser import ModelCardQAParser
-
+from mlentory_extract.core.ModelCardQAParser import ModelCardQAParser
 
 class TestModelCardQAParser:
     """

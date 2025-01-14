@@ -8,8 +8,8 @@ from typing import List, Tuple
 from unittest.mock import Mock
 from pandas import Timestamp
 
-from mlentory_loader.core import GraphHandler
-from mlentory_loader.dbHandler import IndexHandler
+from mlentory_load.core import GraphHandler
+from mlentory_load.dbHandler import IndexHandler
 
 
 class TestIndexHandler:
