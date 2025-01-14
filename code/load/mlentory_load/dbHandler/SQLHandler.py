@@ -134,7 +134,7 @@ class SQLHandler:
 
     def delete_all_tables(self):
         """Delete all tables in the database."""
-        
+
         cursor = self.connection.cursor()
         cursor.execute(
             """
@@ -154,7 +154,7 @@ class SQLHandler:
 
     def clean_all_tables(self):
         """Remove all data from tables while preserving structure."""
-        
+
         cursor = self.connection.cursor()
         cursor.execute(
             """

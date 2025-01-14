@@ -84,7 +84,7 @@ class GraphHandler:
     def update_graph(self):
         """
         Update graphs across all databases.
-        
+
         This method:
         1. Updates metadata graph
         2. Updates current graph
@@ -140,7 +140,7 @@ class GraphHandler:
     def update_metadata_graph(self):
         """
         Update metadata graph with new information.
-        
+
         This method:
         1. Processes each model
         2. Updates triplet metadata
@@ -425,7 +425,7 @@ class GraphHandler:
     def update_current_graph(self):
         """
         Update the current graph with new triplets.
-        
+
         This method:
         1. Creates new triplets graph
         2. Creates deprecated triplets graph

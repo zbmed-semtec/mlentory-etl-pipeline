@@ -110,7 +110,10 @@ class RDFHandler:
         result = container.exec_run(command)
 
     def delete_graph(
-        self, ttl_file_path: str, graph_identifier: str, deprecated_graph_identifier: str
+        self,
+        ttl_file_path: str,
+        graph_identifier: str,
+        deprecated_graph_identifier: str,
     ):
         """
         Delete triples from a graph based on TTL file.
@@ -140,7 +143,14 @@ class RDFHandler:
         command = f"""isql -S 1111 -U {self._user} -P {self._password} {sql_command}"""
         result = container.exec_run(command)
 
-    def delete_triple(self, sparql_endpoint: str, subject: str, predicate: str, object: str, graph_iri: str):
+    def delete_triple(
+        self,
+        sparql_endpoint: str,
+        subject: str,
+        predicate: str,
+        object: str,
+        graph_iri: str,
+    ):
         """
         Delete a specific triple from the graph.
 
