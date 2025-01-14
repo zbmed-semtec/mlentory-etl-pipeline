@@ -13,6 +13,8 @@ import math
 from datetime import datetime
 from tqdm import tqdm
 
+from mlentory_extract.core.QAInferenceEngine import QAInferenceEngine
+
 
 class ModelCardQAParser:
     """
@@ -85,12 +87,7 @@ class ModelCardQAParser:
 
         # Assigning the question answering pipeline
         self.qa_model = qa_model
-        if self.device is not None:
-            self.qa_pipeline = pipeline(
-                "question-answering", model=qa_model, device=self.device
-            )
-        else:
-            self.qa_pipeline = pipeline("question-answering", model=qa_model)
+        self.qa_engine = QAInferenceEngine(qa_model)
 
     def load_tsv_file_to_list(self, path: str) -> Set[str]:
         """
@@ -108,7 +105,7 @@ class ModelCardQAParser:
         # config_info = set(config_info)
         return config_info
 
-    def answer_question(self, question: str, context: str) -> str:
+    def answer_question(self, question: str, context: str) -> List[Dict]:
         """
         Extract answer for a given question from the provided context.
 
@@ -123,15 +120,13 @@ class ModelCardQAParser:
                 - confidence: Confidence score of the answer
                 - extraction_time: Timestamp of extraction
         """
-        answer = self.qa_pipeline({"question": question, "context": context})
-        return [
-            {
-                "data": answer["answer"] + "",
-                "extraction_method": self.qa_model,
-                "confidence": answer["score"],
-                "extraction_time": datetime.now().strftime("%Y-%m-%d_%H-%M-%S"),
-            }
-        ]
+        result = self.qa_engine.answer_single_question(question, context)
+        return [{
+            "data": result.answer,
+            "extraction_method": self.qa_model,
+            "confidence": result.confidence,
+            "extraction_time": result.extraction_time
+        }]
 
     def add_default_extraction_info(
         self, data: str, extraction_method: str, confidence: float
@@ -323,7 +318,7 @@ class ModelCardQAParser:
 
         # Process the dataset in batches using the QA pipeline
         processed_dataset = self.process_question_context_dataset(
-            question_context_dataset, self.qa_pipeline, batch_size=8
+            question_context_dataset, self.qa_engine, batch_size=8
         )
 
         # Merge the results back into the original DataFrame
@@ -364,35 +359,8 @@ class ModelCardQAParser:
     def process_question_context_dataset(
         self, dataset: Dataset, qa_pipeline, batch_size: int = 16
     ) -> Dataset:
-        """
-        Process a dataset of questions and contexts using the QA pipeline.
-
-        Args:
-            dataset (Dataset): Dataset containing question-context pairs
-            qa_pipeline: HuggingFace pipeline for question answering
-            batch_size (int, optional): Size of batches for processing. Defaults to 16.
-
-        Returns:
-            Dataset: Dataset with added answer information
-        """
-        extraction_time = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-
-        def process_batch(batch):
-            # Run the pipeline in batch mode
-            answers = qa_pipeline(
-                [
-                    {"question": q, "context": c}
-                    for q, c in zip(batch["question"], batch["context"])
-                ]
-            )
-
-            # Extract and structure answers
-            batch["answer"] = [a["answer"] for a in answers]
-            batch["score"] = [a["score"] for a in answers]
-            batch["extraction_time"] = extraction_time
-            return batch
-
-        return dataset.map(process_batch, batched=True, batch_size=batch_size)
+        """Updated to use QAInferenceEngine"""
+        return self.qa_engine.process_dataset(dataset)
 
     def merge_answers_into_dataframe(
         self, HF_df: pd.DataFrame, processed_dataset: Dataset
