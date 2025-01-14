@@ -80,8 +80,10 @@ class TestGraphHandler:
         mock_SQLHandler = Mock(spec=SQLHandler)
         mock_RDFHandler = Mock(spec=RDFHandler)
         mock_IndexHandler = Mock(spec=IndexHandler)
-        
-        kg_files_directory = os.path.join(self.source_path, "integration", "dbs", "virtuoso", "kg_files")
+
+        kg_files_directory = os.path.join(
+            self.source_path, "integration", "dbs", "virtuoso", "kg_files"
+        )
 
         graph_handler = GraphHandler(
             mock_SQLHandler,

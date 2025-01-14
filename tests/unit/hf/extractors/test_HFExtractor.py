@@ -218,7 +218,7 @@ class TestHFExtractor:
         """
         # Mock the load_dataset function
         monkeypatch.setattr(
-            "mlentory_extract.hf_extract.HFExtractor.get_hf_dataset",       
+            "mlentory_extract.hf_extract.HFExtractor.get_hf_dataset",
             lambda self: mock_dataset,
         )
 

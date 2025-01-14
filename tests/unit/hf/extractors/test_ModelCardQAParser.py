@@ -7,6 +7,7 @@ import os
 
 from mlentory_extract.core.ModelCardQAParser import ModelCardQAParser
 
+
 class TestModelCardQAParser:
     """
     A class to test the ModelCardQAParser class
