@@ -124,12 +124,14 @@ class ModelCardQAParser:
                 - extraction_time: Timestamp of extraction
         """
         result = self.qa_engine.answer_single_question(question, context)
-        return [{
-            "data": result.answer,
-            "extraction_method": self.qa_model,
-            "confidence": result.confidence,
-            "extraction_time": result.extraction_time
-        }]
+        return [
+            {
+                "data": result.answer,
+                "extraction_method": self.qa_model,
+                "confidence": result.confidence,
+                "extraction_time": result.extraction_time,
+            }
+        ]
 
     def add_default_extraction_info(
         self, data: str, extraction_method: str, confidence: float
@@ -345,7 +347,9 @@ class ModelCardQAParser:
             Dataset: HuggingFace dataset containing question-context pairs
         """
         data = []
-        for index, row in tqdm(HF_df.iterrows(), total=len(HF_df), desc="Creating QA dataset"):
+        for index, row in tqdm(
+            HF_df.iterrows(), total=len(HF_df), desc="Creating QA dataset"
+        ):
             context = row["card"]
             if "---" in context:
                 sections = context.split("---")
@@ -460,7 +464,9 @@ class ModelCardQAParser:
 
         # Pre-process all contexts at once
         contexts = []
-        for _, row in tqdm(HF_df.iterrows(), total=len(HF_df), desc="Pre-processing contexts"):
+        for _, row in tqdm(
+            HF_df.iterrows(), total=len(HF_df), desc="Pre-processing contexts"
+        ):
             context = row["card"]
             if "---" in context:
                 sections = context.split("---")
@@ -469,48 +475,50 @@ class ModelCardQAParser:
             contexts.append(context)
 
         # Get questions once
-        current_questions = [
-            self.questions[q_id] for q_id in questions_to_process
-        ]
-        
+        current_questions = [self.questions[q_id] for q_id in questions_to_process]
+
         # Process in batches
         batch_size = 16
-        for batch_start in tqdm(range(0, len(contexts), batch_size), desc="Processing batches"):
+        for batch_start in tqdm(
+            range(0, len(contexts), batch_size), desc="Processing batches"
+        ):
             batch_end = min(batch_start + batch_size, len(contexts))
             batch_contexts = contexts[batch_start:batch_end]
-            
+
             # Process batch of contexts
             batch_results = []
             for context in batch_contexts:
                 # Find relevant sections for all questions at once
                 relevant_sections = self.matching_engine.find_relevant_sections(
-                    questions=current_questions,
-                    context=context,
-                    top_k=1
+                    questions=current_questions, context=context, top_k=1
                 )
                 batch_results.append(relevant_sections)
 
             # Update DataFrame with batch results
             for i, relevant_sections in enumerate(batch_results):
                 df_idx = batch_start + i
-                
+
                 # Process each question
                 for q_idx, q_id in enumerate(questions_to_process):
                     section, score = relevant_sections[q_idx][0]
-                    
+
                     # Create answer with section content and metadata
-                    answer = [{
-                        "data": section.content.strip(),
-                        "extraction_method": f"Semantic Matching with {self.matching_engine.model_name}",
-                        "confidence": score,
-                        "extraction_time": datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-                    }]
+                    answer = [
+                        {
+                            "data": section.content.strip(),
+                            "extraction_method": f"Semantic Matching with {self.matching_engine.model_name}",
+                            "confidence": score,
+                            "extraction_time": datetime.now().strftime(
+                                "%Y-%m-%d_%H-%M-%S"
+                            ),
+                        }
+                    ]
 
                     # Store the answer in the DataFrame
                     HF_df.loc[df_idx, f"q_id_{q_id}"] = answer
 
             # Clear some memory
-            if hasattr(torch.cuda, 'empty_cache'):
+            if hasattr(torch.cuda, "empty_cache"):
                 torch.cuda.empty_cache()
 
         return HF_df
