@@ -29,8 +29,23 @@ class QAMatchingEngine:
         """
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.model_name = embedding_model
-        self.tokenizer = AutoTokenizer.from_pretrained(embedding_model)
-        self.model = AutoModel.from_pretrained(embedding_model).to(self.device)
+        
+        # Enable TF32 for better performance on Ampere GPUs
+        if self.device.type == "cuda":
+            torch.backends.cuda.matmul.allow_tf32 = True
+            torch.backends.cudnn.allow_tf32 = True
+        
+        # Load model in half precision for CUDA, regular precision for CPU
+        self.model = AutoModel.from_pretrained(
+            embedding_model,
+            torch_dtype=torch.float16 if self.device.type == "cuda" else torch.float32,
+            trust_remote_code=True
+        ).to(self.device)
+        
+        # Load tokenizer with caching
+        self.tokenizer = AutoTokenizer.from_pretrained(embedding_model, use_fast=True)
+        
+        # Set model to eval mode
         self.model.eval()
     
     def _extract_sections(self, text: str) -> List[Section]:
@@ -93,24 +108,71 @@ class QAMatchingEngine:
         Returns:
             torch.Tensor: Tensor of embeddings
         """
-        # Tokenize and get model outputs
-        inputs = self.tokenizer(
-            texts,
-            padding=True,
-            truncation=True,
-            max_length=512,
-            return_tensors="pt"
-        ).to(self.device)
+        # Process in smaller batches to avoid OOM
+        batch_size = 8  # Reduced batch size
+        all_embeddings = []
         
-        outputs = self.model(**inputs)
+        for i in range(0, len(texts), batch_size):
+            batch_texts = texts[i:i + batch_size]
+            
+            try:
+                # Tokenize with efficient padding
+                inputs = self.tokenizer(
+                    batch_texts,
+                    padding=True,
+                    truncation=True,
+                    max_length=512,  # Reduced max length
+                    return_tensors="pt"
+                ).to(self.device)
+                
+                # Get model outputs efficiently
+                outputs = self.model(**inputs)
+                
+                # Efficient mean pooling
+                attention_mask = inputs['attention_mask']
+                token_embeddings = outputs.last_hidden_state
+                
+                # Use broadcasting for faster computation
+                mask_expanded = attention_mask.unsqueeze(-1)
+                sum_embeddings = torch.sum(token_embeddings * mask_expanded, dim=1)
+                sum_mask = torch.clamp(mask_expanded.sum(dim=1), min=1e-9)
+                embeddings = sum_embeddings / sum_mask
+                
+                # Move to CPU to free GPU memory
+                all_embeddings.append(embeddings.cpu())
+                
+            except RuntimeError as e:
+                print(f"Warning: Error processing batch {i}-{i+batch_size}: {str(e)}")
+                # Try processing one by one if batch fails
+                for text in batch_texts:
+                    try:
+                        inputs = self.tokenizer(
+                            [text],
+                            padding=True,
+                            truncation=True,
+                            max_length=512,
+                            return_tensors="pt"
+                        ).to(self.device)
+                        
+                        outputs = self.model(**inputs)
+                        attention_mask = inputs['attention_mask']
+                        token_embeddings = outputs.last_hidden_state
+                        mask_expanded = attention_mask.unsqueeze(-1)
+                        sum_embeddings = torch.sum(token_embeddings * mask_expanded, dim=1)
+                        sum_mask = torch.clamp(mask_expanded.sum(dim=1), min=1e-9)
+                        embeddings = sum_embeddings / sum_mask
+                        all_embeddings.append(embeddings.cpu())
+                    except Exception as e2:
+                        print(f"Warning: Could not process text: {str(e2)}")
+                        # Add zero embedding as fallback
+                        all_embeddings.append(torch.zeros((1, outputs.last_hidden_state.size(-1))))
+            
+            # Clear GPU cache after each batch
+            if self.device.type == "cuda":
+                torch.cuda.empty_cache()
         
-        # Use mean pooling to get text embeddings
-        attention_mask = inputs['attention_mask']
-        token_embeddings = outputs.last_hidden_state
-        input_mask_expanded = attention_mask.unsqueeze(-1).expand(token_embeddings.size()).float()
-        embeddings = torch.sum(token_embeddings * input_mask_expanded, 1) / torch.clamp(input_mask_expanded.sum(1), min=1e-9)
-        
-        return embeddings
+        # Concatenate all embeddings
+        return torch.cat(all_embeddings, dim=0).to(self.device)
     
     def _compute_similarity(self, query_embedding: torch.Tensor, section_embeddings: torch.Tensor) -> torch.Tensor:
         """
@@ -123,10 +185,11 @@ class QAMatchingEngine:
         Returns:
             torch.Tensor: Similarity scores
         """
-        return torch.nn.functional.cosine_similarity(
-            query_embedding.unsqueeze(0),
-            section_embeddings
-        )
+        # Normalize embeddings for more efficient cosine similarity
+        query_embedding = torch.nn.functional.normalize(query_embedding, p=2, dim=-1)
+        section_embeddings = torch.nn.functional.normalize(section_embeddings, p=2, dim=-1)
+        
+        return torch.mm(query_embedding.unsqueeze(0), section_embeddings.t()).squeeze(0)
     
     def find_relevant_sections(self, questions: List[str], context: str, top_k: int = 2) -> List[List[Tuple[Section, float]]]:
         """

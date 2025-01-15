@@ -457,18 +457,22 @@ class ModelCardQAParser:
             int(q.split("_")[2]) for q in self.available_questions
         )
 
-        for index, row in tqdm(HF_df.iterrows(), total=len(HF_df), desc="Processing model cards"):
+        # Pre-process all contexts at once
+        contexts = []
+        for _, row in tqdm(HF_df.iterrows(), total=len(HF_df), desc="Pre-processing contexts"):
             context = row["card"]
             if "---" in context:
                 sections = context.split("---")
                 if len(sections) > 1:
                     context = "---".join(sections[2:])
+            contexts.append(context)
 
-            # Get questions for this model card
-            current_questions = [
-                self.questions[q_id] for q_id in questions_to_process
-            ]
-
+        # Get questions once
+        current_questions = [
+            self.questions[q_id] for q_id in questions_to_process
+        ]
+        
+        for index, context in tqdm(enumerate(contexts), total=len(contexts), desc="Finding relevant sections"):
             # Find relevant sections for all questions at once
             relevant_sections = self.matching_engine.find_relevant_sections(
                 questions=current_questions,
