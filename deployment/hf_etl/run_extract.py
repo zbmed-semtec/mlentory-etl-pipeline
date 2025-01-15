@@ -57,7 +57,10 @@ def initialize_extractor(config_path: str) -> HFExtractor:
         # qa_model="deepset/roberta-base-squad2",
         # qa_model="Intel/dynamic_tinybert",
         # qa_model="mosaicml/mpt-7b",
-        qa_model="distilbert/distilbert-base-cased-distilled-squad",
+        # Not as fast but better for semantic matching
+        # qa_model="sentence-transformers/all-mpnet-base-v2",
+        # Pretty fast 10X faster but bad for semantic matching (Maybe we could finnetune it)
+        qa_model="sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2",
         questions=questions,
         tags_language=tags_language,
         tags_libraries=tags_libraries,
@@ -99,7 +102,7 @@ def parse_args() -> argparse.Namespace:
         help="Download models from this date (format: YYYY-MM-DD)",
     )
     parser.add_argument(
-        "--num-models", type=int, default=10, help="Number of models to download"
+        "--num-models", type=int, default=100, help="Number of models to download"
     )
     parser.add_argument(
         "--output-dir",

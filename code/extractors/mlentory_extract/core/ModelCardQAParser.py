@@ -1,4 +1,5 @@
 import pandas as pd
+import torch
 import transformers
 from transformers import pipeline
 from datasets import Dataset
@@ -89,7 +90,7 @@ class ModelCardQAParser:
         # Assigning the question answering pipeline
         self.qa_model = qa_model
         self.qa_engine = QAInferenceEngine(qa_model)
-        self.matching_engine = QAMatchingEngine()
+        self.matching_engine = QAMatchingEngine(qa_model)
 
     def load_tsv_file_to_list(self, path: str) -> Set[str]:
         """
@@ -472,27 +473,44 @@ class ModelCardQAParser:
             self.questions[q_id] for q_id in questions_to_process
         ]
         
-        for index, context in tqdm(enumerate(contexts), total=len(contexts), desc="Finding relevant sections"):
-            # Find relevant sections for all questions at once
-            relevant_sections = self.matching_engine.find_relevant_sections(
-                questions=current_questions,
-                context=context,
-                top_k=1  # Only get the most relevant section
-            )
+        # Process in batches
+        batch_size = 16
+        for batch_start in tqdm(range(0, len(contexts), batch_size), desc="Processing batches"):
+            batch_end = min(batch_start + batch_size, len(contexts))
+            batch_contexts = contexts[batch_start:batch_end]
+            
+            # Process batch of contexts
+            batch_results = []
+            for context in batch_contexts:
+                # Find relevant sections for all questions at once
+                relevant_sections = self.matching_engine.find_relevant_sections(
+                    questions=current_questions,
+                    context=context,
+                    top_k=1
+                )
+                batch_results.append(relevant_sections)
 
-            # Process each question
-            for q_idx, q_id in enumerate(questions_to_process):
-                section, score = relevant_sections[q_idx][0]  # Get the top section
+            # Update DataFrame with batch results
+            for i, relevant_sections in enumerate(batch_results):
+                df_idx = batch_start + i
                 
-                # Create answer with section content and metadata
-                answer = [{
-                    "data": section.content.strip(),
-                    "extraction_method": "Semantic Matching with "+self.matching_engine.model_name,
-                    "confidence": score,
-                    "extraction_time": datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-                }]
+                # Process each question
+                for q_idx, q_id in enumerate(questions_to_process):
+                    section, score = relevant_sections[q_idx][0]
+                    
+                    # Create answer with section content and metadata
+                    answer = [{
+                        "data": section.content.strip(),
+                        "extraction_method": f"Semantic Matching with {self.matching_engine.model_name}",
+                        "confidence": score,
+                        "extraction_time": datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+                    }]
 
-                # Store the answer in the DataFrame
-                HF_df.loc[index, f"q_id_{q_id}"] = answer
+                    # Store the answer in the DataFrame
+                    HF_df.loc[df_idx, f"q_id_{q_id}"] = answer
+
+            # Clear some memory
+            if hasattr(torch.cuda, 'empty_cache'):
+                torch.cuda.empty_cache()
 
         return HF_df
