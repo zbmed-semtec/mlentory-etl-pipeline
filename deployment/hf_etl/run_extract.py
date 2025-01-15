@@ -54,7 +54,10 @@ def initialize_extractor(config_path: str) -> HFExtractor:
     tags_other = load_tsv_file_to_list(f"{config_path}/extract/tags_other.tsv")
     tags_task = load_tsv_file_to_list(f"{config_path}/extract/tags_task.tsv")
     return HFExtractor(
-        qa_model="Intel/dynamic_tinybert",
+        # qa_model="deepset/roberta-base-squad2",
+        # qa_model="Intel/dynamic_tinybert",
+        # qa_model="mosaicml/mpt-7b",
+        qa_model="distilbert/distilbert-base-cased-distilled-squad",
         questions=questions,
         tags_language=tags_language,
         tags_libraries=tags_libraries,
@@ -74,7 +77,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--save-extraction",
         action="store_true",
-        default=False,
+        default=True,
         help="Save the results of the extraction phase",
     )
     parser.add_argument(
@@ -123,6 +126,7 @@ def main():
     extracted_df = extractor.download_models(
         num_models=args.num_models,
         from_date=args.from_date,
+        output_dir=args.output_dir,
         save_result_in_json=args.save_extraction,
         save_raw_data=False,
     )

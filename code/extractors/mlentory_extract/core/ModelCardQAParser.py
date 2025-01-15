@@ -410,7 +410,13 @@ class ModelCardQAParser:
         for index, row in tqdm(
             HF_df.iterrows(), total=len(HF_df), desc="Parsing text fields"
         ):
-            context = row["card"]  # Getting the context from the "card" column
+            # Get context from card column and remove first section between ---
+            context = row["card"]
+            if "---" in context:
+                sections = context.split("---")
+                if len(sections) > 1:
+                    context = "---".join(sections[2:])
+            # print(context)
             # Create an empty dictionary to store answers for each question
             answers = {}
 
@@ -428,40 +434,3 @@ class ModelCardQAParser:
                 HF_df.loc[index, question] = [answer]
 
         return HF_df
-
-    # def chunker(self, iterable, chunksize):
-    #     """Yields chunks of size chunksize from an iterable."""
-    #     chunk = []
-    #     for item in iterable:
-    #         chunk.append(item)
-    #         if len(chunk) == chunksize:
-    #             yield chunk
-    #             chunk = []
-    #     if chunk:
-    #         yield chunk
-
-    # def parse_fields_from_txt_HF(self, HF_df: pd.DataFrame,chunk_size: int) -> pd.DataFrame:
-    #     questions_to_process = {5, 8, 9, 10, 11, 12, 14, 18}
-
-    #     # Iterate through the dataframe in chunks
-    #     for chunk in self.chunker(HF_df.iterrows(), chunk_size):
-    #         batch_df = pd.DataFrame(chunk, columns=["index", "card"])
-    #         batch_context = batch_df["card"].tolist()  # Extract contexts in a list
-
-    #         # Create an empty dictionary to store answers for each batch
-    #         batch_answers = {}
-
-    #         # Process the questions in a batch using self.answer_question
-    #         for question in self.questions:
-    #             if question not in questions_to_process:
-    #                 continue
-    #             # Assuming answer_question can handle a list of contexts
-    #             batch_answers[question] = self.answer_question(question, batch_context)
-
-    #         # Update the original dataframe with answers for each chunk
-    #         for index, row in chunk:
-    #             for question, answer in batch_answers.items():
-    #                 q_id = "q_id_" + str(question)
-    #                 HF_df.loc[index, q_id] = answer[row["index"]]  # Access answer by index
-
-    #     return HF_df

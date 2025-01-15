@@ -1,9 +1,12 @@
 import torch
+torch.backends.cuda.matmul.allow_tf32 = True
 from transformers import pipeline
 from datasets import Dataset
 from typing import List, Dict, Any
 from datetime import datetime
 from dataclasses import dataclass
+import transformers
+from transformers import AutoTokenizer
 
 @dataclass
 class QAResult:
@@ -25,12 +28,42 @@ class QAInferenceEngine:
     def _setup_pipeline(self) -> None:
         """Initialize the QA pipeline with optimizations"""
         if self.device is not None:
-            self.pipeline = pipeline(
-                "question-answering",
-                model=self.model_name,
-                device=self.device,
-                model_kwargs={"torch_dtype": torch.float16}  # Use FP16 for efficiency
-            )
+            if self.model_name == "mosaicml/mpt-7b":
+                
+                model = transformers.AutoModelForQuestionAnswering.from_pretrained(
+                'mosaicml/mpt-7b',
+                trust_remote_code=True
+                )
+                
+                tokenizer = AutoTokenizer.from_pretrained('EleutherAI/gpt-neox-20b')
+                
+                self.pipeline = pipeline(
+                    "question-answering",
+                    model=model,
+                    tokenizer=tokenizer,
+                    device=self.device,
+                    model_kwargs={"torch_dtype": torch.float16}  # Use FP16 for efficiency
+                )
+                
+            else:
+                model = transformers.AutoModelForQuestionAnswering.from_pretrained(
+                    self.model_name
+                )
+                model.half()
+                model.to(self.device)
+                # model = torch.compile(model)
+                
+                tokenizer = AutoTokenizer.from_pretrained(self.model_name)
+                
+                self.pipeline = pipeline(
+                    "question-answering",
+                    model=model,
+                    tokenizer=tokenizer,
+                    device=self.device,
+                    model_kwargs={"torch_dtype": torch.float16}  # Use FP16 for efficiency
+                )
+            # self.pipeline = self.pipeline.to("cuda")
+            
         else:
             self.pipeline = pipeline("question-answering", model=self.model_name)
 
@@ -52,7 +85,10 @@ class QAInferenceEngine:
             
             # Handle single or batch outputs
             if not isinstance(answers, list):
-                answers = [answers]
+                answers = [QAResult(answer=answers["answer"],
+                                    confidence=answers["score"],
+                                    extraction_time=extraction_time,
+                                    )]
             
             for answer in answers:
                 results.append(QAResult(
@@ -83,7 +119,8 @@ class QAInferenceEngine:
             batched=True,
             batch_size=self.batch_size
         )
-
+        
+    @torch.inference_mode()
     def answer_single_question(self, question: str, context: str) -> QAResult:
         """Process a single question-context pair"""
         with torch.inference_mode():
