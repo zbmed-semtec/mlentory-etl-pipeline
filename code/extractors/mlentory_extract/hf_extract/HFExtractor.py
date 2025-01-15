@@ -125,7 +125,7 @@ class HFExtractor:
         # Parse fields
         HF_df = self.parser.parse_fields_from_tags_HF(HF_df=HF_df)
         HF_df = self.parser.parse_known_fields_HF(HF_df=HF_df)
-        HF_df = self.parser.parse_fields_from_txt_HF(HF_df=HF_df)
+        HF_df = self.parser.parse_fields_from_txt_HF_matching(HF_df=HF_df)
 
         # Clean up columns
         HF_df = HF_df.drop(

@@ -14,6 +14,7 @@ from datetime import datetime
 from tqdm import tqdm
 
 from mlentory_extract.core.QAInferenceEngine import QAInferenceEngine
+from mlentory_extract.core.QAMatchingEngine import QAMatchingEngine
 
 
 class ModelCardQAParser:
@@ -88,6 +89,7 @@ class ModelCardQAParser:
         # Assigning the question answering pipeline
         self.qa_model = qa_model
         self.qa_engine = QAInferenceEngine(qa_model)
+        self.matching_engine = QAMatchingEngine()
 
     def load_tsv_file_to_list(self, path: str) -> Set[str]:
         """
@@ -317,8 +319,9 @@ class ModelCardQAParser:
         )
 
         # Process the dataset in batches using the QA pipeline
+        # Use the batch size from the QA engine
         processed_dataset = self.process_question_context_dataset(
-            question_context_dataset, self.qa_engine, batch_size=8
+            question_context_dataset, self.qa_engine
         )
 
         # Merge the results back into the original DataFrame
@@ -341,8 +344,12 @@ class ModelCardQAParser:
             Dataset: HuggingFace dataset containing question-context pairs
         """
         data = []
-        for index, row in HF_df.iterrows():
+        for index, row in tqdm(HF_df.iterrows(), total=len(HF_df), desc="Creating QA dataset"):
             context = row["card"]
+            if "---" in context:
+                sections = context.split("---")
+                if len(sections) > 1:
+                    context = "---".join(sections[2:])
             for q_cnt, question in enumerate(questions):
                 if q_cnt in questions_to_process:
                     data.append(
@@ -432,5 +439,56 @@ class ModelCardQAParser:
             # Add a new column for each question and populate with answers
             for question, answer in answers.items():
                 HF_df.loc[index, question] = [answer]
+
+        return HF_df
+
+    def parse_fields_from_txt_HF_matching(self, HF_df: pd.DataFrame) -> pd.DataFrame:
+        """
+        Extract information from text fields using semantic matching to find relevant sections.
+        Instead of using QA model, it returns the most relevant sections as answers.
+
+        Args:
+            HF_df (pd.DataFrame): DataFrame containing model information
+
+        Returns:
+            pd.DataFrame: DataFrame with extracted information from text fields
+        """
+        questions_to_process = sorted(
+            int(q.split("_")[2]) for q in self.available_questions
+        )
+
+        for index, row in tqdm(HF_df.iterrows(), total=len(HF_df), desc="Processing model cards"):
+            context = row["card"]
+            if "---" in context:
+                sections = context.split("---")
+                if len(sections) > 1:
+                    context = "---".join(sections[2:])
+
+            # Get questions for this model card
+            current_questions = [
+                self.questions[q_id] for q_id in questions_to_process
+            ]
+
+            # Find relevant sections for all questions at once
+            relevant_sections = self.matching_engine.find_relevant_sections(
+                questions=current_questions,
+                context=context,
+                top_k=1  # Only get the most relevant section
+            )
+
+            # Process each question
+            for q_idx, q_id in enumerate(questions_to_process):
+                section, score = relevant_sections[q_idx][0]  # Get the top section
+                
+                # Create answer with section content and metadata
+                answer = [{
+                    "data": section.content.strip(),
+                    "extraction_method": "Semantic Matching with "+self.matching_engine.model_name,
+                    "confidence": score,
+                    "extraction_time": datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+                }]
+
+                # Store the answer in the DataFrame
+                HF_df.loc[index, f"q_id_{q_id}"] = answer
 
         return HF_df

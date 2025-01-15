@@ -7,6 +7,7 @@ from datetime import datetime
 from dataclasses import dataclass
 import transformers
 from transformers import AutoTokenizer
+from tqdm import tqdm
 
 @dataclass
 class QAResult:
@@ -19,7 +20,7 @@ class QAResult:
 class QAInferenceEngine:
     """Handles model loading and inference for question answering tasks"""
     
-    def __init__(self, model_name: str, batch_size: int = 8):
+    def __init__(self, model_name: str, batch_size: int = 64):
         self.model_name = model_name
         self.batch_size = batch_size
         self.device = 0 if torch.cuda.is_available() else None
@@ -42,6 +43,7 @@ class QAInferenceEngine:
                     model=model,
                     tokenizer=tokenizer,
                     device=self.device,
+                    batch_size=self.batch_size,
                     model_kwargs={"torch_dtype": torch.float16}  # Use FP16 for efficiency
                 )
                 
@@ -51,7 +53,6 @@ class QAInferenceEngine:
                 )
                 model.half()
                 model.to(self.device)
-                # model = torch.compile(model)
                 
                 tokenizer = AutoTokenizer.from_pretrained(self.model_name)
                 
@@ -60,12 +61,12 @@ class QAInferenceEngine:
                     model=model,
                     tokenizer=tokenizer,
                     device=self.device,
+                    batch_size=self.batch_size,
                     model_kwargs={"torch_dtype": torch.float16}  # Use FP16 for efficiency
                 )
-            # self.pipeline = self.pipeline.to("cuda")
             
         else:
-            self.pipeline = pipeline("question-answering", model=self.model_name)
+            self.pipeline = pipeline("question-answering", model=self.model_name, batch_size=self.batch_size)
 
     @torch.inference_mode()
     def batch_inference(self, questions: List[str], contexts: List[str]) -> List[QAResult]:
@@ -78,8 +79,9 @@ class QAInferenceEngine:
         results = []
         extraction_time = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
         
-        # Process in batches
-        for i in range(0, len(qa_inputs), self.batch_size):
+        # Process in batches with progress bar
+        total_batches = (len(qa_inputs) + self.batch_size - 1) // self.batch_size
+        for i in tqdm(range(0, len(qa_inputs), self.batch_size), total=total_batches, desc="Processing QA batches"):
             batch = qa_inputs[i:i + self.batch_size]
             answers = self.pipeline(batch)
             
@@ -101,24 +103,23 @@ class QAInferenceEngine:
 
     def process_dataset(self, dataset: Dataset) -> Dataset:
         """Process a HuggingFace dataset containing questions and contexts"""
-        def process_batch(batch):
-            answers = self.pipeline(
-                [
-                    {"question": q, "context": c}
-                    for q, c in zip(batch["question"], batch["context"])
-                ]
-            )
-            
-            batch["answer"] = [a["answer"] for a in answers]
-            batch["score"] = [a["score"] for a in answers]
-            batch["extraction_time"] = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-            return batch
-
-        return dataset.map(
-            process_batch,
-            batched=True,
-            batch_size=self.batch_size
-        )
+        # Convert dataset to lists for batch processing
+        questions = dataset["question"]
+        contexts = dataset["context"]
+        
+        # Use our existing batch_inference method which handles batching properly
+        results = self.batch_inference(questions, contexts)
+        
+        # Convert results back to dataset format
+        return Dataset.from_dict({
+            "answer": [r.answer for r in results],
+            "score": [r.confidence for r in results],
+            "extraction_time": [r.extraction_time for r in results],
+            "question": dataset["question"],
+            "context": dataset["context"],
+            "row_index": dataset["row_index"],
+            "question_id": dataset["question_id"]
+        })
         
     @torch.inference_mode()
     def answer_single_question(self, question: str, context: str) -> QAResult:
