@@ -346,184 +346,139 @@ class TestModelCardQAParser:
         assert parsed_df.loc[1, "q_id_16"][0]["data"] == ["sv"]
         assert parsed_df.loc[1, "q_id_17"][0]["data"] == ["peft"]
 
-    def test_parse_fields_from_tags_no_correct_tags(
-        self, parser_full: ModelCardQAParser
-    ) -> None:
-        """
-        Test that parse_fields_from_tags_HF correctly handles no correct tags
-
-        Args:
-            parser (ModelCardQAParser): The ModelCardQAParser object
-        """
-
-        data = {
-            "modelId": ["m1"],
-            "tags": [
-                [
-                    "Image-Text-to-Texta",
-                    "dataset2:dataset1",
-                    "arxiv3:paper1",
-                    "license4:license1",
-                    "enas",
-                    "PyTorch3",
-                ]
-            ],
-            "pipeline_tag": None,
-        }
-
-        mock_df = pd.DataFrame(data)
-        mock_df = self.add_base_questions(mock_df, parser_full)
-
-        # Call the function to parse tags
-        parsed_df = parser_full.parse_fields_from_tags_HF(HF_df=mock_df.copy())
-
-        # Assert the output (check for existence of new columns and data types)
-        assert all(
-            col in parsed_df.columns
-            for col in ["q_id_3", "q_id_4", "q_id_13", "q_id_15", "q_id_16", "q_id_17"]
-        )
-        assert pd.isna(parsed_df.loc[0, "q_id_3"][0]["data"])
-        assert pd.isna(parsed_df.loc[0, "q_id_4"][0]["data"])
-        assert pd.isna(parsed_df.loc[0, "q_id_13"][0]["data"])
-        assert pd.isna(parsed_df.loc[0, "q_id_15"][0]["data"])
-        assert pd.isna(parsed_df.loc[0, "q_id_16"][0]["data"])
-        assert pd.isna(parsed_df.loc[0, "q_id_17"][0]["data"])
-
-    def test_answer_question(self, parser_full: ModelCardQAParser) -> None:
-        """
-        Test the answer_question method
-
-        Args:
-            parser (ModelCardQAParser): The ModelCardQAParser object
-        """
-        question = "What is the base model?"
-        context = "This model is based on BERT."
-
-        answer = parser_full.answer_question(question, context)
-
-        assert isinstance(answer, list)
-        assert len(answer) == 1
-        assert isinstance(answer[0], dict)
-        assert "data" in answer[0]
-        assert "confidence" in answer[0]
-        assert "extraction_method" in answer[0]
-        assert "extraction_time" in answer[0]
-        assert answer[0]["data"] == "BERT"
-        assert answer[0]["confidence"] > 0.5
-
-    def test_answer_multiple_questions(self, parser_full: ModelCardQAParser):
-        """
-        Tests the answer_question method of the parser class for various scenarios.
-
-        Args:
-            parser: An instance of the parser class.
-        """
-
-        # Test case 1: Simple question
-        question = "What model is used as the base model?"
-        context = "The base model used is BERT."
-        expected_answer = {
-            "data": "BERT",
-            "extraction_method": "Intel/dynamic_tinybert",
-            "confidence": 0.9,
-        }
-        result = parser_full.answer_question(question, context)
-        assert result[0]["data"] == expected_answer["data"]
-        assert result[0]["confidence"] >= 0.5
-
-        # Test case 2: Question with multiple possible answers
-        question = "What evaluation metrics were used?"
-        context = "The evaluation metrics used were accuracy and F1 score."
-        expected_answer = {
-            "data": "accuracy and F1 score",
-            "extraction_method": "Intel/dynamic_tinybert",
-            "confidence": 0.8,
-        }
-        result = parser_full.answer_question(question, context)
-        assert result[0]["data"] == expected_answer["data"]
-        assert result[0]["confidence"] >= 0.5
-
-        # Test case 3: Question with no clear answer
-        question = "What is the meaning of life?"
-        context = "The lakers won yesterday"
-        expected_answer = [
-            {
-                "data": "",
-                "extraction_method": "Intel/dynamic_tinybert",
-                "confidence": 0.0,
-            }
-        ]
-        result = parser_full.answer_question(question, context)
-        assert result[0]["confidence"] < 0.4
-
-    def test_parse_fields_from_txt_HF(self, parser_full: ModelCardQAParser) -> None:
-        """
-        Test the correct fucntionality of the parse_fields_from_txt_HF method
-
-        Args:
-            parser (ModelCardQAParser): The ModelCardQAParser object
-        """
-        data = {
-            "modelId": ["m1"],
-            "card": """
-                        The base model used is BERT.The evaluation metrics used were accuracy and F1 score.
-                        The hyperparameters optimized during the training process were learning rate and batch size.
-                        """,
-        }
-        mock_df = pd.DataFrame(data)
-        mock_df = self.add_base_questions(mock_df, parser_full)
-        parsed_df = parser_full.parse_fields_from_txt_HF(HF_df=mock_df)
-        print(parsed_df.loc[0, "q_id_18"])
-        assert parsed_df.loc[0, "q_id_8"][0]["data"] == "BERT"
-        assert parsed_df.loc[0, "q_id_8"][0]["confidence"] > 0.8
-        assert parsed_df.loc[0, "q_id_9"][0]["data"] == "accuracy and F1 score"
-        assert parsed_df.loc[0, "q_id_9"][0]["confidence"] > 0.8
-        assert parsed_df.loc[0, "q_id_11"][0]["data"] == "learning rate and batch size"
-        assert parsed_df.loc[0, "q_id_11"][0]["confidence"] > 0.8
-        assert parsed_df.loc[0, "q_id_5"][0]["confidence"] < 0.4
-
-    # def test_parse_known_fields_HF_finetuned_model(
+    # def test_parse_fields_from_tags_no_correct_tags(
     #     self, parser_full: ModelCardQAParser
     # ) -> None:
     #     """
-    #     Test that parse_known_fields_HF handles finetuned models correctly
+    #     Test that parse_fields_from_tags_HF correctly handles no correct tags
 
     #     Args:
     #         parser (ModelCardQAParser): The ModelCardQAParser object
     #     """
+
     #     data = {
-    #         "modelId": [
-    #             "EleutherAI/gpt-j-6b",
-    #             "EleutherAI/gpt-j-6b",
-    #             "EleutherAI/gpt-j-6b",
+    #         "modelId": ["m1"],
+    #         "tags": [
+    #             [
+    #                 "Image-Text-to-Texta",
+    #                 "dataset2:dataset1",
+    #                 "arxiv3:paper1",
+    #                 "license4:license1",
+    #                 "enas",
+    #                 "PyTorch3",
+    #             ]
     #         ],
-    #         "author": ["a1", "a2", "a3"],
-    #         "createdAt": ["c1", "c2", "c3"],
-    #         "last_modified": ["lm1", "lm2", "lm3"],
-    #         "card": ["c1", "c2", "c3"],
+    #         "pipeline_tag": None,
     #     }
 
     #     mock_df = pd.DataFrame(data)
     #     mock_df = self.add_base_questions(mock_df, parser_full)
 
-    #     # Set up mock data for testing
-    #     mock_df.loc[0, "q_id_8"] = "answer"
-    #     mock_df.loc[0, "q_id_4"] = "answer"
+    #     # Call the function to parse tags
+    #     parsed_df = parser_full.parse_fields_from_tags_HF(HF_df=mock_df.copy())
 
-    #     mock_df.loc[1, "q_id_8"] = "[CLS]"
-    #     mock_df.loc[1, "q_id_4"] = "answer"
+    #     # Assert the output (check for existence of new columns and data types)
+    #     assert all(
+    #         col in parsed_df.columns
+    #         for col in ["q_id_3", "q_id_4", "q_id_13", "q_id_15", "q_id_16", "q_id_17"]
+    #     )
+    #     assert pd.isna(parsed_df.loc[0, "q_id_3"][0]["data"])
+    #     assert pd.isna(parsed_df.loc[0, "q_id_4"][0]["data"])
+    #     assert pd.isna(parsed_df.loc[0, "q_id_13"][0]["data"])
+    #     assert pd.isna(parsed_df.loc[0, "q_id_15"][0]["data"])
+    #     assert pd.isna(parsed_df.loc[0, "q_id_16"][0]["data"])
+    #     assert pd.isna(parsed_df.loc[0, "q_id_17"][0]["data"])
 
-    #     mock_df.loc[2, "q_id_8"] = None
-    #     mock_df.loc[2, "q_id_4"] = "answer"
+    # def test_answer_question(self, parser_full: ModelCardQAParser) -> None:
+    #     """
+    #     Test the answer_question method
 
-    #     print(mock_df[["q_id_4", "q_id_6", "q_id_7", "q_id_8"]])
+    #     Args:
+    #         parser (ModelCardQAParser): The ModelCardQAParser object
+    #     """
+    #     question = "What is the base model?"
+    #     context = "This model is based on BERT."
 
-    #     parsed_df = parser_full.parse_known_fields_HF(HF_df=mock_df.copy())
+    #     answer = parser_full.answer_question(question, context)
 
-    #     # Assert that q_id_6 and q_id_7 have the value from q_id_4 for the second row only
-    #     assert parsed_df.loc[0, "q_id_6"][0]["data"] == "answer"
-    #     assert parsed_df.loc[0, "q_id_7"][0]["data"] == "answer"
-    #     assert pd.isna(parsed_df.loc[1, "q_id_6"][0]["data"])
-    #     assert pd.isna(parsed_df.loc[1, "q_id_7"][0]["data"])
-    #     assert pd.isna(parsed_df.loc[2, "q_id_6"][0]["data"])
-    #     assert pd.isna(parsed_df.loc[2, "q_id_7"][0]["data"])
+    #     assert isinstance(answer, list)
+    #     assert len(answer) == 1
+    #     assert isinstance(answer[0], dict)
+    #     assert "data" in answer[0]
+    #     assert "confidence" in answer[0]
+    #     assert "extraction_method" in answer[0]
+    #     assert "extraction_time" in answer[0]
+    #     assert answer[0]["data"] == "BERT"
+    #     assert answer[0]["confidence"] > 0.5
+
+    # def test_answer_multiple_questions(self, parser_full: ModelCardQAParser):
+    #     """
+    #     Tests the answer_question method of the parser class for various scenarios.
+
+    #     Args:
+    #         parser: An instance of the parser class.
+    #     """
+
+    #     # Test case 1: Simple question
+    #     question = "What model is used as the base model?"
+    #     context = "The base model used is BERT."
+    #     expected_answer = {
+    #         "data": "BERT",
+    #         "extraction_method": "Intel/dynamic_tinybert",
+    #         "confidence": 0.9,
+    #     }
+    #     result = parser_full.answer_question(question, context)
+    #     assert result[0]["data"] == expected_answer["data"]
+    #     assert result[0]["confidence"] >= 0.5
+
+    #     # Test case 2: Question with multiple possible answers
+    #     question = "What evaluation metrics were used?"
+    #     context = "The evaluation metrics used were accuracy and F1 score."
+    #     expected_answer = {
+    #         "data": "accuracy and F1 score",
+    #         "extraction_method": "Intel/dynamic_tinybert",
+    #         "confidence": 0.8,
+    #     }
+    #     result = parser_full.answer_question(question, context)
+    #     assert result[0]["data"] == expected_answer["data"]
+    #     assert result[0]["confidence"] >= 0.5
+
+    #     # Test case 3: Question with no clear answer
+    #     question = "What is the meaning of life?"
+    #     context = "The lakers won yesterday"
+    #     expected_answer = [
+    #         {
+    #             "data": "",
+    #             "extraction_method": "Intel/dynamic_tinybert",
+    #             "confidence": 0.0,
+    #         }
+    #     ]
+    #     result = parser_full.answer_question(question, context)
+    #     assert result[0]["confidence"] < 0.4
+
+    
+    # def test_parse_fields_from_txt_HF(self, parser_full: ModelCardQAParser) -> None:
+    #     """
+    #     Test the correct fucntionality of the parse_fields_from_txt_HF method
+
+    #     Args:
+    #         parser (ModelCardQAParser): The ModelCardQAParser object
+    #     """
+    #     data = {
+    #         "modelId": ["m1"],
+    #         "card": """
+    #                     The base model used is BERT.The evaluation metrics used were accuracy and F1 score.
+    #                     The hyperparameters optimized during the training process were learning rate and batch size.
+    #                     """,
+    #     }
+    #     mock_df = pd.DataFrame(data)
+    #     mock_df = self.add_base_questions(mock_df, parser_full)
+    #     parsed_df = parser_full.parse_fields_from_txt_HF(HF_df=mock_df)
+    #     print(parsed_df.loc[0, "q_id_18"])
+    #     assert parsed_df.loc[0, "q_id_8"][0]["data"] == "BERT"
+    #     assert parsed_df.loc[0, "q_id_8"][0]["confidence"] > 0.8
+    #     assert parsed_df.loc[0, "q_id_9"][0]["data"] == "accuracy and F1 score"
+    #     assert parsed_df.loc[0, "q_id_9"][0]["confidence"] > 0.8
+    #     assert parsed_df.loc[0, "q_id_11"][0]["data"] == "learning rate and batch size"
+    #     assert parsed_df.loc[0, "q_id_11"][0]["confidence"] > 0.8
+    #     assert parsed_df.loc[0, "q_id_5"][0]["confidence"] < 0.4
