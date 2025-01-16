@@ -48,12 +48,12 @@ class TestQAInferenceEngine:
         questions = [
             "What is the base model?",
             "What metrics were used?",
-            "What hyperparameters were optimized?"
+            "What hyperparameters were optimized?",
         ]
         contexts = [
             "The base model used is BERT.",
             "The evaluation metrics used were accuracy and F1 score.",
-            "The hyperparameters optimized were learning rate and batch size."
+            "The hyperparameters optimized were learning rate and batch size.",
         ]
 
         results = qa_engine.batch_inference(questions, contexts)
@@ -77,7 +77,7 @@ class TestQAInferenceEngine:
             "question": ["What model?", "What metrics?"],
             "context": ["Model is BERT.", "Metrics are accuracy and F1."],
             "row_index": [0, 1],
-            "question_id": ["q1", "q2"]
+            "question_id": ["q1", "q2"],
         }
         dataset = Dataset.from_dict(dataset_dict)
 
@@ -88,11 +88,11 @@ class TestQAInferenceEngine:
         assert "score" in result_dataset.features
         assert "extraction_time" in result_dataset.features
         assert len(result_dataset) == 2
-        
+
         # Check first result
         assert result_dataset[0]["answer"] == "BERT"
         assert result_dataset[0]["score"] > 0.5
-        
+
         # Check second result
         assert "accuracy" in result_dataset[1]["answer"]
         assert result_dataset[1]["score"] > 0.5
@@ -105,11 +105,13 @@ class TestQAInferenceEngine:
             qa_engine (QAInferenceEngine): The inference engine instance
         """
         question = "What is the second president of the United States?"
-        
+
         # Test empty context
         with pytest.raises(ValueError, match="context"):
             qa_engine.answer_single_question(question, "")
 
         # Test with very irrelevant context
-        result = qa_engine.answer_single_question(question, "The weather is nice today.")
+        result = qa_engine.answer_single_question(
+            question, "The weather is nice today."
+        )
         assert result.confidence < 0.4
