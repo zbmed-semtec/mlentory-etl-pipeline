@@ -456,7 +456,6 @@ class TestModelCardQAParser:
         result = parser_full.answer_question(question, context)
         assert result[0]["confidence"] < 0.4
 
-    @pytest.skip(reason="Needs to be updated")
     def test_parse_fields_from_txt_HF(self, parser_full: ModelCardQAParser) -> None:
         """
         Test the correct fucntionality of the parse_fields_from_txt_HF method
