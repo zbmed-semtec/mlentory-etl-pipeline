@@ -196,4 +196,6 @@ cython_debug/
 .devcontainer/
 .github/
 
+# Cursor rules
+.cursorrules
 
