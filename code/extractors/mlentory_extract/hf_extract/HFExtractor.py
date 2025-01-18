@@ -1,10 +1,11 @@
-from typing import Any, Dict, List, Set, Union
+from typing import Any, Dict, List, Set, Union, Optional
 from datasets import load_dataset
 from datetime import datetime
 import pandas as pd
 import os
 
 from mlentory_extract.core.ModelCardQAParser import ModelCardQAParser
+from mlentory_extract.hf_extract.HFDatasetManager import HFDatasetManager
 
 
 class HFExtractor:
@@ -19,6 +20,7 @@ class HFExtractor:
 
     Attributes:
         parser (ModelCardQAParser): Parser instance for extracting information
+        dataset_manager (HFDatasetManager): Dataset manager instance
     """
 
     def __init__(
@@ -29,6 +31,7 @@ class HFExtractor:
         tags_libraries: List[str] = None,
         tags_other: List[str] = None,
         tags_task: List[str] = None,
+        dataset_manager: Optional[HFDatasetManager] = None,
     ):
         """
         Initialize the HuggingFace extractor.
@@ -46,6 +49,8 @@ class HFExtractor:
                 Defaults to None.
             tags_task (List[str], optional): List of task tags.
                 Defaults to None.
+            dataset_manager (Optional[HFDatasetManager], optional): Dataset manager instance.
+                Defaults to None.
         """
         self.parser = ModelCardQAParser(
             qa_model=qa_model,
@@ -55,17 +60,8 @@ class HFExtractor:
             tags_other=tags_other,
             tags_task=tags_task,
         )
+        self.dataset_manager = dataset_manager or HFDatasetManager()
 
-    def get_hf_dataset(self) -> pd.DataFrame:
-        """
-        Retrieve the HuggingFace dataset containing model card information.
-
-        Returns:
-            pd.DataFrame: DataFrame containing model card information from HuggingFace
-        """
-        return load_dataset("librarian-bots/model_cards_with_metadata")[
-            "train"
-        ].to_pandas()
 
     def download_models(
         self,
@@ -103,7 +99,7 @@ class HFExtractor:
             pd.DataFrame: Processed DataFrame containing extracted information
         """
         # Load dataset
-        original_HF_df = self.get_hf_dataset()
+        original_HF_df = self.dataset_manager.get_model_cards_dataset()
 
         # Slice dataframe if num_models specified
         HF_df = original_HF_df.iloc[0:num_models] if num_models else original_HF_df
