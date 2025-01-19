@@ -99,7 +99,7 @@ class HFExtractor:
             pd.DataFrame: Processed DataFrame containing extracted information
         """
         # Load dataset
-        original_HF_df = self.dataset_manager.get_model_cards_dataset()
+        original_HF_df = self.dataset_manager.get_model_metadata_dataset(update_recent=True)
 
         # Slice dataframe if num_models specified
         HF_df = original_HF_df.iloc[0:num_models] if num_models else original_HF_df

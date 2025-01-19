@@ -7,7 +7,7 @@ import os
 import argparse
 import time
 
-from mlentory_extract.hf_extract import HFExtractor
+from mlentory_extract.hf_extract import HFExtractor, HFDatasetManager
 from mlentory_transform.hf_transform.FieldProcessorHF import FieldProcessorHF
 from mlentory_load.core import LoadProcessor, GraphHandler
 from mlentory_load.dbHandler import RDFHandler, SQLHandler, IndexHandler
@@ -53,6 +53,9 @@ def initialize_extractor(config_path: str) -> HFExtractor:
     tags_libraries = load_tsv_file_to_list(f"{config_path}/extract/tags_libraries.tsv")
     tags_other = load_tsv_file_to_list(f"{config_path}/extract/tags_other.tsv")
     tags_task = load_tsv_file_to_list(f"{config_path}/extract/tags_task.tsv")
+    
+    dataset_manager = HFDatasetManager(api_token=os.getenv("HF_TOKEN"))
+    
     return HFExtractor(
         # qa_model="deepset/roberta-base-squad2",
         # qa_model="Intel/dynamic_tinybert",
@@ -61,6 +64,7 @@ def initialize_extractor(config_path: str) -> HFExtractor:
         # qa_model="sentence-transformers/all-mpnet-base-v2",
         # Pretty fast 10X faster but bad for semantic matching (Maybe we could finnetune it)
         qa_model="sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2",
+        dataset_manager=dataset_manager,
         questions=questions,
         tags_language=tags_language,
         tags_libraries=tags_libraries,
@@ -102,7 +106,7 @@ def parse_args() -> argparse.Namespace:
         help="Download models from this date (format: YYYY-MM-DD)",
     )
     parser.add_argument(
-        "--num-models", type=int, default=100, help="Number of models to download"
+        "--num-models", type=int, default=10, help="Number of models to download"
     )
     parser.add_argument(
         "--output-dir",
