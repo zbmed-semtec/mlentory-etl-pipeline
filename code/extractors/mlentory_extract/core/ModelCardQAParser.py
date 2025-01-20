@@ -194,7 +194,7 @@ class ModelCardQAParser:
                 HF_df.loc[index, "q_id_0"]
             )
 
-        for index in tqdm(range(len(HF_df)), desc="Adding default extraction info"):
+        for index in tqdm(HF_df.index, desc="Adding default extraction info"):
             for id in [
                 "q_id_0",
                 "q_id_1",
@@ -205,9 +205,9 @@ class ModelCardQAParser:
                 "q_id_29",
                 "q_id_30",
             ]:
-                HF_df.loc[index, id] = [
+                HF_df.at[index, id] = [
                     self.add_default_extraction_info(
-                        HF_df.loc[index, id], "Parsed_from_HF_dataset", 1.0
+                        HF_df.at[index, id], "Parsed_from_HF_dataset", 1.0
                     )
                 ]
 
@@ -288,13 +288,16 @@ class ModelCardQAParser:
                     if tag_for_q3 not in HF_df["q_id_3"][index]:
                         HF_df.loc[index, "q_id_3"].append(tag_for_q3)
 
-        for index in range(len(HF_df)):
+        print("Debugging!!!!!!!!!!")
+        print(HF_df.head(10))
+        for index in HF_df.index:
             for id in ["q_id_3", "q_id_4", "q_id_13", "q_id_15", "q_id_16", "q_id_17"]:
-                HF_df.loc[index, id] = [
-                    self.add_default_extraction_info(
-                        HF_df.loc[index, id], "Parsed_from_HF_dataset", 1.0
-                    )
-                ]
+                if HF_df.at[index, id] is not None:  # Only process if there's data
+                    HF_df.at[index, id] = [
+                        self.add_default_extraction_info(
+                            HF_df.at[index, id], "Parsed_from_HF_dataset", 1.0
+                        )
+                    ]
 
         for id in ["q_id_3", "q_id_4", "q_id_13", "q_id_15", "q_id_16", "q_id_17"]:
             self.available_questions.discard(id)

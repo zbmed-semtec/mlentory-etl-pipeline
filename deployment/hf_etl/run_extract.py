@@ -53,9 +53,9 @@ def initialize_extractor(config_path: str) -> HFExtractor:
     tags_libraries = load_tsv_file_to_list(f"{config_path}/extract/tags_libraries.tsv")
     tags_other = load_tsv_file_to_list(f"{config_path}/extract/tags_other.tsv")
     tags_task = load_tsv_file_to_list(f"{config_path}/extract/tags_task.tsv")
-    
+
     dataset_manager = HFDatasetManager(api_token=os.getenv("HF_TOKEN"))
-    
+
     return HFExtractor(
         # qa_model="deepset/roberta-base-squad2",
         # qa_model="Intel/dynamic_tinybert",
@@ -106,7 +106,7 @@ def parse_args() -> argparse.Namespace:
         help="Download models from this date (format: YYYY-MM-DD)",
     )
     parser.add_argument(
-        "--num-models", type=int, default=10, help="Number of models to download"
+        "--num-models", type=int, default=20, help="Number of models to download"
     )
     parser.add_argument(
         "--output-dir",
