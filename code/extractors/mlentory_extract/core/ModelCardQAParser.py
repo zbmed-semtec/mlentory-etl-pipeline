@@ -288,8 +288,6 @@ class ModelCardQAParser:
                     if tag_for_q3 not in HF_df["q_id_3"][index]:
                         HF_df.loc[index, "q_id_3"].append(tag_for_q3)
 
-        print("Debugging!!!!!!!!!!")
-        print(HF_df.head(10))
         for index in HF_df.index:
             for id in ["q_id_3", "q_id_4", "q_id_13", "q_id_15", "q_id_16", "q_id_17"]:
                 if HF_df.at[index, id] is not None:  # Only process if there's data
@@ -419,7 +417,6 @@ class ModelCardQAParser:
         """
         questions_to_process = set()
         for q in self.available_questions:
-            # print(q.split("_")[2])
             questions_to_process.add(int(q.split("_")[2]))
 
         for index, row in tqdm(
@@ -431,7 +428,6 @@ class ModelCardQAParser:
                 sections = context.split("---")
                 if len(sections) > 1:
                     context = "---".join(sections[2:])
-            # print(context)
             # Create an empty dictionary to store answers for each question
             answers = {}
 
@@ -440,7 +436,12 @@ class ModelCardQAParser:
                 q_cnt += 1
                 if q_cnt not in questions_to_process:
                     continue
-                answer = self.answer_question(question, context)
+                
+                answer = self.add_default_extraction_info("No context to answer", "Parsed_from_HF_dataset", 1.0)
+                
+                if context != "" and context != None:
+                    answer = self.answer_question(question, context)
+                    
                 q_id = "q_id_" + str(q_cnt)
                 answers[q_id] = answer  # Store answer for each question
 
