@@ -32,8 +32,6 @@ class HFDatasetManager:
             ValueError: If the model_cards_dataset is invalid or inaccessible
         """
         self.token = None
-        print("api_token")
-        print(api_token)
         if api_token:
             self.token = api_token
             self.api = HfApi(token=api_token)
@@ -41,7 +39,7 @@ class HFDatasetManager:
             self.api = HfApi()
 
     def get_model_metadata_dataset(
-        self, update_recent: bool = True, limit: int = 100
+        self, update_recent: bool = True, limit: int = 5
     ) -> pd.DataFrame:
         """
         Retrieve and optionally update the HuggingFace dataset containing model card information.
@@ -64,12 +62,13 @@ class HFDatasetManager:
             dataset = load_dataset("librarian-bots/model_cards_with_metadata")[
                 "train"
             ].to_pandas()
+            
+            # trim the dataset to the limit
+            dataset = dataset[:min(limit, len(dataset))]
 
             if not update_recent:
                 return dataset
-
-            print("Dataset before update:")
-            print(dataset.head(10))
+            
             # Get the most recent modification date from the dataset
             latest_modification = dataset["last_modified"].max()
 
@@ -83,10 +82,6 @@ class HFDatasetManager:
 
                 # Sort by last_modified
                 dataset = dataset.sort_values("last_modified", ascending=False)
-
-                print("Dataset after update:")
-                # Select the modelId and pipeline_tag columns
-                print(dataset[["modelId", "pipeline_tag"]].head(10))
 
             return dataset
 
@@ -111,46 +106,42 @@ class HFDatasetManager:
             limit=limit,
             sort="lastModified",
             direction=-1,
+            full=True
         )
 
         model_data = []
 
         for model in models:
 
-            model_info = None
             card = None
             try:
                 if self.token:
-                    model_info = self.api.model_info(model.modelId, token=self.token)
                     card = ModelCard.load(model.modelId, token=self.token)
                 else:
-                    model_info = self.api.model_info(model.modelId)
                     card = ModelCard.load(model.modelId)
             except Exception as e:
                 print()
                 print(f"Error loading model card for {model.id}: {e}")
 
-            if model_info == None:
-                continue
             # Check if this model is newer than our latest modification
-            if model_info.last_modified <= latest_modification:
+            if model.last_modified <= latest_modification:
                 break
 
             model_data.append(
                 {
-                    "modelId": model_info.id,
-                    "author": model_info.author,
-                    "last_modified": model_info.last_modified,
-                    "downloads": model_info.downloads,
-                    "likes": model_info.likes,
-                    "pipeline_tag": model_info.pipeline_tag,
-                    "tags": model_info.tags,
-                    "task_categories": model_info.pipeline_tag,
-                    "createdAt": model_info.created_at,
+                    "modelId": model.id,
+                    "author": model.author,
+                    "last_modified": model.last_modified,
+                    "downloads": model.downloads,
+                    "likes": model.likes,
+                    "pipeline_tag": model.pipeline_tag,
+                    "tags": model.tags,
+                    "task_categories": model.pipeline_tag,
+                    "createdAt": model.created_at,
                     "card": card.content if card else "",
                 }
             )
-
+        
         return pd.DataFrame(model_data)
 
     def get_dataset_metadata_dataset(self) -> pd.DataFrame:
@@ -174,43 +165,3 @@ class HFDatasetManager:
             ].to_pandas()
         except Exception as e:
             raise Exception(f"Error loading arxiv metadata dataset: {str(e)}")
-
-    def save_to_file(
-        self,
-        df: pd.DataFrame,
-        output_dir: str,
-        filename: str,
-        format: Literal["csv", "json", "parquet"] = "parquet",
-    ) -> str:
-        """
-        Save the DataFrame to a file.
-
-        Args:
-            df (pd.DataFrame): DataFrame to save
-            output_dir (str): Directory to save the file
-            filename (str): Base filename without extension
-            format (Literal["csv", "json", "parquet"]): Output format.
-                Defaults to "parquet".
-
-        Returns:
-            str: Path to the saved file
-
-        Raises:
-            Exception: If there's an error saving the file
-        """
-        try:
-            os.makedirs(output_dir, exist_ok=True)
-            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            filepath = os.path.join(output_dir, f"{filename}_{timestamp}.{format}")
-
-            if format == "csv":
-                df.to_csv(filepath, index=False)
-            elif format == "json":
-                df.to_json(filepath, orient="records", indent=2)
-            else:  # parquet
-                df.to_parquet(filepath, index=False)
-
-            return filepath
-
-        except Exception as e:
-            raise Exception(f"Error saving file: {str(e)}")
