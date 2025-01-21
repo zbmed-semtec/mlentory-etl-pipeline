@@ -436,12 +436,14 @@ class ModelCardQAParser:
                 q_cnt += 1
                 if q_cnt not in questions_to_process:
                     continue
-                
-                answer = self.add_default_extraction_info("No context to answer", "Parsed_from_HF_dataset", 1.0)
-                
+
+                answer = self.add_default_extraction_info(
+                    "No context to answer", "Parsed_from_HF_dataset", 1.0
+                )
+
                 if context != "" and context != None:
                     answer = self.answer_question(question, context)
-                    
+
                 q_id = "q_id_" + str(q_cnt)
                 answers[q_id] = answer  # Store answer for each question
 

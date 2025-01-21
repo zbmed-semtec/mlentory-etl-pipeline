@@ -62,13 +62,13 @@ class HFDatasetManager:
             dataset = load_dataset("librarian-bots/model_cards_with_metadata")[
                 "train"
             ].to_pandas()
-            
+
             # trim the dataset to the limit
-            dataset = dataset[:min(limit, len(dataset))]
+            dataset = dataset[: min(limit, len(dataset))]
 
             if not update_recent:
                 return dataset
-            
+
             # Get the most recent modification date from the dataset
             latest_modification = dataset["last_modified"].max()
 
@@ -103,10 +103,7 @@ class HFDatasetManager:
         """
 
         models = self.api.list_models(
-            limit=limit,
-            sort="lastModified",
-            direction=-1,
-            full=True
+            limit=limit, sort="lastModified", direction=-1, full=True
         )
 
         model_data = []
@@ -136,12 +133,12 @@ class HFDatasetManager:
                     "likes": model.likes,
                     "pipeline_tag": model.pipeline_tag,
                     "tags": model.tags,
-                    "task_categories": model.pipeline_tag,
+                    "library_name": model.library_name,
                     "createdAt": model.created_at,
                     "card": card.content if card else "",
                 }
             )
-        
+
         return pd.DataFrame(model_data)
 
     def get_dataset_metadata_dataset(self) -> pd.DataFrame:

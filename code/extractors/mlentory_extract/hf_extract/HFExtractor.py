@@ -132,9 +132,9 @@ class HFExtractor:
                 "last_modified",
                 "downloads",
                 "likes",
-                "library_name",
-                "tags",
                 "pipeline_tag",
+                "tags",
+                "library_name",
                 "createdAt",
                 "card",
             ]

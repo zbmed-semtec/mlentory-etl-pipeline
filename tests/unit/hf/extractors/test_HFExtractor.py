@@ -192,8 +192,8 @@ class TestHFExtractor:
         """
         # Mock the load_dataset function
         monkeypatch.setattr(
-            "mlentory_extract.hf_extract.HFExtractor.get_hf_dataset",
-            lambda self: mock_dataset,
+            "mlentory_extract.hf_extract.HFDatasetManager.get_model_metadata_dataset",
+            lambda self, update_recent=False, limit=2: mock_dataset,
         )
         extractor_empty.parser = mock_parser
 
@@ -222,8 +222,8 @@ class TestHFExtractor:
         """
         # Mock the load_dataset function
         monkeypatch.setattr(
-            "mlentory_extract.hf_extract.HFExtractor.get_hf_dataset",
-            lambda self: mock_dataset,
+            "mlentory_extract.hf_extract.HFDatasetManager.get_model_metadata_dataset",
+            lambda self, update_recent=False, limit=2: mock_dataset,
         )
 
         # Check an exception is raised when num_models is 0
@@ -240,9 +240,8 @@ class TestHFExtractor:
         # Check that we're in the expected test folder
 
         df = extractor_full.download_models(
-            num_models=1, save_raw_data=False, save_result_in_json=False
+            num_models=2, save_raw_data=False, save_result_in_json=False
         )
-
         # Check that each cell contains the expected extraction info structure
         first_cell = df.iloc[0, 0][0]  # Get first cell's extraction info
         assert isinstance(first_cell, dict)
