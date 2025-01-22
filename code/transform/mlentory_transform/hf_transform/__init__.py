@@ -1,4 +1,4 @@
 from ..hf_transform.FieldProcessorHF import FieldProcessorHF
-from ..hf_transform.TransformHF import TransformHF
+from .TransformModelsHF import TransformHF
 
 __all__ = ["FieldProcessorHF", "TransformHF"]
