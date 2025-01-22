@@ -1,10 +1,12 @@
 from unittest.mock import patch, MagicMock
 import pytest
 import pandas as pd
+import os
 from datetime import datetime, timezone
 from datasets import Dataset
 from huggingface_hub import ModelInfo
 from mlentory_extract.hf_extract import HFDatasetManager
+from unittest.mock import Mock
 
 
 @pytest.fixture
@@ -274,3 +276,85 @@ class TestHFDatasetManager:
         mock_load_dataset.assert_called_once_with(
             "librarian-bots/model_cards_with_metadata"
         )
+    
+    def test_get_datasets_metadata(self, monkeypatch):
+        """
+        Test getting datasets metadata.
+        """
+        # Create mock dataset objects
+        mock_datasets = [
+            Mock(
+                id=f"dataset_{i}", 
+                last_modified=datetime(2023, 1, i+1, tzinfo=timezone.utc)
+            ) for i in range(8)
+        ]
+        
+        # Mock the list_datasets method
+        def mock_list_datasets(*args, **kwargs):
+            for dataset in mock_datasets:
+                yield dataset
+        
+        # Mock the get_croissant_metadata method
+        def mock_get_croissant_metadata(self, dataset_id):
+            return {"metadata": f"mock_metadata_for_{dataset_id}"}
+        
+        # Apply the mocks
+        monkeypatch.setattr("huggingface_hub.HfApi.list_datasets", mock_list_datasets)
+        monkeypatch.setattr(
+            "mlentory_extract.hf_extract.HFDatasetManager.get_croissant_metadata",
+            mock_get_croissant_metadata
+        )
+        
+        manager = HFDatasetManager()
+        result = manager.get_datasets_metadata(
+            limit=8, 
+            latest_modification=datetime(2022, 1, 1, tzinfo=timezone.utc)
+        )
+        
+        # Assertions
+        assert isinstance(result, pd.DataFrame)
+        assert len(result) == 8
+        assert list(result.columns) == ["datasetId", "crossaint_metadata"]
+        assert all(isinstance(metadata, dict) for metadata in result["crossaint_metadata"])
+        assert result["crossaint_metadata"].iloc[0]['metadata'].startswith("mock_metadata_for_dataset_")
+
+    def test_get_datasets_metadata_only_new_datasets(self, monkeypatch):
+        """
+        Test getting datasets metadata.
+        """
+        # Create mock dataset objects
+        mock_datasets = [
+            Mock(
+                id=f"dataset_{i}", 
+                last_modified=datetime(2023, 1, i+1, tzinfo=timezone.utc)
+            ) for i in range(8)
+        ]
+        
+        # Mock the list_datasets method
+        def mock_list_datasets(*args, **kwargs):
+            for dataset in mock_datasets:
+                yield dataset
+        
+        # Mock the get_croissant_metadata method
+        def mock_get_croissant_metadata(self, dataset_id):
+            return {"metadata": f"mock_metadata_for_{dataset_id}"}
+        
+        # Apply the mocks
+        monkeypatch.setattr("huggingface_hub.HfApi.list_datasets", mock_list_datasets)
+        monkeypatch.setattr(
+            "mlentory_extract.hf_extract.HFDatasetManager.get_croissant_metadata",
+            mock_get_croissant_metadata
+        )
+        
+        manager = HFDatasetManager()
+        result = manager.get_datasets_metadata(
+            limit=8, 
+            latest_modification=datetime(2023, 1, 5, tzinfo=timezone.utc)
+        )
+        
+        # Assertions
+        assert isinstance(result, pd.DataFrame)
+        assert len(result) == 3
+        assert list(result.columns) == ["datasetId", "crossaint_metadata"]
+        assert all(isinstance(metadata, dict) for metadata in result["crossaint_metadata"])
+        assert result["crossaint_metadata"].iloc[0]['metadata'].startswith("mock_metadata_for_dataset_")

@@ -3,7 +3,10 @@ from datasets import load_dataset
 import pandas as pd
 from huggingface_hub import HfApi, ModelCard
 from datetime import datetime
+import requests
+import itertools
 import os
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 
 class HFDatasetManager:
@@ -89,7 +92,7 @@ class HFDatasetManager:
             raise Exception(f"Error loading or updating model cards dataset: {str(e)}")
 
     def get_recent_models_metadata(
-        self, limit: int, latest_modification: datetime
+        self, limit: int, latest_modification: datetime, threads: int = 4
     ) -> pd.DataFrame:
         """
         Retrieve recent models metadata from HuggingFace API.
@@ -97,19 +100,19 @@ class HFDatasetManager:
         Args:
             limit (int): Maximum number of models to fetch.
             latest_modification (datetime): The latest modification date to filter models.
+            threads (int): Number of threads for parallel processing. Defaults to 4.
 
         Returns:
             pd.DataFrame: DataFrame containing model metadata
         """
-
         models = self.api.list_models(
             limit=limit, sort="lastModified", direction=-1, full=True
         )
-
-        model_data = []
-
-        for model in models:
-
+        
+        def process_model(model):
+            if model.last_modified <= latest_modification:
+                return None
+                
             card = None
             try:
                 if self.token:
@@ -119,42 +122,108 @@ class HFDatasetManager:
             except Exception as e:
                 print()
                 print(f"Error loading model card for {model.id}: {e}")
+                
+            return {
+                "modelId": model.id,
+                "author": model.author,
+                "last_modified": model.last_modified,
+                "downloads": model.downloads,
+                "likes": model.likes,
+                "pipeline_tag": model.pipeline_tag,
+                "tags": model.tags,
+                "library_name": model.library_name,
+                "createdAt": model.created_at,
+                "card": card.content if card else "",
+            }
 
-            # Check if this model is newer than our latest modification
-            if model.last_modified <= latest_modification:
-                break
-
-            model_data.append(
-                {
-                    "modelId": model.id,
-                    "author": model.author,
-                    "last_modified": model.last_modified,
-                    "downloads": model.downloads,
-                    "likes": model.likes,
-                    "pipeline_tag": model.pipeline_tag,
-                    "tags": model.tags,
-                    "library_name": model.library_name,
-                    "createdAt": model.created_at,
-                    "card": card.content if card else "",
-                }
-            )
-
+        model_data = []
+        with ThreadPoolExecutor(max_workers=threads) as executor:
+            future_to_model = {executor.submit(process_model, model): model for model in models}
+            for future in as_completed(future_to_model):
+                result = future.result()
+                if result is not None:
+                    model_data.append(result)
+                
         return pd.DataFrame(model_data)
 
-    def get_dataset_metadata_dataset(self) -> pd.DataFrame:
+    def get_datasets_metadata(
+        self, limit: int, latest_modification: datetime, threads: int = 4
+    ) -> pd.DataFrame:
         """
-        Retrieve the HuggingFace dataset containing dataset card information.
-        """
-        try:
-            return load_dataset("librarian-bots/dataset_cards_with_metadata")[
-                "train"
-            ].to_pandas()
-        except Exception as e:
-            raise Exception(f"Error loading datasets card dataset: {str(e)}")
+        Retrieve recent datasets metadata from HuggingFace API.
 
+        Args:
+            limit (int): Maximum number of datasets to fetch.
+            latest_modification (datetime): The latest modification date to filter datasets.
+            threads (int): Number of threads for parallel processing. Defaults to 4.
+
+        Returns:
+            pd.DataFrame: DataFrame containing dataset metadata
+        """
+        datasets = list(itertools.islice(
+            self.api.list_datasets(sort="lastModified", direction=-1),
+            limit
+        ))
+        
+        def process_dataset(dataset):
+            if dataset.last_modified <= latest_modification:
+                return None
+            
+            croissant_metadata = self.get_croissant_metadata(dataset.id)
+            if croissant_metadata == {}:
+                return None
+            
+            return {
+                "datasetId": dataset.id,
+                "crossaint_metadata": croissant_metadata,
+            }
+
+        dataset_data = []
+        remaining_limit = limit
+        
+        with ThreadPoolExecutor(max_workers=threads) as executor:
+            future_to_dataset = {
+                executor.submit(process_dataset, dataset): dataset 
+                for dataset in datasets
+            }
+            for future in as_completed(future_to_dataset):
+                if remaining_limit <= 0:
+                    break
+                result = future.result()
+                if result is not None:
+                    dataset_data.append(result)
+                    remaining_limit -= 1
+            
+        return pd.DataFrame(dataset_data)
+
+    
+    def get_croissant_metadata(self, dataset_id: str) -> Dict:
+        """
+        Retrieve croissant metadata for a given dataset.
+
+        Args:
+            dataset_id (str): The ID of the dataset to retrieve metadata for.
+
+        Returns:
+            Dict: The croissant metadata for the dataset, or an empty dictionary if not found.
+        """
+        API_URL = f"https://huggingface.co/api/datasets/{dataset_id}/croissant"
+        if self.token:
+            headers = {"Authorization": f"Bearer {self.token}"}
+        else:
+            headers = {}
+        response = requests.get(API_URL, headers=headers)
+        if response.status_code == 200:
+            return response.json()
+        else:
+            return {}
+    
     def get_arxiv_metadata_dataset(self) -> pd.DataFrame:
         """
         Retrieve the HuggingFace dataset containing arxiv metadata.
+        
+        Returns:
+            pd.DataFrame: DataFrame containing arxiv metadata
         """
         try:
             return load_dataset("librarian-bots/arxiv-metadata-snapshot")[
