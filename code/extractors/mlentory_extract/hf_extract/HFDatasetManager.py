@@ -135,7 +135,6 @@ class HFDatasetManager:
                 "createdAt": model.created_at,
                 "card": card.content if card else "",
             }
-            print(model_info)
             
             return model_info
         model_data = []
