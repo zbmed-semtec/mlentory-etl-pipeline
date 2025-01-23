@@ -134,13 +134,13 @@ class ModelCardQAParser:
         ]
 
     def add_default_extraction_info(
-        self, data: str, extraction_method: str, confidence: float
+        self, data: Any, extraction_method: str, confidence: float
     ) -> Dict:
         """
         Create a standardized dictionary for extraction metadata.
 
         Args:
-            data (str): The extracted information
+            data (Any): The extracted information
             extraction_method (str): Method used for extraction
             confidence (float): Confidence score of the extraction
 
@@ -171,6 +171,7 @@ class ModelCardQAParser:
     def parse_known_fields_HF(self, HF_df: pd.DataFrame) -> pd.DataFrame:
         """
         Parse known fields from HuggingFace dataset into standardized format.
+        Answer question 0, 1, 2, 6, 7, 26, 29, 30
 
         Args:
             HF_df (pd.DataFrame): DataFrame containing HuggingFace model information
@@ -228,6 +229,7 @@ class ModelCardQAParser:
     def parse_fields_from_tags_HF(self, HF_df: pd.DataFrame) -> pd.DataFrame:
         """
         Extract information from HuggingFace model tags.
+        Answer question 3, 4, 13, 15, 16, 17
 
         Args:
             HF_df (pd.DataFrame): DataFrame containing HuggingFace model information
@@ -290,12 +292,11 @@ class ModelCardQAParser:
 
         for index in HF_df.index:
             for id in ["q_id_3", "q_id_4", "q_id_13", "q_id_15", "q_id_16", "q_id_17"]:
-                if HF_df.at[index, id] is not None:  # Only process if there's data
-                    HF_df.at[index, id] = [
-                        self.add_default_extraction_info(
-                            HF_df.at[index, id], "Parsed_from_HF_dataset", 1.0
-                        )
-                    ]
+                HF_df.at[index, id] = [
+                    self.add_default_extraction_info(
+                        HF_df.at[index, id], "Parsed_from_HF_dataset", 1.0
+                    )
+                ]
 
         for id in ["q_id_3", "q_id_4", "q_id_13", "q_id_15", "q_id_16", "q_id_17"]:
             self.available_questions.discard(id)
@@ -449,7 +450,14 @@ class ModelCardQAParser:
 
             # Add a new column for each question and populate with answers
             for question, answer in answers.items():
-                HF_df.loc[index, question] = [answer]
+                if answer != None:
+                    HF_df.loc[index, question] = [answer]
+                else:
+                    HF_df.loc[index, question] = [
+                        self.add_default_extraction_info(
+                            "No context to answer the question", "Parsed_from_HF_dataset", 1.0
+                        )
+                    ]
 
         return HF_df
 
@@ -474,6 +482,10 @@ class ModelCardQAParser:
             HF_df.iterrows(), total=len(HF_df), desc="Pre-processing contexts"
         ):
             context = row["card"]
+            if not context or context.strip() == "":
+                contexts.append(None)
+                continue
+            
             if "---" in context:
                 sections = context.split("---")
                 if len(sections) > 1:
@@ -494,11 +506,16 @@ class ModelCardQAParser:
             # Process batch of contexts
             batch_results = []
             for context in batch_contexts:
-                # Find relevant sections for all questions at once
-                relevant_sections = self.matching_engine.find_relevant_sections(
-                    questions=current_questions, context=context, top_k=1
-                )
-                batch_results.append(relevant_sections)
+                if context is None:
+                    # Create empty results for all questions
+                    empty_results = [(None, 0.0)] * len(current_questions)
+                    batch_results.append(empty_results)
+                else:
+                    # Find relevant sections for all questions at once
+                    relevant_sections = self.matching_engine.find_relevant_sections(
+                        questions=current_questions, context=context, top_k=1
+                    )
+                    batch_results.append(relevant_sections)
 
             # Update DataFrame with batch results
             for i, relevant_sections in enumerate(batch_results):
@@ -506,19 +523,22 @@ class ModelCardQAParser:
 
                 # Process each question
                 for q_idx, q_id in enumerate(questions_to_process):
-                    section, score = relevant_sections[q_idx][0]
-
-                    # Create answer with section content and metadata
-                    answer = [
-                        {
+                    if relevant_sections[q_idx][0] is None:
+                        # Handle empty/None context
+                        answer = [{
+                            "data": "No context to answer the question",
+                            "extraction_method": "Parsed_from_HF_dataset",
+                            "confidence": 1.0,
+                            "extraction_time": datetime.now().strftime("%Y-%m-%d_%H-%M-%S"),
+                        }]
+                    else:
+                        section, score = relevant_sections[q_idx][0]
+                        answer = [{
                             "data": section.content.strip(),
                             "extraction_method": f"Semantic Matching with {self.matching_engine.model_name}",
                             "confidence": score,
-                            "extraction_time": datetime.now().strftime(
-                                "%Y-%m-%d_%H-%M-%S"
-                            ),
-                        }
-                    ]
+                            "extraction_time": datetime.now().strftime("%Y-%m-%d_%H-%M-%S"),
+                        }]
 
                     # Store the answer in the DataFrame
                     HF_df.loc[df_idx, f"q_id_{q_id}"] = answer

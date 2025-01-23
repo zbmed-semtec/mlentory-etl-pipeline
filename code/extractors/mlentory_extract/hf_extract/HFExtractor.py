@@ -65,7 +65,7 @@ class HFExtractor:
     def download_models(
         self,
         num_models: int = 10,
-        questions: List[str] = None,
+        update_recent: bool = True,
         output_dir: str = "./outputs",
         save_raw_data: bool = False,
         save_result_in_json: bool = False,
@@ -83,8 +83,8 @@ class HFExtractor:
         Args:
             num_models (int, optional): Number of models to process.
                 Defaults to 10.
-            questions (List[str], optional): Custom questions for extraction.
-                Defaults to None.
+            update_recent (bool, optional): Whether to update recent models.
+                Defaults to True.
             output_dir (str, optional): Directory to save output files.
                 Defaults to "./outputs".
             save_raw_data (bool, optional): Whether to save original dataset.
@@ -99,15 +99,10 @@ class HFExtractor:
         """
         # Load dataset
         original_HF_df = self.dataset_manager.get_model_metadata_dataset(
-            update_recent=True, limit=num_models
+            update_recent=update_recent, limit=num_models
         )
-
         # Slice dataframe if num_models specified
-        HF_df = original_HF_df.iloc[0:num_models] if num_models else original_HF_df
-
-        # Update parser questions if custom questions provided
-        if questions:
-            self.parser.questions = questions
+        HF_df = original_HF_df
 
         # Create new columns for each question
         new_columns = {
@@ -116,13 +111,11 @@ class HFExtractor:
         }
         HF_df = HF_df.assign(**new_columns)
 
-        print("**CHECKING COLUMNS**")
-        print(HF_df.columns)
-
         # Parse fields
         HF_df = self.parser.parse_fields_from_tags_HF(HF_df=HF_df)
         HF_df = self.parser.parse_known_fields_HF(HF_df=HF_df)
         HF_df = self.parser.parse_fields_from_txt_HF_matching(HF_df=HF_df)
+        
 
         # Clean up columns
         HF_df = HF_df.drop(
@@ -163,6 +156,28 @@ class HFExtractor:
 
         return HF_df
 
+    def print_detailed_dataframe(self, HF_df: pd.DataFrame):
+        print("\n**DATAFRAME**")
+        print("\nColumns:", HF_df.columns.tolist())
+        print("\nShape:", HF_df.shape)
+        print("\nSample Data:")
+        for col in HF_df.columns:
+            print(f"\n{col}:")
+            for row in HF_df[col]:
+                # Limit the text to 100 characters
+                if isinstance(row, list ):
+                    row_data = row[0]["data"]
+                    if isinstance(row_data, str):
+                        print(row_data[:100])
+                    else:
+                        print(row_data)
+                else:
+                    print(row)
+                    
+            print()
+        print("\nDataFrame Info:")
+        print(HF_df.info())
+        
     def _augment_column_name(self, name: str) -> str:
         """
         Add question text to column names for better readability.

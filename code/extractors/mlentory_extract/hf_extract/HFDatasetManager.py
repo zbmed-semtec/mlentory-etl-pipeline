@@ -122,20 +122,22 @@ class HFDatasetManager:
             except Exception as e:
                 print()
                 print(f"Error loading model card for {model.id}: {e}")
-                
-            return {
+            
+            model_info = {
                 "modelId": model.id,
                 "author": model.author,
                 "last_modified": model.last_modified,
                 "downloads": model.downloads,
                 "likes": model.likes,
-                "pipeline_tag": model.pipeline_tag,
-                "tags": model.tags,
                 "library_name": model.library_name,
+                "tags": model.tags,
+                "pipeline_tag": model.pipeline_tag,
                 "createdAt": model.created_at,
                 "card": card.content if card else "",
             }
-
+            print(model_info)
+            
+            return model_info
         model_data = []
         with ThreadPoolExecutor(max_workers=threads) as executor:
             future_to_model = {executor.submit(process_model, model): model for model in models}
