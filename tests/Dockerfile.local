@@ -1,5 +1,19 @@
-FROM python:3.11
+FROM nvidia/cuda:11.2.2-cudnn8-devel-ubuntu20.04
 
+ARG DEBIAN_FRONTEND=noninteractive
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    wget \
+    curl \
+    git \
+    python3.8 \
+    python3-pip \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN nvcc --version
+
+# Install PyTorch with CUDA support
 RUN pip3 install torch -f https://download.pytorch.org/whl/cu113
 
 ENV DOCKER_VERSION=18.09.4
@@ -8,7 +22,7 @@ tar -xzf docker.tgz docker/docker --strip=1 --directory /usr/local/bin && \
 rm docker.tgz
 
 COPY ./tests/config/requirements.txt .
-RUN pip3 install -r requirements.txt
+RUN pip install -r requirements.txt
 
 WORKDIR /app_test
 COPY ./tests/scripts/wait-for-it.sh ./wait-for-it.sh
@@ -16,7 +30,7 @@ RUN chmod +x ./wait-for-it.sh
 
 COPY /code/extractors /app_test/extractors
 WORKDIR /app_test/extractors
-RUN pip3 install -e .
+RUN pip install -e .
 
 COPY /code/transform /app_test/transform
 WORKDIR /app_test/transform
@@ -24,6 +38,6 @@ RUN pip3 install -e .
 
 COPY /code/load /app_test/load
 WORKDIR /app_test/load
-RUN pip3 install -e .
+RUN pip install -e .
 
 WORKDIR /app_test

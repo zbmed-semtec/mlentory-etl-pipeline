@@ -17,4 +17,4 @@ elasticsearch-dsl<8.0.0
 black
 ruff
 pytest-cov
-psycopg2
+psycopg2-binary
