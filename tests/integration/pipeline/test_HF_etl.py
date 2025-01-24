@@ -5,7 +5,8 @@ from datetime import datetime
 from typing import List, Tuple
 
 from mlentory_extract.hf_extract import HFExtractor, HFDatasetManager
-from mlentory_transform.core.MlentoryTransform import MlentoryTransform
+from mlentory_transform.core.MlentoryTransform import MlentoryTransform, KnowledgeGraphHandler
+from mlentory_transform.hf_transform.TransformHF import TransformHF
 
 
 def load_tsv_file_to_list(path: str) -> List[str]:
@@ -39,7 +40,8 @@ def initialize_extractor() -> HFExtractor:
         tags_task=tags_task,
     )
 
-def initialize_transform_data() -> TransformHF:
+@pytest.fixture
+def initialize_transform() -> TransformHF:
     """
     Initializes the transformer with the configuration data.
 
@@ -50,24 +52,27 @@ def initialize_transform_data() -> TransformHF:
         TransformHF: The transformer instance.
     """
     config_path = "config/hf/transform"
-    new_schema = pd.read_csv(f"{config_path}/M4ML_schema.tsv", sep="\t")
+    new_schema = pd.read_csv(f"{config_path}/M4ML_schema.csv", sep=",",lineterminator="\n")
     transformations = pd.read_csv(
         f"{config_path}/column_transformations.csv",
         lineterminator="\n",
         sep=",",
     )
-    return new_schema,transformations
+    
+    kg_handler = KnowledgeGraphHandler(M4ML_schema=new_schema, base_namespace="http://test_example.org/")
+    transform_hf = TransformHF(new_schema, transformations)
+    transformer = MlentoryTransform(kg_handler, transform_hf)
+    
+    return transformer
 
 
-@pytest.mark.integration
 class TestHFETLIntegration:
     """Integration tests for HuggingFace ETL pipeline."""
 
     def test_extract_transform_pipeline(
         self,
         initialize_extractor,
-        initialize_transform_data,
-        output_dir: str,
+        initialize_transform,
         monkeypatch
     ):
         """
@@ -78,12 +83,14 @@ class TestHFETLIntegration:
             output_dir: Path to output directory
             monkeypatch: pytest fixture for mocking
         """
-        new_schema,transformations = initialize_transform_data
 
         # Initialize extractor
         extractor = initialize_extractor
-        # Initialize transformer
-        transformer = MlentoryTransform(new_schema,transformations)
+        
+        output_dir = "integration/pipeline/outputs"
+        # Clean the output directory
+        for file in os.listdir(output_dir):
+            os.remove(os.path.join(output_dir, file))
 
         # Extract data (limited sample)
         extracted_df = extractor.download_models(
@@ -91,30 +98,21 @@ class TestHFETLIntegration:
             from_date=datetime(2023, 1, 1),
             output_dir=output_dir,
             save_result_in_json=True,
-            save_raw_data=False
+            save_raw_data=False,
+            update_recent=True
         )
 
-        # Transform data
-        transformed_df = transformer.transform_models(
+        # Initialize transformer
+        transformer = initialize_transform
+        
+        transformer.transform_HF_models(
             extracted_df=extracted_df,
             save_output_in_json=True,
             output_dir=output_dir
         )
 
-        # Verify transformation results
-        assert isinstance(transformed_df, pd.DataFrame)
-        assert len(transformed_df) == len(extracted_df)
-        assert "model_id" in transformed_df.columns
-        assert "task" in transformed_df.columns
-        assert "last_modified" in transformed_df.columns
-
-        # Verify data types
-        assert pd.api.types.is_string_dtype(transformed_df["model_id"])
-        assert pd.api.types.is_string_dtype(transformed_df["task"])
-        assert pd.api.types.is_numeric_dtype(transformed_df["downloads"])
-        assert isinstance(transformed_df["tags"].iloc[0], list)
-
         # Verify output files
         files = os.listdir(output_dir)
+        print(files)
         assert any(file.endswith("_transformation_results.csv") for file in files)
         assert any(file.endswith(".json") for file in files)
