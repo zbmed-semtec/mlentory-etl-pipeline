@@ -93,7 +93,7 @@ class TestHFETLIntegration:
             os.remove(os.path.join(output_dir, file))
 
         # Extract data (limited sample)
-        extracted_df = extractor.download_models(
+        extracted_models_df = extractor.download_models(
             num_models=2,
             from_date=datetime(2023, 1, 1),
             output_dir=output_dir,
@@ -101,12 +101,14 @@ class TestHFETLIntegration:
             save_raw_data=False,
             update_recent=True
         )
+        
+        
 
         # Initialize transformer
         transformer = initialize_transform
         
         transformer.transform_HF_models(
-            extracted_df=extracted_df,
+            extracted_df=extracted_models_df,
             save_output_in_json=True,
             output_dir=output_dir
         )
@@ -114,5 +116,6 @@ class TestHFETLIntegration:
         # Verify output files
         files = os.listdir(output_dir)
         print(files)
-        assert any(file.endswith("_transformation_results.csv") for file in files)
-        assert any(file.endswith(".json") for file in files)
+        assert len(files) >= 2
+        assert any(file.endswith("_kg.csv") for file in files)
+        assert any(file.endswith("_metadata.json") for file in files)

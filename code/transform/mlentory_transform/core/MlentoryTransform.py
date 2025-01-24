@@ -44,13 +44,13 @@ class MlentoryTransform:
                             save_output_in_json: bool = False,
                             output_dir: str = None) -> pd.DataFrame:
         """
-        Transform the extracted data into the target schema.
+        Transform the extracted data into a knowledge graph.
 
         This method:
         1. Processes each row of the input DataFrame
         2. Applies the specified transformations
         3. Optionally saves the results to a file
-
+        4. Returns the transformed knowledge graph and metadata graph
         Args:
             extracted_df (pd.DataFrame): DataFrame containing extracted model data
             save_output_in_json (bool, optional): Whether to save the transformed data.
@@ -59,7 +59,7 @@ class MlentoryTransform:
                 Required if save_output_in_json is True.
 
         Returns:
-            pd.DataFrame: Transformed DataFrame conforming to the target schema
+            Tuple[rdflib.Graph, rdflib.Graph]: Transformed knowledge graph and metadata graph
 
         Raises:
             ValueError: If save_output_in_json is True but output_dir is not provided
@@ -84,16 +84,16 @@ class MlentoryTransform:
         if save_output_in_json:
             current_date = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
             kg_output_path = os.path.join(
-                output_dir, f"{current_date}_HF_kg.json"
+                output_dir, f"{current_date}_Transformed_HF_kg.json"
             )
             metadata_output_path = os.path.join(
-                output_dir, f"{current_date}_HF_kg_metadata.json"
+                output_dir, f"{current_date}_Transformed_HF_kg_metadata.json"
             )
             knowledge_graph.serialize(destination=kg_output_path, format="json-ld")
             metadata_graph.serialize(destination=metadata_output_path, format="json-ld")
             
             
-        return transformed_df
+        return knowledge_graph, metadata_graph
 
     def save_indiviual_sources(self, output_dir: str):
         """

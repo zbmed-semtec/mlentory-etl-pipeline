@@ -150,7 +150,7 @@ class HFExtractor:
 
         if save_result_in_json:
             processed_path = os.path.join(
-                output_dir, f"{timestamp}_Processed_HF_Dataframe.json"
+                output_dir, f"{timestamp}_Extracted_Models_HF_df.json"
             )
             HF_df.to_json(path_or_buf=processed_path, orient="records", indent=4)
 
