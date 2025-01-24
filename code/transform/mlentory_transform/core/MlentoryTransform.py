@@ -22,14 +22,13 @@ class MlentoryTransform:
         transformations (pd.DataFrame): Mapping rules for data transformation
     """
 
-    def __init__(self):
+    def __init__(self, kg_handler, transform_hf):
         """
         Initialize the transformer with schema and transformation rules.
 
         Args:
-            schema (pd.DataFrame): Target schema for data transformation
-            transformations (pd.DataFrame): Rules for mapping source fields to target schema
-
+            kg_handler (KnowledgeGraphHandler): Knowledge graph handler
+            transform_hf (TransformHF): Transform HF
         Example:
             >>> schema_df = pd.read_csv("schema.tsv", sep="\t")
             >>> transform_df = pd.read_csv("transformations.csv")
@@ -37,11 +36,10 @@ class MlentoryTransform:
         """
         self.processed_data = []
         self.current_sources = {}
-        self.kg_handler = KnowledgeGraphHandler()
+        self.kg_handler = kg_handler
+        self.transform_hf = transform_hf
 
     def transform_HF_models(self,
-                            new_schema: pd.DataFrame,
-                            transformations: pd.DataFrame,
                             extracted_df: pd.DataFrame,
                             save_output_in_json: bool = False,
                             output_dir: str = None) -> pd.DataFrame:
@@ -54,8 +52,6 @@ class MlentoryTransform:
         3. Optionally saves the results to a file
 
         Args:
-            new_schema (pd.DataFrame): Target schema for the transformed data
-            transformations (pd.DataFrame): Transformation rules to apply
             extracted_df (pd.DataFrame): DataFrame containing extracted model data
             save_output_in_json (bool, optional): Whether to save the transformed data.
                 Defaults to False.
@@ -68,24 +64,58 @@ class MlentoryTransform:
         Raises:
             ValueError: If save_output_in_json is True but output_dir is not provided
         """
+        # Reset the knowledge graph handler before processing new data
+        self.kg_handler.reset_graphs()
         
-        transform_hf = TransformHF(new_schema, transformations)
-
-        transformed_df = transform_hf.transform_models(extracted_df)
+        transformed_df = self.transform_hf.transform_models(extracted_df)
         
-        self.print_detailed_dataframe(transformed_df)
+        # self.print_detailed_dataframe(transformed_df)
         
         #Transform the dataframe to a knowledge graph
-        knowledge_graph = self.kg_handler.dataframe_to_graph_M4ML_schema(
+        knowledge_graph, metadata_graph = self.kg_handler.dataframe_to_graph_M4ML_schema(
             df=transformed_df,
             identifier_column="schema.org:name",
             platform="HF"
         )
         
-        self.current_sources["HF_models"] = knowledge_graph
+        self.current_sources["HF"] = knowledge_graph
+        self.current_sources["HF_metadata"] = metadata_graph
         
+        if save_output_in_json:
+            current_date = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+            kg_output_path = os.path.join(
+                output_dir, f"{current_date}_HF_kg.json"
+            )
+            metadata_output_path = os.path.join(
+                output_dir, f"{current_date}_HF_kg_metadata.json"
+            )
+            knowledge_graph.serialize(destination=kg_output_path, format="json-ld")
+            metadata_graph.serialize(destination=metadata_output_path, format="json-ld")
+            
+            
         return transformed_df
 
+    def save_indiviual_sources(self, output_dir: str):
+        """
+        Save each transformed source in a separate file in json format.
+        """
+        current_date = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+        
+        
+        for source in self.current_sources.keys():
+            
+            output_path = os.path.join(
+                output_dir, f"{current_date}_{source}_transformation_result.json"
+            )
+            
+            self.current_sources[source].to_json(output_path, index=False)
+    
+    def unify_knowledge_graph(self):
+        """
+        Unify the knowledge graph from the current sources.
+        """
+        pass
+    
     def print_detailed_dataframe(self, df: pd.DataFrame):
         """
         Print the detailed dataframe
@@ -111,26 +141,3 @@ class MlentoryTransform:
             print()
         print("\nDataFrame Info:")
         print(df.info())
-    
-    
-    
-    def save_indiviual_sources(self, output_dir: str):
-        """
-        Save each transformed source in a separate file in json format.
-        """
-        current_date = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-        
-        
-        for source in self.current_sources.keys():
-            
-            output_path = os.path.join(
-                output_dir, f"{current_date}_{source}_transformation_result.json"
-            )
-            
-            self.current_sources[source].to_json(output_path, index=False)
-    
-    def unify_knowledge_graph(self):
-        """
-        Unify the knowledge graph from the current sources.
-        """
-        pass
