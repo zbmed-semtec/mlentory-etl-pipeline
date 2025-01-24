@@ -156,6 +156,38 @@ class HFExtractor:
 
         return HF_df
 
+    def download_datasets(self, num_datasets: int = 10, from_date: str = None, output_dir: str = "./outputs", save_result_in_json: bool = False, update_recent: bool = True):
+        """
+        Download metadata from HuggingFace datasets in the croissant format.
+        
+        Args:
+            num_datasets (int, optional): Number of datasets to process.
+                Defaults to 10.
+            from_date (str, optional): Filter datasets by date.
+                Defaults to None.
+            output_dir (str, optional): Directory to save output files.
+                Defaults to "./outputs".
+            save_result_in_json (bool, optional): Whether to save results as JSON.
+                Defaults to True.
+            update_recent (bool, optional): Whether to update recent datasets.
+                Defaults to True.
+        """
+        
+        result_df = self.dataset_manager.get_dataset_metadata_dataset(
+            limit=num_datasets,
+            latest_modification=from_date,
+            threads=4
+        )
+        
+        if save_result_in_json:
+            timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+            processed_path = os.path.join(
+                output_dir, f"{timestamp}_Extracted_Datasets_HF_df.json"
+            )
+            result_df.to_json(path_or_buf=processed_path, orient="records", indent=4)
+        
+        return result_df
+
     def print_detailed_dataframe(self, HF_df: pd.DataFrame):
         print("\n**DATAFRAME**")
         print("\nColumns:", HF_df.columns.tolist())
