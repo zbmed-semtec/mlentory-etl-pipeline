@@ -173,7 +173,7 @@ class HFExtractor:
                 Defaults to True.
         """
         
-        result_df = self.dataset_manager.get_dataset_metadata_dataset(
+        result_df = self.dataset_manager.get_datasets_metadata(
             limit=num_datasets,
             latest_modification=from_date,
             threads=4
@@ -188,7 +188,9 @@ class HFExtractor:
         
         return result_df
 
+
     def print_detailed_dataframe(self, HF_df: pd.DataFrame):
+        
         print("\n**DATAFRAME**")
         print("\nColumns:", HF_df.columns.tolist())
         print("\nShape:", HF_df.shape)

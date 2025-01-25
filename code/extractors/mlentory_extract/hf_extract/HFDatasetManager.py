@@ -159,15 +159,21 @@ class HFDatasetManager:
             threads (int): Number of threads for parallel processing. Defaults to 4.
 
         Returns:
-            pd.DataFrame: DataFrame containing dataset metadata
+            pd.DataFrame: DataFrame containing dataset metadata with exactly 'limit' rows
+                         (or fewer if not enough valid datasets are found)
         """
+        # Fetch initial batch of datasets (100x limit to have enough valid ones)
         datasets = list(itertools.islice(
             self.api.list_datasets(sort="lastModified", direction=-1),
-            limit
+            limit+100
         ))
         
+        dataset_data = []
+        futures = []
+        
         def process_dataset(dataset):
-            if dataset.last_modified <= latest_modification:
+            last_modified = dataset.last_modified.replace(tzinfo=latest_modification.tzinfo)
+            if latest_modification and last_modified <= latest_modification:
                 return None
             
             croissant_metadata = self.get_croissant_metadata(dataset.id)
@@ -176,25 +182,33 @@ class HFDatasetManager:
             
             return {
                 "datasetId": dataset.id,
-                "crossaint_metadata": croissant_metadata,
+                "croissant_metadata": croissant_metadata,
+                "extraction_metadata": {
+                    "extraction_method": "Downloaded_from_HF_Croissant_endpoint",
+                    "confidence": 1.0,
+                    "extraction_time": datetime.now().strftime("%Y-%m-%d_%H-%M-%S"),
+                }
             }
 
-        dataset_data = []
-        remaining_limit = limit
-        
         with ThreadPoolExecutor(max_workers=threads) as executor:
-            future_to_dataset = {
-                executor.submit(process_dataset, dataset): dataset 
-                for dataset in datasets
-            }
-            for future in as_completed(future_to_dataset):
-                if remaining_limit <= 0:
-                    break
+            # Submit all tasks
+            for dataset in datasets:
+                future = executor.submit(process_dataset, dataset)
+                futures.append(future)
+            
+            # Process results as they complete
+            for future in as_completed(futures):
                 result = future.result()
                 if result is not None:
                     dataset_data.append(result)
-                    remaining_limit -= 1
-            
+                    # If we've reached the limit, cancel remaining futures
+                    if len(dataset_data) >= limit:
+                        for f in futures:
+                            f.cancel()
+                        break
+        
+        # Trim results to exact limit if we got more than needed
+        dataset_data = dataset_data[:limit]
         return pd.DataFrame(dataset_data)
 
     
