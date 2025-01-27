@@ -7,7 +7,7 @@ RUN apt-get update && apt-get install -y \
     wget \
     curl \
     git \
-    python3.9 \
+    python3.8 \
     python3-pip \
     && rm -rf /var/lib/apt/lists/*
 
