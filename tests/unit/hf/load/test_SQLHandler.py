@@ -8,7 +8,7 @@ from unittest.mock import Mock, patch
 from typing import Dict, Any
 import psycopg2
 
-from mlentory_loader.dbHandler.SQLHandler import SQLHandler
+from mlentory_load.dbHandler.SQLHandler import SQLHandler
 
 
 class TestSQLHandler:

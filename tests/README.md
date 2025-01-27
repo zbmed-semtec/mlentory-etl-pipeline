@@ -1,66 +1,71 @@
-# Tests package
+# MLEntory ETL Pipeline Tests
 
-This folder contains all the files needed to test the whole backend of the ETL-pipeline.
+This folder contains all the test files for the MLentory ETL pipeline. The tests are organized to validate each component of the pipeline's functionality.
 
-<img src="../../docs/Readme_images/MLentory Backend TDD Diagrams-Main_component_interaction_Diagram.jpg"/>
-<p style=" text-align: center; font-size: 0.8em; color: #cccccc">MLentory Pipeline</p>
+## Test Structure
 
-The order on which each component is executed in the normal program behavior is the following:
+The tests are organized according to the main components of the ETL pipeline:
 
-- test_extract_HF_MetadataParser.py
-- test_transform_QueueObserver.py
-- test_transform_FileProcessor.py
-- test_transform_FieldProcessor.py
-- test_transform_GraphCreator.py
+### Extract
+- `tests/unit/hf/extractors/test_HFExtractor.py` - Tests for the HuggingFace model extraction
+- `tests/unit/hf/extractors/test_ModelCardQAParser.py` - Tests for parsing model card information
 
-So you can follow that order to understand the codebase.
+### Transform
+- `tests/unit/hf/transform/test_FieldProcessorHF.py` - Tests for field processing and transformations
 
-## How to use it
+### Load
+- `tests/unit/hf/load/test_Elasticsearch.py` - Tests for Elasticsearch integration
+- `tests/unit/hf/load/test_GraphHandler.py` - Tests for graph data handling
+- `tests/unit/hf/load/test_IndexHandler.py` - Tests for index management
+- `tests/unit/hf/load/test_SQLHandler.py` - Tests for SQL database operations
 
-### Using shell script
-You can directly run the script *validate_tests.sh* to run all the backend tests.
-1. You go to the /Tests directory
-2. Then you run
-    ```
-    sh validate_tests.sh
-    ```
+## Running the Tests
 
-Is important to note that if you want to use a shell script in Windows you need third party tools like WSL2.
-If you follow the instructions on the [Backend README.md](https://github.com/zbmed-semtec/mlentory-etl-pipeline/tree/main/Backend) you should not have problems running it.
+### Using Docker Compose (Recommended)
 
-### Using docker-compose
-If you want to enter the container that runs all the tests, to test something more specific you can do the following:
-
-1. You need to build the images for the containers in the project, 
-
-```
+1. Build the test containers:
+```bash
 docker-compose --profile test build
 ```
 
-2. Bring up the container architecture.
-
-```
+2. Start the test environment:
+```bash
 docker-compose --profile test up
 ```
 
-3. If you want to access any of the running containers:
-
-```
-docker ps #Check the containers that are running
+3. Access the test container:
+```bash
+docker ps  # Find the test container ID
 docker exec -it <test_container_name> /bin/bash
 ```
 
-4. To run the tests inside the container:
+4. Run the tests:
+```bash
+pytest  # Run all tests
+pytest tests/unit/hf/extractors/  # Run specific test directory
+pytest tests/unit/hf/extractors/test_HFExtractor.py  # Run specific test file
+```
 
-```
-pytest
+### Using Shell Script
+
+If you have WSL2 or are on a Unix-based system:
+
+1. Navigate to the tests directory
+2. Run:
+```bash
+bash validate_tests.sh
 ```
 
-To learn more about how to run specific tests check the [pytest documentation](https://docs.pytest.org/en/6.2.x/usage.html). If for example you want to run just the tests for the class *test_transform_FieldProcessor.py* you can do the following:
+## Test Dependencies
 
-5. Run:
-```
-pytest Test/test_transform_FieldProcessor.py
-```
+The test environment requires several services:
+- PostgreSQL for SQL database testing
+- Elasticsearch for search functionality
+- Virtuoso for graph database operations
+
+These services are automatically configured when using Docker Compose.
+
+For more detailed information about the ETL pipeline components and their interactions, refer to the main documentation.
+
 
 
