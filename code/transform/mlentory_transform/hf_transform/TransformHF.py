@@ -1,4 +1,5 @@
 import pandas as pd
+from typing import List, Dict
 from tqdm import tqdm
 import os
 from datetime import datetime
@@ -86,3 +87,154 @@ class TransformHF:
             print(f"Saved transformation results to {output_path}")
 
         return transformed_df
+
+    def transform_dataset_croissant(self, dataset_id: str, croissant_metadata: dict, extraction_metadata: dict) -> List[dict]:
+        """
+        Transform Croissant metadata into rows compatible with M4ML schema.
+        
+        Args:
+            dataset_id (str): The HuggingFace dataset ID
+            croissant_metadata (dict): Dataset metadata in Croissant format
+            extraction_metadata (dict): Metadata about the extraction process
+            
+        Returns:
+            List[dict]: List of dictionaries containing transformed metadata
+        """
+        rows = []
+        extraction_time = extraction_metadata.get('extraction_time')
+        extraction_method = extraction_metadata.get('extraction_method')
+        confidence = extraction_metadata.get('confidence', 1.0)
+        
+        # Base dataset information
+        base_info = {
+            "schema.org:name": [{
+                "data": dataset_id,
+                "extraction_method": extraction_method,
+                "confidence": confidence,
+                "extraction_time": extraction_time
+            }],
+            "schema.org:description": [{
+                "data": croissant_metadata.get('description', ''),
+                "extraction_method": extraction_method,
+                "confidence": confidence,
+                "extraction_time": extraction_time
+            }],
+            "schema.org:url": [{
+                "data": croissant_metadata.get('url', ''),
+                "extraction_method": extraction_method,
+                "confidence": confidence,
+                "extraction_time": extraction_time
+            }]
+        }
+        
+        # Add creator information
+        creator = croissant_metadata.get('creator', {})
+        if creator:
+            base_info["schema.org:creator"] = [{
+                "data": creator.get('name', ''),
+                "extraction_method": extraction_method,
+                "confidence": confidence,
+                "extraction_time": extraction_time
+            }]
+            if 'url' in creator:
+                base_info["schema.org:creatorUrl"] = [{
+                    "data": creator['url'],
+                    "extraction_method": extraction_method,
+                    "confidence": confidence,
+                    "extraction_time": extraction_time
+                }]
+        
+        # Add keywords
+        keywords = croissant_metadata.get('keywords', [])
+        if keywords:
+            base_info["schema.org:keywords"] = [{
+                "data": keyword,
+                "extraction_method": extraction_method,
+                "confidence": confidence,
+                "extraction_time": extraction_time
+            } for keyword in keywords]
+        
+        # Add license information
+        if 'license' in croissant_metadata:
+            base_info["schema.org:license"] = [{
+                "data": croissant_metadata['license'],
+                "extraction_method": extraction_method,
+                "confidence": confidence,
+                "extraction_time": extraction_time
+            }]
+        
+        # Process distributions
+        for dist in croissant_metadata.get('distribution', []):
+            dist_row = base_info.copy()
+            
+            if 'contentUrl' in dist:
+                dist_row["schema.org:contentUrl"] = [{
+                    "data": dist['contentUrl'],
+                    "extraction_method": extraction_method,
+                    "confidence": confidence,
+                    "extraction_time": extraction_time
+                }]
+            
+            if 'encodingFormat' in dist:
+                dist_row["schema.org:encodingFormat"] = [{
+                    "data": dist['encodingFormat'],
+                    "extraction_method": extraction_method,
+                    "confidence": confidence,
+                    "extraction_time": extraction_time
+                }]
+                
+            if 'name' in dist:
+                dist_row["cr:distributionName"] = [{
+                    "data": dist['name'],
+                    "extraction_method": extraction_method,
+                    "confidence": confidence,
+                    "extraction_time": extraction_time
+                }]
+            
+            rows.append(dist_row)
+        
+        # Process record sets
+        for record_set in croissant_metadata.get('recordSet', []):
+            record_row = base_info.copy()
+            
+            if 'name' in record_set:
+                record_row["cr:recordSetName"] = [{
+                    "data": record_set['name'],
+                    "extraction_method": extraction_method,
+                    "confidence": confidence,
+                    "extraction_time": extraction_time
+                }]
+            
+            if 'description' in record_set:
+                record_row["cr:recordSetDescription"] = [{
+                    "data": record_set['description'],
+                    "extraction_method": extraction_method,
+                    "confidence": confidence,
+                    "extraction_time": extraction_time
+                }]
+            
+            # Process fields in record set
+            for field in record_set.get('field', []):
+                if '@id' in field:
+                    record_row["cr:field"] = [{
+                        "data": field['@id'],
+                        "extraction_method": extraction_method,
+                        "confidence": confidence,
+                        "extraction_time": extraction_time
+                    }]
+                
+                if 'dataType' in field:
+                    record_row["cr:dataType"] = [{
+                        "data": field['dataType'],
+                        "extraction_method": extraction_method,
+                        "confidence": confidence,
+                        "extraction_time": extraction_time
+                    }]
+            
+            rows.append(record_row)
+        
+        # If no distributions or record sets, add base info as a row
+        if not rows:
+            rows.append(base_info)
+        
+        return rows

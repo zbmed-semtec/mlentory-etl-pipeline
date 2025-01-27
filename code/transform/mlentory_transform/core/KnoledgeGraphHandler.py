@@ -70,8 +70,9 @@ class KnowledgeGraphHandler:
         self.namespaces = {
             "base": self.base_namespace,
             "schema": Namespace("http://schema.org/"),
-            "fair4ml": Namespace("http://w3id.org/fair4ml#"),
+            "fair4ml": Namespace("http://w3id.org/fair4ml/"),
             "codemeta": Namespace("https://w3id.org/codemeta/"),
+            "cr": Namespace("https://w3id.org/croissant/"),
             "rdf": RDF,
             "rdfs": RDFS,
             "xsd": XSD
@@ -81,6 +82,62 @@ class KnowledgeGraphHandler:
         for prefix, namespace in self.namespaces.items():
             self.graph.bind(prefix, namespace)
             self.metadata_graph.bind(prefix, namespace)
+    
+    def dataframe_to_graph_Croissant_schema(
+        self,
+        df: pd.DataFrame,
+        identifier_column: Optional[str] = None,
+        platform: str = None,
+    ) -> Tuple[Graph, Graph]:
+        """
+        Convert a DataFrame to a Knowledge Graph using the Croissant schema.
+        
+        Args:
+            df (pd.DataFrame): The DataFrame to convert to a Knowledge Graph.
+            identifier_column (Optional[str]): The column to use as the identifier for the entities.
+            platform (str): The platform name for the entities in the DataFrame.
+        
+        Returns:
+            Tuple[Graph, Graph]: A tuple containing:
+                - The Knowledge Graph created from the DataFrame
+                - The Metadata Graph containing provenance information
+                
+        Raises:
+            ValueError: If the DataFrame is empty or if the identifier column is not found.
+        """
+        if df.empty:
+            raise ValueError("Cannot convert empty DataFrame to graph")
+
+        if identifier_column and identifier_column not in df.columns:
+            raise ValueError(f"Identifier column '{identifier_column}' not found in DataFrame")
+
+        for idx, row in df.iterrows():
+            item_json_ld = row['croissant_metadata']
+            temp_graph = Graph()
+            temp_graph.parse(data=item_json_ld, format='json-ld', base=URIRef(self.base_namespace))
+            entity_uri = self.base_namespace[f"{platform}_Dataset_{row['datasetId']}"]
+            # creator_uri = self.base_namespace[f"{platform}_User_{}"]
+            
+            #Go through the triples and add them
+            for triple in temp_graph:
+                print("TRIPLE\n", triple)
+                #Transform the triple to the correct format
+                
+                self.add_triple_with_metadata(
+                    triple[0],
+                    triple[1],
+                    triple[2],
+                    {
+                        "extraction_method": row['extraction_metadata']['extraction_method'],
+                        "confidence": row['extraction_metadata']['confidence']
+                    },
+                    row['extraction_metadata']['extraction_time']
+            )
+                
+            
+       
+
+        return self.graph, self.metadata_graph
 
     def dataframe_to_graph_M4ML_schema(
         self,

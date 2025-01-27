@@ -93,22 +93,36 @@ class TestHFETLIntegration:
             os.remove(os.path.join(output_dir, file))
 
         # Extract data (limited sample)
-        extracted_models_df = extractor.download_models(
-            num_models=2,
+        # extracted_models_df = extractor.download_models(
+        #     num_models=2,
+        #     from_date=datetime(2023, 1, 1),
+        #     output_dir=output_dir,
+        #     save_result_in_json=True,
+        #     save_raw_data=False,
+        #     update_recent=True
+        # )
+        
+        extracted_datasets_df = extractor.download_datasets(
+            num_datasets=4,
             from_date=datetime(2023, 1, 1),
             output_dir=output_dir,
             save_result_in_json=True,
-            save_raw_data=False,
-            update_recent=True
+            update_recent=False
         )
         
-        
+        print(extracted_datasets_df)
 
         # Initialize transformer
         transformer = initialize_transform
         
-        transformer.transform_HF_models(
-            extracted_df=extracted_models_df,
+        # models_kg, models_metadata = transformer.transform_HF_models(
+        #     extracted_df=extracted_models_df,
+        #     save_output_in_json=True,
+        #     output_dir=output_dir
+        # )
+
+        datasets_kg, datasets_metadata = transformer.transform_HF_datasets(
+            extracted_df=extracted_datasets_df,
             save_output_in_json=True,
             output_dir=output_dir
         )
