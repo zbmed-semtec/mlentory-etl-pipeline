@@ -1,3 +1,5 @@
+import numpy as np
+np.float_ = np.float64
 import pandas as pd
 import logging
 import datetime
@@ -196,7 +198,7 @@ def main():
 
     # Transform
     transformer = initialize_transform_hf(config_path)
-    m4ml_models_df = transformer.transform(
+    m4ml_models_df = transformer.transform_models(
         extracted_df,
         save_output_in_json=args.save_transformation,
         output_dir=args.output_dir,
