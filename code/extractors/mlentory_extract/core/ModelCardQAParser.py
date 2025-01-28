@@ -1,4 +1,5 @@
 import pandas as pd
+import torch
 import transformers
 from transformers import pipeline
 from datasets import Dataset
@@ -12,6 +13,9 @@ from huggingface_hub.hf_api import RepoFile, RepoFolder
 import math
 from datetime import datetime
 from tqdm import tqdm
+
+from mlentory_extract.core.QAInferenceEngine import QAInferenceEngine
+from mlentory_extract.core.QAMatchingEngine import QAMatchingEngine
 
 
 class ModelCardQAParser:
@@ -85,12 +89,8 @@ class ModelCardQAParser:
 
         # Assigning the question answering pipeline
         self.qa_model = qa_model
-        if self.device is not None:
-            self.qa_pipeline = pipeline(
-                "question-answering", model=qa_model, device=self.device
-            )
-        else:
-            self.qa_pipeline = pipeline("question-answering", model=qa_model)
+        self.qa_engine = QAInferenceEngine(qa_model)
+        self.matching_engine = QAMatchingEngine(qa_model)
 
     def load_tsv_file_to_list(self, path: str) -> Set[str]:
         """
@@ -108,7 +108,7 @@ class ModelCardQAParser:
         # config_info = set(config_info)
         return config_info
 
-    def answer_question(self, question: str, context: str) -> str:
+    def answer_question(self, question: str, context: str) -> List[Dict]:
         """
         Extract answer for a given question from the provided context.
 
@@ -123,13 +123,13 @@ class ModelCardQAParser:
                 - confidence: Confidence score of the answer
                 - extraction_time: Timestamp of extraction
         """
-        answer = self.qa_pipeline({"question": question, "context": context})
+        result = self.qa_engine.answer_single_question(question, context)
         return [
             {
-                "data": answer["answer"] + "",
+                "data": result.answer,
                 "extraction_method": self.qa_model,
-                "confidence": answer["score"],
-                "extraction_time": datetime.now().strftime("%Y-%m-%d_%H-%M-%S"),
+                "confidence": result.confidence,
+                "extraction_time": result.extraction_time,
             }
         ]
 
@@ -322,8 +322,9 @@ class ModelCardQAParser:
         )
 
         # Process the dataset in batches using the QA pipeline
+        # Use the batch size from the QA engine
         processed_dataset = self.process_question_context_dataset(
-            question_context_dataset, self.qa_pipeline, batch_size=8
+            question_context_dataset, self.qa_engine
         )
 
         # Merge the results back into the original DataFrame
@@ -346,8 +347,14 @@ class ModelCardQAParser:
             Dataset: HuggingFace dataset containing question-context pairs
         """
         data = []
-        for index, row in HF_df.iterrows():
+        for index, row in tqdm(
+            HF_df.iterrows(), total=len(HF_df), desc="Creating QA dataset"
+        ):
             context = row["card"]
+            if "---" in context:
+                sections = context.split("---")
+                if len(sections) > 1:
+                    context = "---".join(sections[2:])
             for q_cnt, question in enumerate(questions):
                 if q_cnt in questions_to_process:
                     data.append(
@@ -364,35 +371,8 @@ class ModelCardQAParser:
     def process_question_context_dataset(
         self, dataset: Dataset, qa_pipeline, batch_size: int = 16
     ) -> Dataset:
-        """
-        Process a dataset of questions and contexts using the QA pipeline.
-
-        Args:
-            dataset (Dataset): Dataset containing question-context pairs
-            qa_pipeline: HuggingFace pipeline for question answering
-            batch_size (int, optional): Size of batches for processing. Defaults to 16.
-
-        Returns:
-            Dataset: Dataset with added answer information
-        """
-        extraction_time = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-
-        def process_batch(batch):
-            # Run the pipeline in batch mode
-            answers = qa_pipeline(
-                [
-                    {"question": q, "context": c}
-                    for q, c in zip(batch["question"], batch["context"])
-                ]
-            )
-
-            # Extract and structure answers
-            batch["answer"] = [a["answer"] for a in answers]
-            batch["score"] = [a["score"] for a in answers]
-            batch["extraction_time"] = extraction_time
-            return batch
-
-        return dataset.map(process_batch, batched=True, batch_size=batch_size)
+        """Updated to use QAInferenceEngine"""
+        return self.qa_engine.process_dataset(dataset)
 
     def merge_answers_into_dataframe(
         self, HF_df: pd.DataFrame, processed_dataset: Dataset
@@ -442,7 +422,13 @@ class ModelCardQAParser:
         for index, row in tqdm(
             HF_df.iterrows(), total=len(HF_df), desc="Parsing text fields"
         ):
-            context = row["card"]  # Getting the context from the "card" column
+            # Get context from card column and remove first section between ---
+            context = row["card"]
+            if "---" in context:
+                sections = context.split("---")
+                if len(sections) > 1:
+                    context = "---".join(sections[2:])
+            # print(context)
             # Create an empty dictionary to store answers for each question
             answers = {}
 
@@ -461,39 +447,78 @@ class ModelCardQAParser:
 
         return HF_df
 
-    # def chunker(self, iterable, chunksize):
-    #     """Yields chunks of size chunksize from an iterable."""
-    #     chunk = []
-    #     for item in iterable:
-    #         chunk.append(item)
-    #         if len(chunk) == chunksize:
-    #             yield chunk
-    #             chunk = []
-    #     if chunk:
-    #         yield chunk
+    def parse_fields_from_txt_HF_matching(self, HF_df: pd.DataFrame) -> pd.DataFrame:
+        """
+        Extract information from text fields using semantic matching to find relevant sections.
+        Instead of using QA model, it returns the most relevant sections as answers.
 
-    # def parse_fields_from_txt_HF(self, HF_df: pd.DataFrame,chunk_size: int) -> pd.DataFrame:
-    #     questions_to_process = {5, 8, 9, 10, 11, 12, 14, 18}
+        Args:
+            HF_df (pd.DataFrame): DataFrame containing model information
 
-    #     # Iterate through the dataframe in chunks
-    #     for chunk in self.chunker(HF_df.iterrows(), chunk_size):
-    #         batch_df = pd.DataFrame(chunk, columns=["index", "card"])
-    #         batch_context = batch_df["card"].tolist()  # Extract contexts in a list
+        Returns:
+            pd.DataFrame: DataFrame with extracted information from text fields
+        """
+        questions_to_process = sorted(
+            int(q.split("_")[2]) for q in self.available_questions
+        )
 
-    #         # Create an empty dictionary to store answers for each batch
-    #         batch_answers = {}
+        # Pre-process all contexts at once
+        contexts = []
+        for _, row in tqdm(
+            HF_df.iterrows(), total=len(HF_df), desc="Pre-processing contexts"
+        ):
+            context = row["card"]
+            if "---" in context:
+                sections = context.split("---")
+                if len(sections) > 1:
+                    context = "---".join(sections[2:])
+            contexts.append(context)
 
-    #         # Process the questions in a batch using self.answer_question
-    #         for question in self.questions:
-    #             if question not in questions_to_process:
-    #                 continue
-    #             # Assuming answer_question can handle a list of contexts
-    #             batch_answers[question] = self.answer_question(question, batch_context)
+        # Get questions once
+        current_questions = [self.questions[q_id] for q_id in questions_to_process]
 
-    #         # Update the original dataframe with answers for each chunk
-    #         for index, row in chunk:
-    #             for question, answer in batch_answers.items():
-    #                 q_id = "q_id_" + str(question)
-    #                 HF_df.loc[index, q_id] = answer[row["index"]]  # Access answer by index
+        # Process in batches
+        batch_size = 16
+        for batch_start in tqdm(
+            range(0, len(contexts), batch_size), desc="Processing batches"
+        ):
+            batch_end = min(batch_start + batch_size, len(contexts))
+            batch_contexts = contexts[batch_start:batch_end]
 
-    #     return HF_df
+            # Process batch of contexts
+            batch_results = []
+            for context in batch_contexts:
+                # Find relevant sections for all questions at once
+                relevant_sections = self.matching_engine.find_relevant_sections(
+                    questions=current_questions, context=context, top_k=1
+                )
+                batch_results.append(relevant_sections)
+
+            # Update DataFrame with batch results
+            for i, relevant_sections in enumerate(batch_results):
+                df_idx = batch_start + i
+
+                # Process each question
+                for q_idx, q_id in enumerate(questions_to_process):
+                    section, score = relevant_sections[q_idx][0]
+
+                    # Create answer with section content and metadata
+                    answer = [
+                        {
+                            "data": section.content.strip(),
+                            "extraction_method": f"Semantic Matching with {self.matching_engine.model_name}",
+                            "confidence": score,
+                            "extraction_time": datetime.now().strftime(
+                                "%Y-%m-%d_%H-%M-%S"
+                            ),
+                        }
+                    ]
+
+                    # Store the answer in the DataFrame
+                    HF_df.loc[df_idx, f"q_id_{q_id}"] = answer
+
+            # Clear some memory
+            if hasattr(torch.cuda, "empty_cache"):
+                torch.cuda.empty_cache()
+
+        return HF_df

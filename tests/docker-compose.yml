@@ -8,17 +8,17 @@ services:
     # environment:
     #   - VIRTUOSO_CONTAINER_NAME=test_virtuoso_1
     build: 
-      context: ../../../
-      dockerfile: ./tests/config/docker/Dockerfile.local  # Path to tests Dockerfile
+      context: ../
+      dockerfile: ./tests/Dockerfile.local  # Path to tests Dockerfile
     # Define volumes to mount extractor scripts or dependencies
     volumes:
-      - ../../unit:/app_test/unit
-      - ../../fixtures:/app_test/fixtures
-      - ../../integration:/app_test/integration
-      - ../../config:/app_test/config
-      - ../../../code/extractors:/app_test/extractors
-      - ../../../code/transform:/app_test/transform
-      - ../../../code/load:/app_test/load
+      - ./unit:/app_test/unit
+      - ./fixtures:/app_test/fixtures
+      - ./integration:/app_test/integration
+      - ./config:/app_test/config
+      - ../code/extractors:/app_test/extractors
+      - ../code/transform:/app_test/transform
+      - ../code/load:/app_test/load
 
       - /var/run/docker.sock:/var/run/docker.sock
     # env_file:
@@ -35,16 +35,16 @@ services:
       - ci_test
     container_name: ci_test
     build: 
-      context: ../../../
-      dockerfile: ./tests/config/docker/Dockerfile.remote  # Path to test Dockerfile
+      context: ../
+      dockerfile: ./tests/Dockerfile.remote  # Path to test Dockerfile
     volumes:
-      - ../../unit:/app_test/unit
-      - ../../fixtures:/app_test/fixtures
-      - ../../integration:/app_test/integration
-      - ../../config:/app_test/config
-      - ../../../code/extractors:/app_test/extractors
-      - ../../../code/transform:/app_test/transform
-      - ../../../code/load:/app_test/load
+      - ./unit:/app_test/unit
+      - ./fixtures:/app_test/fixtures
+      - ./integration:/app_test/integration
+      - ./config:/app_test/config
+      - ../code/extractors:/app_test/extractors
+      - ../code/transform:/app_test/transform
+      - ../code/load:/app_test/load
 
       - /var/run/docker.sock:/var/run/docker.sock
     dns:
@@ -66,7 +66,7 @@ services:
     ports:
       - '5432:5432'
     volumes:
-      - ../../integration/dbs/postgres/sql_files/test_init.sql:/docker-entrypoint-initdb.d/init.sql   
+      - ./integration/dbs/postgres/sql_files/test_init.sql:/docker-entrypoint-initdb.d/init.sql   
   
   virtuoso:
     profiles:
@@ -81,13 +81,13 @@ services:
     environment:
       DBA_PASSWORD: my_strong_password
     volumes:
-      - ../../integration/dbs/virtuoso:/opt/virtuoso-opensource/database
+      - ./integration/dbs/virtuoso:/opt/virtuoso-opensource/database
 
   elastic:
     profiles:
         - ci_test
         - test
-    image: docker.elastic.co/elasticsearch/elasticsearch:7.6.0
+    image: docker.elastic.co/elasticsearch/elasticsearch:7.10.0
     container_name: elastic
     hostname: elastic
     # privileged: true
@@ -106,7 +106,7 @@ services:
         soft: -1
         hard: -1
     volumes:
-      - ../../integration/dbs/elastic:/var/lib/elasticsearch/data
+      - ./integration/dbs/elastic:/var/lib/elasticsearch/data
     ports:
       - 9200:9200
       - 9300:9300

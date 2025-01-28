@@ -53,7 +53,7 @@ If you have WSL2 or are on a Unix-based system:
 1. Navigate to the tests directory
 2. Run:
 ```bash
-bash validate_tests.sh
+bash scripts/validate_tests.sh
 ```
 
 ## Test Dependencies

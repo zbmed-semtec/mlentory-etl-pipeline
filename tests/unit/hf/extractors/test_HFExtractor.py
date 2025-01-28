@@ -1,3 +1,4 @@
+import time
 from datasets import load_dataset
 from datetime import datetime
 import pandas as pd
@@ -16,12 +17,12 @@ class TestHFExtractor:
     """
 
     @pytest.fixture
-    def mock_dataset(self) -> Mock:
+    def mock_dataset(self) -> pd.DataFrame:
         """
         Create a mock dataset that mimics the HuggingFace dataset structure
 
         Returns:
-            Mock: A mock dataset object
+            pd.DataFrame: A mock dataset object
         """
         mock_df = pd.DataFrame(
             {
@@ -80,7 +81,7 @@ class TestHFExtractor:
         # Mock the methods that are called by HFExtractor
         mock_parser.parse_fields_from_tags_HF.return_value = default_df.copy()
         mock_parser.parse_known_fields_HF.return_value = default_df.copy()
-        mock_parser.parse_fields_from_txt_HF.return_value = default_df.copy()
+        mock_parser.parse_fields_from_txt_HF_matching.return_value = default_df.copy()
 
         # Mock the questions property
         mock_parser.questions = ["Test question 1", "Test question 2"]
@@ -164,6 +165,7 @@ class TestHFExtractor:
             save_result_in_json=False,
         )
 
+        print(type(df))
         # Verify the results
         assert isinstance(df, pd.DataFrame)
         assert "q_id_0_Test question 1" in df.columns
@@ -175,7 +177,7 @@ class TestHFExtractor:
         # Verify that parser methods were called
         extractor_empty.parser.parse_fields_from_tags_HF.assert_called_once()
         extractor_empty.parser.parse_known_fields_HF.assert_called_once()
-        extractor_empty.parser.parse_fields_from_txt_HF.assert_called_once()
+        extractor_empty.parser.parse_fields_from_txt_HF_matching.assert_called_once()
 
     def test_download_models_output_files(
         self,
@@ -203,9 +205,11 @@ class TestHFExtractor:
             save_raw_data=True,
             save_result_in_json=True,
         )
-
+        # Add small wait to ensure files are written
+        # time.sleep(0.5)
         # Check that output files were created
         files = list(output_dir.glob("*"))
+        print(files)
         assert len(files) == 2
         assert any(f.name.endswith("Original_HF_Dataframe.csv") for f in files)
         assert any(f.name.endswith("Processed_HF_Dataframe.json") for f in files)
