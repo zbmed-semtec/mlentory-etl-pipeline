@@ -1,4 +1,5 @@
-from typing import List, Optional, Union, Dict, Tuple
+from typing import List, Optional, Union, Dict, Tuple, Any
+import pprint
 import pandas as pd
 from rdflib import Graph, Literal, Namespace, URIRef, BNode
 from rdflib.namespace import RDF, RDFS, XSD
@@ -115,12 +116,17 @@ class KnowledgeGraphHandler:
             item_json_ld = row['croissant_metadata']
             temp_graph = Graph()
             temp_graph.parse(data=item_json_ld, format='json-ld', base=URIRef(self.base_namespace))
-            entity_uri = self.base_namespace[f"{platform}_Dataset_{row['datasetId']}"]
-            # creator_uri = self.base_namespace[f"{platform}_User_{}"]
             
+            
+            self.replace_blank_nodes_with_type(temp_graph,row,platform)
+            # self.replace_blank_nodes_with_no_type(temp_graph,row,platform)
+            self.replace_default_nodes(temp_graph,row,platform)
+            self.delete_remaining_blank_nodes(temp_graph)
+            
+                    
             #Go through the triples and add them
             for triple in temp_graph:
-                print("TRIPLE\n", triple)
+                # print("TRIPLE:", triple)
                 #Transform the triple to the correct format
                 
                 self.add_triple_with_metadata(
@@ -400,89 +406,236 @@ class KnowledgeGraphHandler:
 
         return integrated_graph
     
-    def get_entity_graph_at_time(
-        self, 
-        entity_uri: URIRef, 
-        timestamp: str
-    ) -> Graph:
-        """
-        Reconstruct the graph for a specific entity at a given point in time.
 
+            
+    def replace_blank_nodes_with_type(self, graph: Graph, row: pd.Series, platform: str) -> None:
+        """
+        Replace blank nodes in the graph with the correct values.
+        
         Args:
-            entity_uri (URIRef): URI of the entity to reconstruct
-            timestamp (str): ISO format timestamp to reconstruct the graph at
+            graph (Graph): The RDF graph to replace blank nodes in
+            row (pd.Series): The row containing the datasetId and other metadata
+            platform (str): The platform prefix to use in the URIs
+        """
+        
+        
+        blank_nodes = self.identify_blank_nodes_with_type(graph)
+        
+        #blank_nodes is a dictionary with the type of the blank node as the key and the properties as the value
+        if blank_nodes.get("https://schema.org/Dataset", []) != []:
+            self.replace_node(old_id=blank_nodes.get("https://schema.org/Dataset", [])[0]["node_id"],
+                                new_id=row['datasetId'],
+                                graph=graph,
+                                platform=platform,
+                                type="https://schema.org/Dataset")
+            
+        if blank_nodes.get("https://schema.org/Organization", []) != []:   
+            name = blank_nodes.get("https://schema.org/Organization", [])[0]["properties"]["https://schema.org/name"]
+            self.replace_node(old_id=blank_nodes.get("https://schema.org/Organization", [])[0]["node_id"],
+                                new_id=name,
+                                graph=graph,
+                                platform=platform,
+                                type="https://schema.org/Organization")
+        
+        if blank_nodes.get("https://schema.org/Person", []) != []:
+            name = blank_nodes.get("https://schema.org/Person", [])[0]["properties"]["https://schema.org/name"]
+            self.replace_node(old_id=blank_nodes.get("https://schema.org/Person", [])[0]["node_id"],
+                                new_id=name,
+                                graph=graph,
+                                platform=platform,
+                                type="https://schema.org/Person")
+        
+
+    def identify_blank_nodes_with_type(self, graph: Graph) -> Dict[str, List[Dict[str, Any]]]:
+        """
+        Identify all blank nodes in the graph that have a type and replace them with a node with an ID.
 
         Returns:
-            Graph: A graph containing all valid triples for the entity at the given time
+            Dict[str, List[Dict[str, Any]]]: A dictionary where:
+                - key is the type of the blank node
+                - value is a list of dictionaries containing:
+                    - node: The blank node identifier
+                    - properties: Dict of properties and their values for this node
         """
-        result_graph = Graph()
+        blank_nodes = {}
         
-        # Query metadata graph to find all assertions about this entity
-        meta = self.namespaces["meta"]
-        
-        query = f"""
-        SELECT ?s ?p ?o ?time
-        WHERE {{
-            ?assertion rdf:type meta:TripletMetadata ;
-                      meta:subject ?s ;
-                      meta:predicate ?p ;
-                      meta:object ?o ;
-                      meta:extractionTime ?time .
-            FILTER(?s = <{str(entity_uri)}>)
-            FILTER(?time <= "{timestamp}"^^xsd:dateTime)
-        }}
-        ORDER BY ?time
+        # Query to find all blank nodes and their types
+        query = """
+        SELECT DISTINCT ?node ?type
+        WHERE {
+            ?node a ?type .
+            FILTER(isBlank(?node))
+        }
         """
         
-        # Get the latest version of each triple before the given timestamp
-        latest_triples = {}
-        for row in self.metadata_graph.query(query):
-            s, p, o, time = row
-            triple_key = (s, p)
-            latest_triples[triple_key] = (o, time)
+        # First get all blank nodes and their types
+        for row in graph.query(query):
+            node, node_type = row
+            type_str = str(node_type)
+            
+            if type_str not in blank_nodes:
+                blank_nodes[type_str] = []
+            
+            # Now get all properties for this blank node
+            properties = {}
+            for pred, obj in graph.predicate_objects(node):
+                pred_str = str(pred)
+                if isinstance(obj, Literal):
+                    properties[pred_str] = str(obj)
+                else:
+                    properties[pred_str] = str(obj)
+            
+            blank_nodes[type_str].append({
+                "type": type_str,
+                "node_id": node.n3(),
+                "properties": properties
+            })
         
-        # Add the latest version of each triple to the result graph
-        for (s, p), (o, _) in latest_triples.items():
-            result_graph.add((s, p, o))
+        return blank_nodes
+    
+    def replace_blank_nodes_with_no_type(self, graph: Graph, row: pd.Series, platform: str) -> None:
+        """
+        Identify blank nodes that don't have a type and create a new node with an unique ID.
         
-        return result_graph
+        Args:
+            graph (Graph): The RDF graph to replace blank nodes in
+            row (pd.Series): The row containing the datasetId and other metadata
+            platform (str): The platform prefix to use in the URIs
+        """
+        
+        blank_nodes = self.identify_blank_nodes_with_no_type(graph)
+        
+        for blank_node in blank_nodes:
+            new_id = blank_node["parent_id"] + "/" + blank_node["relation_type"].split("/")[-1]
+            self.replace_node(old_id=blank_node,
+                                new_id=new_id,
+                                graph=graph,
+                                platform=platform,
+                                type="https://schema.org/Dataset")
 
-    def get_current_graph(self) -> Graph:
+    def replace_default_nodes(self, temp_graph: Graph, row: pd.Series, platform: str) -> None:
         """
-        Reconstruct the current version of the entire graph based on metadata.
+        Identify and update field nodes in the Croissant schema with default types IDs.
+        
+        This method finds all nodes of types like http://mlcommons.org/croissant/Field, http://mlcommons.org/croissant/FileSet,
+        http://mlcommons.org/croissant/FileObject, http://mlcommons.org/croissant/FileObjectSet, http://mlcommons.org/croissant/RecordSet
+        and updates their IDs to include the dataset ID, ensuring uniqueness across datasets.
+        
+        Args:
+            temp_graph (Graph): The temporary graph parsed from JSON-LD
+            row (pd.Series): DataFrame row containing dataset metadata
+            platform (str): Platform prefix (e.g., 'HF' for Hugging Face)
+            
+        Example:
+            Original ID: http://test_example.org/default/split
+            New ID: http://test_example.org/dataset_name/default/split
+        """
+        # Find all Field nodes using SPARQL query
+        field_types = [URIRef("http://mlcommons.org/croissant/Field"),
+                       URIRef("http://mlcommons.org/croissant/FileSet"),
+                       URIRef("http://mlcommons.org/croissant/File"),
+                       URIRef("http://mlcommons.org/croissant/FileObject"),
+                       URIRef("http://mlcommons.org/croissant/FileObjectSet"),
+                       URIRef("http://mlcommons.org/croissant/RecordSet"),
+                       ]
+        
+        for field_type in field_types:
+            # Get all nodes of type Field
+            for field_node in temp_graph.subjects(RDF.type, field_type):
+                if isinstance(field_node, URIRef):
+                    # Extract the original ID path component
+                    original_path = str(field_node).split("/")[-1]
+                    
+                    # Create new ID with dataset prefix
+                    dataset_id = row['datasetId'].replace("/", "_")
+                    new_id = f"{dataset_id}/{original_path}"
+                    new_uri = URIRef(f"{self.base_namespace}{new_id}")
+                    
+                    # Replace all occurrences in the graph
+                    self.replace_node(
+                        old_id=field_node,
+                        new_id=new_uri,
+                        graph=temp_graph,
+                        node_type=field_type
+                    )              
+    
+    def replace_node(
+        self,
+        old_id: Union[str, URIRef],
+        new_id: Union[str, URIRef],
+        graph: Graph,
+        platform: str = "HF",
+        type: str = "https://schema.org/Dataset",
+        node_type: Optional[URIRef] = None
+    ) -> None:
+        """
+        Replace a node in the graph using SPARQL queries.
+        It will replace it from the object and subject side of any triples that contains it.
+        
+        Args:
+            old_id (Union[str, URIRef]): The old identifier to replace (can be string or URIRef)
+            new_id (Union[str, URIRef]): The new identifier to use (can be string or URIRef)
+            graph (Graph): The RDF graph where the replacements should be made
+            platform (str): The platform prefix to use in the URIs
+            type (str): The type of entity being replaced (Dataset/Organization/Person)
+            node_type (Optional[URIRef]): Direct RDF type for the node (if provided)
 
-        Returns:
-            Graph: The current version of the graph
+        Raises:
+            ValueError: If replacement fails or old node still exists after replacement
+            
+        Example:
+            >>> # Old style usage
+            >>> replace_node("_:b0", "dataset1", graph, "HF", "Dataset")
+            >>> # New style usage with URIRefs
+            >>> replace_node(old_uri, new_uri, graph, node_type=field_type)
         """
-        current_time = datetime.now().isoformat()
-        result_graph = Graph()
+        # Handle both string IDs and URIRefs
+        old_uri = old_id if isinstance(old_id, URIRef) else None
+        new_uri = new_id if isinstance(new_id, URIRef) else None
         
-        # Query to get the latest version of each triple
-        query = f"""
-        SELECT ?s ?p ?o
-        WHERE {{
-            {{
-                SELECT ?s ?p (MAX(?time) as ?latest_time)
-                WHERE {{
-                    ?assertion rdf:type meta:TripletMetadata ;
-                              meta:subject ?s ;
-                              meta:predicate ?p ;
-                              meta:extractionTime ?time .
-                }}
-                GROUP BY ?s ?p
-            }}
-            ?assertion meta:subject ?s ;
-                      meta:predicate ?p ;
-                      meta:object ?o ;
-                      meta:extractionTime ?latest_time .
-        }}
+        # If string IDs provided, create proper URIRef (old style)
+        if old_uri is None and isinstance(old_id, str):
+            if old_id.startswith("_:"):
+                old_uri = BNode(old_id[2:])
+            else:
+                old_uri = URIRef(old_id)
+                
+        if new_uri is None and isinstance(new_id, str):
+            if not new_id.startswith("http"):
+                new_uri = self.base_namespace[f"{platform}_{type.split('/')[-1]}_{new_id.replace(' ', '_')}"]
+            else:
+                new_uri = URIRef(new_id.replace(' ', '_'))
+        
+        # Add type declaration
+        if node_type:
+            graph.add((new_uri, RDF.type, node_type))
+        else:
+            graph.add((new_uri, RDF.type, URIRef(type)))
+            
+        # Update all references in the graph
+        for s, p, o in graph.triples((old_uri, None, None)):
+            graph.remove((s, p, o))
+            graph.add((new_uri, p, o))
+            
+        for s, p, o in graph.triples((None, None, old_uri)):
+            graph.remove((s, p, o))
+            graph.add((s, p, new_uri))
+     
+    
+    def delete_remaining_blank_nodes(self,graph:Graph):
+        """
+        Delete all triples related to a blank node
+        
+        Args:
+            graph (Graph): The RDF graph to delete blank nodes from
         """
         
-        for row in self.metadata_graph.query(query):
-            result_graph.add(row)
-        
-        return result_graph
+        for triple in graph:
+            s, p, o = triple
+            if isinstance(s, BNode) or isinstance(o, BNode) or isinstance(p, BNode):
+                graph.remove(triple)
 
+        
     def reset_graphs(self) -> None:
         """
         Reset the internal graphs while preserving namespace and schema configurations.
