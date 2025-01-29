@@ -3,7 +3,7 @@ version: "3.8"
 services:
   test:
     profiles:
-      - test
+      - local
     container_name: local_test
     # environment:
     #   - VIRTUOSO_CONTAINER_NAME=test_virtuoso_1
@@ -23,6 +23,13 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock
     # env_file:
     #   - fileName: .env
+    deploy:
+      resources:
+        reservations:
+          devices:
+          - driver: nvidia
+            count: all
+            capabilities: [gpu]
     dns:
       - 1.1.1.1
 
@@ -56,7 +63,7 @@ services:
   postgres:
     profiles:
         - ci_test
-        - test
+        - local
     image: postgres:14.1-alpine
     container_name: postgres
     environment:
@@ -71,7 +78,7 @@ services:
   virtuoso:
     profiles:
         - ci_test
-        - test
+        - local
     image: openlink/virtuoso-opensource-7:latest
     hostname: virtuoso
     container_name: virtuoso
@@ -86,7 +93,7 @@ services:
   elastic:
     profiles:
         - ci_test
-        - test
+        - local
     image: docker.elastic.co/elasticsearch/elasticsearch:7.10.0
     container_name: elastic
     hostname: elastic

@@ -34,7 +34,7 @@ class TransformHF:
         self.transformations = transformations
         self.fields_processor = FieldProcessorHF(self.new_schema, self.transformations)
 
-    def transform(
+    def transform_models(
         self,
         extracted_df: pd.DataFrame,
         save_output_in_json: bool = False,

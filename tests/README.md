@@ -25,12 +25,12 @@ The tests are organized according to the main components of the ETL pipeline:
 
 1. Build the test containers:
 ```bash
-docker-compose --profile test build
+docker-compose --profile local build
 ```
 
 2. Start the test environment:
 ```bash
-docker-compose --profile test up
+docker-compose --profile local up
 ```
 
 3. Access the test container:
