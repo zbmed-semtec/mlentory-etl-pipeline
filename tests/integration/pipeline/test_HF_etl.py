@@ -94,7 +94,7 @@ class TestHFETLIntegration:
 
         # Extract data (limited sample)
         # extracted_models_df = extractor.download_models(
-        #     num_models=2,
+        #     num_models=4,
         #     from_date=datetime(2023, 1, 1),
         #     output_dir=output_dir,
         #     save_result_in_json=True,
@@ -104,13 +104,12 @@ class TestHFETLIntegration:
         
         extracted_datasets_df = extractor.download_datasets(
             num_datasets=4,
-            from_date=datetime(2023, 1, 1),
             output_dir=output_dir,
             save_result_in_json=True,
-            update_recent=False
+            update_recent=True
         )
         
-        print(extracted_datasets_df)
+        # extracted_datasets_df = pd.read_json("fixtures/data/hf_extracted_datasets_small_1.json")
 
         # Initialize transformer
         transformer = initialize_transform
