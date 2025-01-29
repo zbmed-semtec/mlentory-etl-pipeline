@@ -172,14 +172,17 @@ class HFDatasetManager:
         futures = []
         
         def process_dataset(dataset):
-            last_modified = dataset.last_modified.replace(tzinfo=latest_modification.tzinfo)
-            if latest_modification and last_modified <= latest_modification:
-                return None
+            if not (latest_modification is None):
+                last_modified = dataset.last_modified.replace(tzinfo=latest_modification.tzinfo)
+                if last_modified <= latest_modification:
+                    return None
             
             croissant_metadata = self.get_croissant_metadata(dataset.id)
             if croissant_metadata == {}:
                 return None
-            
+            #Print all the datasets properties
+            print("\nDATASEEEEEEET\n")
+            print(dataset)
             return {
                 "datasetId": dataset.id,
                 "croissant_metadata": croissant_metadata,
