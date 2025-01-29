@@ -42,7 +42,7 @@ class HFDatasetManager:
             self.api = HfApi()
 
     def get_model_metadata_dataset(
-        self, update_recent: bool = True, limit: int = 5
+        self, update_recent: bool = True, limit: int = 5, threads: int = 4
     ) -> pd.DataFrame:
         """
         Retrieve and optionally update the HuggingFace dataset containing model card information.
@@ -54,6 +54,7 @@ class HFDatasetManager:
             update_recent (bool): Whether to fetch and append recent model updates.
                 Defaults to True.
             limit (int): Maximum number of models to fetch. Defaults to 100.
+            threads (int): Number of threads for parallel processing. Defaults to 4.
         Returns:
             pd.DataFrame: DataFrame containing model card information
 
@@ -75,7 +76,7 @@ class HFDatasetManager:
             # Get the most recent modification date from the dataset
             latest_modification = dataset["last_modified"].max()
 
-            recent_models = self.get_recent_models_metadata(limit, latest_modification)
+            recent_models = self.get_recent_models_metadata(limit, latest_modification, threads)
 
             if len(recent_models) > 0:
 
