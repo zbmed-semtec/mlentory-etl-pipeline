@@ -89,7 +89,7 @@ class ModelCardQAParser:
 
         # Assigning the question answering pipeline
         self.qa_model = qa_model
-        self.qa_engine = QAInferenceEngine(qa_model)
+        # self.qa_engine = QAInferenceEngine(qa_model)
         self.matching_engine = QAMatchingEngine(qa_model)
 
     def load_tsv_file_to_list(self, path: str) -> Set[str]:
