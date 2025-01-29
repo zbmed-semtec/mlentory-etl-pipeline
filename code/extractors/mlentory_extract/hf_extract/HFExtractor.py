@@ -70,6 +70,7 @@ class HFExtractor:
         save_raw_data: bool = False,
         save_result_in_json: bool = False,
         from_date: str = None,
+        threads: int = 4,
     ) -> pd.DataFrame:
         """
         Download and process model cards from HuggingFace.
@@ -96,10 +97,11 @@ class HFExtractor:
 
         Returns:
             pd.DataFrame: Processed DataFrame containing extracted information
+
         """
         # Load dataset
         original_HF_df = self.dataset_manager.get_model_metadata_dataset(
-            update_recent=update_recent, limit=num_models
+            update_recent=update_recent, limit=num_models, threads=threads
         )
         # Slice dataframe if num_models specified
         HF_df = original_HF_df
@@ -115,7 +117,6 @@ class HFExtractor:
         HF_df = self.parser.parse_fields_from_tags_HF(HF_df=HF_df)
         HF_df = self.parser.parse_known_fields_HF(HF_df=HF_df)
         HF_df = self.parser.parse_fields_from_txt_HF_matching(HF_df=HF_df)
-        
 
         # Clean up columns
         HF_df = HF_df.drop(
@@ -156,10 +157,18 @@ class HFExtractor:
 
         return HF_df
 
-    def download_datasets(self, num_datasets: int = 10, from_date: str = None, output_dir: str = "./outputs", save_result_in_json: bool = False, update_recent: bool = True):
+    def download_datasets(
+        self,
+        num_datasets: int = 10,
+        from_date: str = None,
+        output_dir: str = "./outputs",
+        save_result_in_json: bool = False,
+        update_recent: bool = True,
+        threads: int = 4,
+    ) -> pd.DataFrame:
         """
         Download metadata from HuggingFace datasets in the croissant format.
-        
+
         Args:
             num_datasets (int, optional): Number of datasets to process.
                 Defaults to 10.
@@ -171,26 +180,28 @@ class HFExtractor:
                 Defaults to True.
             update_recent (bool, optional): Whether to update recent datasets.
                 Defaults to True.
+            threads (int, optional): Number of threads to use for downloading.
+                Defaults to 4.
+
+        Returns:
+            pd.DataFrame: Processed DataFrame containing extracted information
         """
-        
+
         result_df = self.dataset_manager.get_datasets_metadata(
-            limit=num_datasets,
-            latest_modification=from_date,
-            threads=4
+            limit=num_datasets, latest_modification=from_date, threads=threads
         )
-        
+
         if save_result_in_json:
             timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
             processed_path = os.path.join(
                 output_dir, f"{timestamp}_Extracted_Datasets_HF_df.json"
             )
             result_df.to_json(path_or_buf=processed_path, orient="records", indent=4)
-        
+
         return result_df
 
-
     def print_detailed_dataframe(self, HF_df: pd.DataFrame):
-        
+
         print("\n**DATAFRAME**")
         print("\nColumns:", HF_df.columns.tolist())
         print("\nShape:", HF_df.shape)
@@ -199,7 +210,7 @@ class HFExtractor:
             print(f"\n{col}:")
             for row in HF_df[col]:
                 # Limit the text to 100 characters
-                if isinstance(row, list ):
+                if isinstance(row, list):
                     row_data = row[0]["data"]
                     if isinstance(row_data, str):
                         print(row_data[:100])
@@ -207,11 +218,11 @@ class HFExtractor:
                         print(row_data)
                 else:
                     print(row)
-                    
+
             print()
         print("\nDataFrame Info:")
         print(HF_df.info())
-        
+
     def _augment_column_name(self, name: str) -> str:
         """
         Add question text to column names for better readability.

@@ -5,7 +5,10 @@ from datetime import datetime
 from typing import List, Tuple
 
 from mlentory_extract.hf_extract import HFExtractor, HFDatasetManager
-from mlentory_transform.core.MlentoryTransform import MlentoryTransform, KnowledgeGraphHandler
+from mlentory_transform.core.MlentoryTransform import (
+    MlentoryTransform,
+    KnowledgeGraphHandler,
+)
 from mlentory_transform.hf_transform.TransformHF import TransformHF
 
 
@@ -40,6 +43,7 @@ def initialize_extractor() -> HFExtractor:
         tags_task=tags_task,
     )
 
+
 @pytest.fixture
 def initialize_transform() -> TransformHF:
     """
@@ -52,17 +56,21 @@ def initialize_transform() -> TransformHF:
         TransformHF: The transformer instance.
     """
     config_path = "config/hf/transform"
-    new_schema = pd.read_csv(f"{config_path}/M4ML_schema.csv", sep=",",lineterminator="\n")
+    new_schema = pd.read_csv(
+        f"{config_path}/M4ML_schema.csv", sep=",", lineterminator="\n"
+    )
     transformations = pd.read_csv(
         f"{config_path}/column_transformations.csv",
         lineterminator="\n",
         sep=",",
     )
-    
-    kg_handler = KnowledgeGraphHandler(M4ML_schema=new_schema, base_namespace="http://test_example.org/")
+
+    kg_handler = KnowledgeGraphHandler(
+        M4ML_schema=new_schema, base_namespace="http://test_example.org/"
+    )
     transform_hf = TransformHF(new_schema, transformations)
     transformer = MlentoryTransform(kg_handler, transform_hf)
-    
+
     return transformer
 
 
@@ -70,10 +78,7 @@ class TestHFETLIntegration:
     """Integration tests for HuggingFace ETL pipeline."""
 
     def test_extract_transform_pipeline(
-        self,
-        initialize_extractor,
-        initialize_transform,
-        monkeypatch
+        self, initialize_extractor, initialize_transform, monkeypatch
     ):
         """
         Test the complete extract-transform pipeline.
@@ -86,46 +91,51 @@ class TestHFETLIntegration:
 
         # Initialize extractor
         extractor = initialize_extractor
-        
+
         output_dir = "integration/pipeline/outputs"
         # Clean the output directory
         for file in os.listdir(output_dir):
             os.remove(os.path.join(output_dir, file))
 
         # Extract data (limited sample)
-        # extracted_models_df = extractor.download_models(
-        #     num_models=4,
-        #     from_date=datetime(2023, 1, 1),
-        #     output_dir=output_dir,
-        #     save_result_in_json=True,
-        #     save_raw_data=False,
-        #     update_recent=True
-        # )
-        
+        extracted_models_df = extractor.download_models(
+            num_models=4,
+            from_date=datetime(2023, 1, 1),
+            output_dir=output_dir,
+            save_result_in_json=True,
+            save_raw_data=False,
+            update_recent=True,
+            threads=4
+        )
+
         extracted_datasets_df = extractor.download_datasets(
             num_datasets=4,
             output_dir=output_dir,
             save_result_in_json=True,
-            update_recent=True
+            update_recent=True,
+            threads=4
         )
-        
+
         # extracted_datasets_df = pd.read_json("fixtures/data/hf_extracted_datasets_small_1.json")
 
         # Initialize transformer
         transformer = initialize_transform
-        
-        # models_kg, models_metadata = transformer.transform_HF_models(
-        #     extracted_df=extracted_models_df,
-        #     save_output_in_json=True,
-        #     output_dir=output_dir
-        # )
 
-        datasets_kg, datasets_metadata = transformer.transform_HF_datasets(
-            extracted_df=extracted_datasets_df,
+        models_kg, models_metadata = transformer.transform_HF_models(
+            extracted_df=extracted_models_df,
             save_output_in_json=True,
             output_dir=output_dir
         )
 
+        datasets_kg, datasets_metadata = transformer.transform_HF_datasets(
+            extracted_df=extracted_datasets_df,
+            save_output_in_json=True,
+            output_dir=output_dir,
+        )
+
+        
+        
+        
         # Verify output files
         files = os.listdir(output_dir)
         print(files)
