@@ -93,20 +93,35 @@ class TestHFETLIntegration:
             os.remove(os.path.join(output_dir, file))
 
         # Extract data (limited sample)
-        extracted_df = extractor.download_models(
-            num_models=2,
-            from_date=datetime(2023, 1, 1),
+        # extracted_models_df = extractor.download_models(
+        #     num_models=4,
+        #     from_date=datetime(2023, 1, 1),
+        #     output_dir=output_dir,
+        #     save_result_in_json=True,
+        #     save_raw_data=False,
+        #     update_recent=True
+        # )
+        
+        extracted_datasets_df = extractor.download_datasets(
+            num_datasets=4,
             output_dir=output_dir,
             save_result_in_json=True,
-            save_raw_data=False,
             update_recent=True
         )
+        
+        # extracted_datasets_df = pd.read_json("fixtures/data/hf_extracted_datasets_small_1.json")
 
         # Initialize transformer
         transformer = initialize_transform
         
-        transformer.transform_HF_models(
-            extracted_df=extracted_df,
+        # models_kg, models_metadata = transformer.transform_HF_models(
+        #     extracted_df=extracted_models_df,
+        #     save_output_in_json=True,
+        #     output_dir=output_dir
+        # )
+
+        datasets_kg, datasets_metadata = transformer.transform_HF_datasets(
+            extracted_df=extracted_datasets_df,
             save_output_in_json=True,
             output_dir=output_dir
         )
@@ -114,5 +129,6 @@ class TestHFETLIntegration:
         # Verify output files
         files = os.listdir(output_dir)
         print(files)
-        assert any(file.endswith("_transformation_results.csv") for file in files)
-        assert any(file.endswith(".json") for file in files)
+        assert len(files) >= 2
+        assert any(file.endswith("_kg.csv") for file in files)
+        assert any(file.endswith("_metadata.json") for file in files)

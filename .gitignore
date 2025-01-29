@@ -199,3 +199,4 @@ cython_debug/
 # Cursor rules
 .cursorrules
 
+tests/integration/pipeline/outputs/

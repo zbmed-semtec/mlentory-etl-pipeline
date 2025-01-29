@@ -51,6 +51,7 @@ For docker compose version 2.0 or higher run:
 
 ```bash
 docker compose --profile gpu up -d
+docker-compose -d --profile up  gpu
 ```
 
 For CPU-only deployment:
@@ -70,9 +71,9 @@ docker compose --profile no_gpu up -d
 The ETL process can be triggered through Airflow or manually using the provided Python script:
 
 ```bash
-docker exec hf_gpu python3 /app/hf_etl/run_extract_transform_load.py [options]
+docker exec hf_gpu python3 /app/hf_etl/run_extract_transfom_load.py
 ```
-
+[options]
 Available options:
 
 - `--save-extraction`: Save extraction results
