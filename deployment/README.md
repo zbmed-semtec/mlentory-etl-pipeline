@@ -8,7 +8,7 @@ This folder contains all the necessary configuration files and scripts to deploy
 deployment/
 ├── docker-compose.yml                    # Main container orchestration file
 ├── hf_etl/                               # HuggingFace ETL service
-│ ├── Dockerfile.gpu 
+│ ├── Dockerfile.gpu
 │ ├── Dockerfile.no_gpu
 │ └── run_extract_transform_load.py
 ├── scheduler/                            # Airflow scheduler configuration
@@ -44,6 +44,13 @@ Make sure to be in the deployment folder when running the following commands.
 For GPU-enabled deployment:
 
 ```bash
+docker-compose --profile gpu up -d
+```
+
+For docker compose version 2.0 or higher run:
+
+```bash
+docker compose --profile gpu up -d
 docker-compose -d --profile up  gpu
 ```
 
@@ -51,6 +58,12 @@ For CPU-only deployment:
 
 ```bash
 docker-compose --profile no_gpu up -d
+```
+
+For docker compose version 2.0 or higher run:
+
+```bash
+docker compose --profile no_gpu up -d
 ```
 
 ## Running ETL Jobs
@@ -62,6 +75,7 @@ docker exec hf_gpu python3 /app/hf_etl/run_extract_transfom_load.py
 ```
 [options]
 Available options:
+
 - `--save-extraction`: Save extraction results
 - `--save-transformation`: Save transformation results
 - `--save-load-data`: Save load data
@@ -74,11 +88,13 @@ Available options:
 The system consists of several containerized services:
 
 - **Airflow Components**:
+
   - Scheduler (Port 8794)
   - Webserver (Port 8080)
   - PostgreSQL Database (Port 5442)
 
 - **ETL Service** (either GPU or no-GPU):
+
   - HuggingFace model extraction
   - Data transformation
   - Data loading
@@ -106,61 +122,67 @@ If you are in Windows we recommend installing the Windows subsystem for Linux (W
 For Linux distribution like Ubuntu, Debian, CentOS, etc, we do the following:
 
 1. Update your existing list of packages:
-``` console
+
+```console
 sudo apt update
 ```
 
 2. Install a few prerequisite packages which let apt use packages over HTTPS:
-``` console
+
+```console
 sudo apt install apt-transport-https ca-certificates curl software-properties-common
 ```
 
-
 3. Add the GPG key for the official Docker repository:
-``` console
+
+```console
 curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -
 ```
 
-
 4. Add the Docker repository to APT sources:
-``` console
+
+```console
 sudo add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu focal stable"
 ```
 
-
 5. Update the package database with the Docker packages:
+
 ```
 sudo apt update
 ```
 
-
 7. Install Docker:
+
 ```
 sudo apt install docker-ce
 ```
 
-
 8. Verify the installation:
+
 ```
 sudo docker run hello-world
 ```
 
-
 ### Manage Docker as Non-root User
 
-If you don't want to write sudo before every command, do the following: 
+If you don't want to write sudo before every command, do the following:
 
 1. Create the docker group if it does not exist:
+
 ```
 sudo groupadd docker
 ```
+
 2. Add your user to the docker group:
+
 ```
 sudo usermod -aG docker ${USER}
 ```
+
 3. Log out and log back in for changes to take effect.
 
 4. Verify you can run Docker commands without sudo:
+
 ```
 docker run hello-world
 ```
@@ -168,68 +190,84 @@ docker run hello-world
 ### Install Docker compose
 
 1. Run this command to download the latest version of Docker Compose:
+
 ```
 sudo curl -L "https://github.com/docker/compose/releases/download/1.29.2/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
 ```
+
 2. Apply executable permissions to the binary:
+
 ```
 sudo chmod +x /usr/local/bin/docker-compose
 ```
+
 3. Verify the installation:
+
 ```
 docker-compose --version
 ```
 
 ### Setup NVIDIA GPUs
 
-* It is not necessary to have a gpu to run the Backend, but it will make the pipeline run faster.
+- It is not necessary to have a gpu to run the Backend, but it will make the pipeline run faster.
 
-* You can follow the guide at https://docs.nvidia.com/cuda/wsl-user-guide/index.html if you want to setup the NVDIA GPUs in your WSL.
+- You can follow the guide at https://docs.nvidia.com/cuda/wsl-user-guide/index.html if you want to setup the NVDIA GPUs in your WSL.
 
-* But in general you have to guarantee that you have the GPU drivers, the NVIDIA container toolkit, and you have CUDA toolkit install.
+- But in general you have to guarantee that you have the GPU drivers, the NVIDIA container toolkit, and you have CUDA toolkit install.
 
-* If you are using Windows with WSL you have to install the GPU drivers in Windows, otherwise just install the drivers in your host OS. 
-    * In Windows you can check the NVIDIA GPU drivers at: https://www.nvidia.com/Download/index.aspx
-    * In Ubuntu you can check how to download the drivers at: https://ubuntu.com/server/docs/nvidia-drivers-installation
-    * Remember to restart your system after installation.
+- If you are using Windows with WSL you have to install the GPU drivers in Windows, otherwise just install the drivers in your host OS.
+  - In Windows you can check the NVIDIA GPU drivers at: https://www.nvidia.com/Download/index.aspx
+  - In Ubuntu you can check how to download the drivers at: https://ubuntu.com/server/docs/nvidia-drivers-installation
+  - Remember to restart your system after installation.
 
-If you don't have CUDA drivers installed to use your GPU for ML development you can follow the instructions here: 
+If you don't have CUDA drivers installed to use your GPU for ML development you can follow the instructions here:
 https://developer.nvidia.com/cuda-downloads
 
 ### Update the default Docker DNS server
+
 If you are using the WSL or a Linux distribution as your OS you need to configure the following in order for the private container network to resolve outside hostnames and interact correctly with the internet.
 
 1. Install dnsmasq and resolvconf.
+
 ```
 sudo apt update
 sudo apt install dnsmasq resolvconf
 ```
 
 2. Find your docker IP (in this case, 172.17.0.1):
+
 ```
 root@host:~# ifconfig | grep -A2 docker0
-docker0   Link encap:Ethernet  HWaddr 02:42:bb:b4:4a:50  
+docker0   Link encap:Ethernet  HWaddr 02:42:bb:b4:4a:50
           inet addr:172.17.0.1  Bcast:0.0.0.0  Mask:255.255.0.0
 ```
 
 3. Edit /etc/dnsmasq.conf and add these lines:
+
 ```
 sudo nano /etc/dnsmasq.conf
 ```
+
 ```
 interface=docker0
 bind-interfaces
 listen-address=172.17.0.1
 ```
+
 5. Create/edit /etc/resolvconf/resolv.conf.d/tail (you can use vim or nano) and add this line, you have to change the line there with the IP of your default network interface eth0:
+
 ```
 nameserver 8.8.8.8
 ```
+
 6. Re-read the configuration files and regenerate /etc/resolv.conf.
+
 ```
 sudo resolvconf -u
 ```
+
 7. Restart your OS. If you are using WSL run the following in your windows terminal:
+
 ```
 wsl.exe --shutdown
 ```
@@ -237,6 +275,7 @@ wsl.exe --shutdown
 ## Troubleshooting
 
 1. If services fail to start, check:
+
    - Docker daemon is running
    - Required ports are available
    - Sufficient system resources
