@@ -1,4 +1,5 @@
 import numpy as np
+
 np.float_ = np.float64
 import pandas as pd
 import logging
@@ -50,10 +51,8 @@ def initialize_extractor(config_path: str) -> HFExtractor:
         HFExtractor: The extractor instance.
     """
     questions = load_tsv_file_to_list(f"{config_path}/extract/questions.tsv")
-    tags_language = load_tsv_file_to_list(
-        f"{config_path}/extract/tags_language.tsv")
-    tags_libraries = load_tsv_file_to_list(
-        f"{config_path}/extract/tags_libraries.tsv")
+    tags_language = load_tsv_file_to_list(f"{config_path}/extract/tags_language.tsv")
+    tags_libraries = load_tsv_file_to_list(f"{config_path}/extract/tags_libraries.tsv")
     tags_other = load_tsv_file_to_list(f"{config_path}/extract/tags_other.tsv")
     tags_task = load_tsv_file_to_list(f"{config_path}/extract/tags_task.tsv")
     return HFExtractor(
@@ -76,8 +75,7 @@ def initialize_transform_hf(config_path: str) -> TransformHF:
     Returns:
         TransformHF: The transformer instance.
     """
-    new_schema = pd.read_csv(
-        f"{config_path}/transform/M4ML_schema.tsv", sep="\t")
+    new_schema = pd.read_csv(f"{config_path}/transform/M4ML_schema.tsv", sep="\t")
     transformations = pd.read_csv(
         f"{config_path}/transform/column_transformations.csv",
         lineterminator="\n",
@@ -210,8 +208,7 @@ def main():
     # Load
     load_processor = initialize_load_processor(kg_files_directory)
     # load_processor.clean_DBs()
-    load_processor.load_df(
-        df=m4ml_models_df, output_ttl_file_path=args.output_dir)
+    load_processor.load_df(df=m4ml_models_df, output_ttl_file_path=args.output_dir)
     load_processor.print_DB_states()
 
 

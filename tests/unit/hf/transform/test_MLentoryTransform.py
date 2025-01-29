@@ -4,6 +4,7 @@ import os
 from datetime import datetime
 from mlentory_transform.core.MlentoryTransform import MlentoryTransform
 
+
 @pytest.fixture
 def sample_schema() -> pd.DataFrame:
     """
@@ -15,6 +16,7 @@ def sample_schema() -> pd.DataFrame:
     schema_data = pd.read_csv("tests/unit/hf/transform/M4ML_schema.tsv", sep="\t")
     return schema_data
 
+
 @pytest.fixture
 def sample_transformations() -> pd.DataFrame:
     """
@@ -23,8 +25,11 @@ def sample_transformations() -> pd.DataFrame:
     Returns:
         pd.DataFrame: Sample transformation rules
     """
-    transformations_data = pd.read_csv("tests/unit/hf/transform/column_transformations.csv")
+    transformations_data = pd.read_csv(
+        "tests/unit/hf/transform/column_transformations.csv"
+    )
     return transformations_data
+
 
 @pytest.fixture
 def sample_extracted_data() -> pd.DataFrame:
@@ -38,9 +43,10 @@ def sample_extracted_data() -> pd.DataFrame:
         "modelId": ["bert-base", "gpt2-small"],
         "taskType": ["text-classification", "text-generation"],
         "downloadCount": [1000, 2000],
-        "extra_field": ["ignore1", "ignore2"]
+        "extra_field": ["ignore1", "ignore2"],
     }
     return pd.DataFrame(extracted_data)
+
 
 @pytest.fixture
 def temp_output_dir(tmp_path) -> str:
@@ -57,6 +63,7 @@ def temp_output_dir(tmp_path) -> str:
     output_dir.mkdir()
     return str(output_dir)
 
+
 class TestMlentoryTransform:
     """Test suite for MlentoryTransform class."""
 
@@ -64,7 +71,7 @@ class TestMlentoryTransform:
         self,
         sample_schema: pd.DataFrame,
         sample_transformations: pd.DataFrame,
-        sample_extracted_data: pd.DataFrame
+        sample_extracted_data: pd.DataFrame,
     ):
         """
         Test basic transformation functionality without saving output.
@@ -76,9 +83,7 @@ class TestMlentoryTransform:
         """
         transformer = MlentoryTransform()
         result_df = transformer.transform_HF_models(
-            sample_schema,
-            sample_transformations,
-            sample_extracted_data
+            sample_schema, sample_transformations, sample_extracted_data
         )
 
         # Verify the transformed DataFrame structure
@@ -86,7 +91,7 @@ class TestMlentoryTransform:
         assert "model_name" in result_df.columns
         assert "task" in result_df.columns
         assert "downloads" in result_df.columns
-        
+
         # Verify data transformation
         assert result_df["model_name"].tolist() == ["bert-base", "gpt2-small"]
         assert result_df["downloads"].tolist() == [1000, 2000]
@@ -96,7 +101,7 @@ class TestMlentoryTransform:
         sample_schema: pd.DataFrame,
         sample_transformations: pd.DataFrame,
         sample_extracted_data: pd.DataFrame,
-        temp_output_dir: str
+        temp_output_dir: str,
     ):
         """
         Test transformation with output saving functionality.
@@ -113,7 +118,7 @@ class TestMlentoryTransform:
             sample_transformations,
             sample_extracted_data,
             save_output_in_json=True,
-            output_dir=temp_output_dir
+            output_dir=temp_output_dir,
         )
 
         # Verify knowledge graph creation
@@ -124,7 +129,7 @@ class TestMlentoryTransform:
         self,
         sample_schema: pd.DataFrame,
         sample_transformations: pd.DataFrame,
-        sample_extracted_data: pd.DataFrame
+        sample_extracted_data: pd.DataFrame,
     ):
         """
         Test transformation with invalid save parameters.
@@ -135,14 +140,14 @@ class TestMlentoryTransform:
             sample_extracted_data: Sample input data
         """
         transformer = MlentoryTransform()
-        
+
         with pytest.raises(ValueError):
             transformer.transform_HF_models(
                 sample_schema,
                 sample_transformations,
                 sample_extracted_data,
                 save_output_in_json=True,
-                output_dir=None
+                output_dir=None,
             )
 
     @pytest.mark.integration
@@ -151,7 +156,7 @@ class TestMlentoryTransform:
         sample_schema: pd.DataFrame,
         sample_transformations: pd.DataFrame,
         sample_extracted_data: pd.DataFrame,
-        temp_output_dir: str
+        temp_output_dir: str,
     ):
         """
         Integration test for complete transformation workflow.
@@ -163,19 +168,21 @@ class TestMlentoryTransform:
             temp_output_dir: Temporary directory path
         """
         transformer = MlentoryTransform()
-        
+
         # Transform the data
         result_df = transformer.transform_HF_models(
             sample_schema,
             sample_transformations,
             sample_extracted_data,
             save_output_in_json=True,
-            output_dir=temp_output_dir
+            output_dir=temp_output_dir,
         )
-        
+
         # Save individual sources
         transformer.save_indiviual_sources(temp_output_dir)
-        
+
         # Verify files were created
         files = os.listdir(temp_output_dir)
-        assert any(file.endswith("HF_models_transformation_result.json") for file in files)
+        assert any(
+            file.endswith("HF_models_transformation_result.json") for file in files
+        )

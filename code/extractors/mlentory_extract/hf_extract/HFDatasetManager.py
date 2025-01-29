@@ -108,11 +108,11 @@ class HFDatasetManager:
         models = self.api.list_models(
             limit=limit, sort="lastModified", direction=-1, full=True
         )
-        
+
         def process_model(model):
             if model.last_modified <= latest_modification:
                 return None
-                
+
             card = None
             try:
                 if self.token:
@@ -122,7 +122,7 @@ class HFDatasetManager:
             except Exception as e:
                 print()
                 print(f"Error loading model card for {model.id}: {e}")
-            
+
             model_info = {
                 "modelId": model.id,
                 "author": model.author,
@@ -135,16 +135,19 @@ class HFDatasetManager:
                 "createdAt": model.created_at,
                 "card": card.content if card else "",
             }
-            
+
             return model_info
+
         model_data = []
         with ThreadPoolExecutor(max_workers=threads) as executor:
-            future_to_model = {executor.submit(process_model, model): model for model in models}
+            future_to_model = {
+                executor.submit(process_model, model): model for model in models
+            }
             for future in as_completed(future_to_model):
                 result = future.result()
                 if result is not None:
                     model_data.append(result)
-                
+
         return pd.DataFrame(model_data)
 
     def get_datasets_metadata(
@@ -163,24 +166,27 @@ class HFDatasetManager:
                          (or fewer if not enough valid datasets are found)
         """
         # Fetch initial batch of datasets (100x limit to have enough valid ones)
-        datasets = list(itertools.islice(
-            self.api.list_datasets(sort="lastModified", direction=-1),
-            limit+100
-        ))
-        
+        datasets = list(
+            itertools.islice(
+                self.api.list_datasets(sort="lastModified", direction=-1), limit + 100
+            )
+        )
+
         dataset_data = []
         futures = []
-        
+
         def process_dataset(dataset):
             if not (latest_modification is None):
-                last_modified = dataset.last_modified.replace(tzinfo=latest_modification.tzinfo)
+                last_modified = dataset.last_modified.replace(
+                    tzinfo=latest_modification.tzinfo
+                )
                 if last_modified <= latest_modification:
                     return None
-            
+
             croissant_metadata = self.get_croissant_metadata(dataset.id)
             if croissant_metadata == {}:
                 return None
-            #Print all the datasets properties
+            # Print all the datasets properties
             print("\nDATASEEEEEEET\n")
             print(dataset)
             return {
@@ -190,7 +196,7 @@ class HFDatasetManager:
                     "extraction_method": "Downloaded_from_HF_Croissant_endpoint",
                     "confidence": 1.0,
                     "extraction_time": datetime.now().strftime("%Y-%m-%d_%H-%M-%S"),
-                }
+                },
             }
 
         with ThreadPoolExecutor(max_workers=threads) as executor:
@@ -198,7 +204,7 @@ class HFDatasetManager:
             for dataset in datasets:
                 future = executor.submit(process_dataset, dataset)
                 futures.append(future)
-            
+
             # Process results as they complete
             for future in as_completed(futures):
                 result = future.result()
@@ -209,12 +215,11 @@ class HFDatasetManager:
                         for f in futures:
                             f.cancel()
                         break
-        
+
         # Trim results to exact limit if we got more than needed
         dataset_data = dataset_data[:limit]
         return pd.DataFrame(dataset_data)
 
-    
     def get_croissant_metadata(self, dataset_id: str) -> Dict:
         """
         Retrieve croissant metadata for a given dataset.
@@ -235,11 +240,11 @@ class HFDatasetManager:
             return response.json()
         else:
             return {}
-    
+
     def get_arxiv_metadata_dataset(self) -> pd.DataFrame:
         """
         Retrieve the HuggingFace dataset containing arxiv metadata.
-        
+
         Returns:
             pd.DataFrame: DataFrame containing arxiv metadata
         """

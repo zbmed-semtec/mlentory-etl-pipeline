@@ -7,16 +7,17 @@ import os
 from ..hf_transform.TransformHF import TransformHF
 from .KnoledgeGraphHandler import KnowledgeGraphHandler
 
+
 class MlentoryTransform:
     """
     A class for transforming data from different sources into a unified knowledge graph.
-    
+
     This class provides functionality to:
     - Transform data from multiple sources (HF, OpenML, etc.)
     - Standardize data formats
     - Handle metadata extraction
     - Create unified knowledge representations
-    
+
     Attributes:
         sources (List[Tuple[str, pd.DataFrame]]): List of data sources and their dataframes
         schema (pd.DataFrame): Target schema for the transformed data
@@ -39,12 +40,13 @@ class MlentoryTransform:
         self.current_sources = {}
         self.kg_handler = kg_handler
         self.transform_hf = transform_hf
-    
 
-    def transform_HF_models(self,
-                            extracted_df: pd.DataFrame,
-                            save_output_in_json: bool = False,
-                            output_dir: str = None) -> Tuple[rdflib.Graph, rdflib.Graph]:
+    def transform_HF_models(
+        self,
+        extracted_df: pd.DataFrame,
+        save_output_in_json: bool = False,
+        output_dir: str = None,
+    ) -> Tuple[rdflib.Graph, rdflib.Graph]:
         """
         Transform the extracted data into a knowledge graph.
 
@@ -68,19 +70,19 @@ class MlentoryTransform:
         """
         # Reset the knowledge graph handler before processing new data
         self.kg_handler.reset_graphs()
-        
+
         transformed_df = self.transform_hf.transform_models(extracted_df)
-        
-        #Transform the dataframe to a knowledge graph
-        knowledge_graph, metadata_graph = self.kg_handler.dataframe_to_graph_M4ML_schema(
-            df=transformed_df,
-            identifier_column="schema.org:name",
-            platform="HF"
+
+        # Transform the dataframe to a knowledge graph
+        knowledge_graph, metadata_graph = (
+            self.kg_handler.dataframe_to_graph_M4ML_schema(
+                df=transformed_df, identifier_column="schema.org:name", platform="HF"
+            )
         )
-        
+
         self.current_sources["HF"] = knowledge_graph
         self.current_sources["HF_metadata"] = metadata_graph
-        
+
         if save_output_in_json:
             current_date = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
             kg_output_path = os.path.join(
@@ -91,17 +93,18 @@ class MlentoryTransform:
             )
             knowledge_graph.serialize(destination=kg_output_path, format="json-ld")
             metadata_graph.serialize(destination=metadata_output_path, format="json-ld")
-            
-            
+
         return knowledge_graph, metadata_graph
 
-    def transform_HF_datasets(self,
-                            extracted_df: pd.DataFrame,
-                            save_output_in_json: bool = False,
-                            output_dir: str = None) -> Tuple[rdflib.Graph, rdflib.Graph]:
+    def transform_HF_datasets(
+        self,
+        extracted_df: pd.DataFrame,
+        save_output_in_json: bool = False,
+        output_dir: str = None,
+    ) -> Tuple[rdflib.Graph, rdflib.Graph]:
         """
         Transform the extracted data into a knowledge graph.
-        
+
         Args:
             extracted_df (pd.DataFrame): DataFrame containing extracted dataset data
             It has three columns:
@@ -118,17 +121,17 @@ class MlentoryTransform:
         """
         # Reset the knowledge graph handler before processing new data
         self.kg_handler.reset_graphs()
-        
+
         # Transform the dataframe to a knowledge graph
-        knowledge_graph, metadata_graph = self.kg_handler.dataframe_to_graph_Croissant_schema(
-            df=extracted_df,
-            identifier_column="datasetId",
-            platform="HF"
+        knowledge_graph, metadata_graph = (
+            self.kg_handler.dataframe_to_graph_Croissant_schema(
+                df=extracted_df, identifier_column="datasetId", platform="HF"
+            )
         )
-        
+
         self.current_sources["HF_dataset"] = knowledge_graph
         self.current_sources["HF_dataset_metadata"] = metadata_graph
-        
+
         if save_output_in_json:
             current_date = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
             kg_output_path = os.path.join(
@@ -139,32 +142,29 @@ class MlentoryTransform:
             )
             knowledge_graph.serialize(destination=kg_output_path, format="json-ld")
             metadata_graph.serialize(destination=metadata_output_path, format="json-ld")
-        
-        return knowledge_graph, metadata_graph
 
-    
+        return knowledge_graph, metadata_graph
 
     def save_indiviual_sources(self, output_dir: str):
         """
         Save each transformed source in a separate file in json format.
         """
         current_date = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-        
-        
+
         for source in self.current_sources.keys():
-            
+
             output_path = os.path.join(
                 output_dir, f"{current_date}_{source}_transformation_result.json"
             )
-            
+
             self.current_sources[source].to_json(output_path, index=False)
-    
+
     def unify_knowledge_graph(self):
         """
         Unify the knowledge graph from the current sources.
         """
         pass
-    
+
     def print_detailed_dataframe(self, df: pd.DataFrame):
         """
         Print the detailed dataframe
@@ -178,7 +178,7 @@ class MlentoryTransform:
             print(f"\n{col}:")
             for row in df[col]:
                 # Limit the text to 100 characters
-                if isinstance(row, list ):
+                if isinstance(row, list):
                     row_data = row[0]["data"]
                     if isinstance(row_data, str):
                         print(row_data[:100])
