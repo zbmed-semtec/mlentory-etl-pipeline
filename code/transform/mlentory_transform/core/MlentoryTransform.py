@@ -145,25 +145,32 @@ class MlentoryTransform:
 
         return knowledge_graph, metadata_graph
 
-    def save_indiviual_sources(self, output_dir: str):
-        """
-        Save each transformed source in a separate file in json format.
-        """
-        current_date = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+    
 
-        for source in self.current_sources.keys():
-
-            output_path = os.path.join(
-                output_dir, f"{current_date}_{source}_transformation_result.json"
-            )
-
-            self.current_sources[source].to_json(output_path, index=False)
-
-    def unify_knowledge_graph(self):
+    def unify_graphs(self, graphs: List[rdflib.Graph], save_output_in_json: bool = False, output_dir: str = None) -> rdflib.Graph:
         """
         Unify the knowledge graph from the current sources.
+        Args:
+            graphs (List[rdflib.Graph]): List of graphs to unify
+            save_output_in_json (bool, optional): Whether to save the transformed data.
+                Defaults to False.
+            output_dir (str, optional): Directory to save the transformed data.
+                Required if save_output_in_json is True.
+        Returns:
+            rdflib.Graph: Unified graph
         """
-        pass
+        unified_graph = rdflib.Graph()
+        for graph in graphs:
+            unified_graph += graph
+
+        if save_output_in_json:
+            current_date = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+            kg_output_path = os.path.join(
+                output_dir, f"{current_date}_unified_kg.json"
+            )
+            unified_graph.serialize(destination=kg_output_path, format="json-ld")
+
+        return unified_graph
 
     def print_detailed_dataframe(self, df: pd.DataFrame):
         """
