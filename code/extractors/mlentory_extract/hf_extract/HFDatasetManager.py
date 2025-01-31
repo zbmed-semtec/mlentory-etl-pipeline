@@ -76,7 +76,9 @@ class HFDatasetManager:
             # Get the most recent modification date from the dataset
             latest_modification = dataset["last_modified"].max()
 
-            recent_models = self.get_recent_models_metadata(limit, latest_modification, threads)
+            recent_models = self.get_recent_models_metadata(
+                limit, latest_modification, threads
+            )
 
             if len(recent_models) > 0:
 

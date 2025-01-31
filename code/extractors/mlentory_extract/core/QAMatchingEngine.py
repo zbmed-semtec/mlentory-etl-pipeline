@@ -44,7 +44,7 @@ class QAMatchingEngine:
         self.model = AutoModel.from_pretrained(
             embedding_model,
             torch_dtype=torch.float16 if self.device.type == "cuda" else torch.float32,
-            trust_remote_code=True
+            trust_remote_code=True,
         ).to(self.device)
 
         # Load tokenizer with caching
