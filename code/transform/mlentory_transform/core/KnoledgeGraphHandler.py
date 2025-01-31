@@ -61,7 +61,7 @@ class KnowledgeGraphHandler:
 
         # Initialize base namespace and graph
         self.base_namespace = Namespace(base_namespace)
-        self.meta_namespace = Namespace(f"{base_namespace}/meta/")
+        self.meta_namespace = Namespace(f"{base_namespace}meta/")
 
         self.graph = Graph()
 
@@ -124,7 +124,7 @@ class KnowledgeGraphHandler:
 
             self.replace_blank_nodes_with_type(temp_graph, row, platform)
             # self.replace_blank_nodes_with_no_type(temp_graph,row,platform)
-            self.replace_default_nodes(temp_graph, row, platform)
+            # self.replace_default_nodes(temp_graph, row, platform)
             self.delete_remaining_blank_nodes(temp_graph)
 
             # Go through the triples and add them
@@ -254,7 +254,7 @@ class KnowledgeGraphHandler:
 
         for value in values:
 
-            print("VALUE\n", value)
+            # print("VALUE\n", value)
 
             if predicate_info.empty:
                 # Default case: treat as string if predicate not found in schema

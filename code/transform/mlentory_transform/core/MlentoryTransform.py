@@ -145,9 +145,12 @@ class MlentoryTransform:
 
         return knowledge_graph, metadata_graph
 
-    
-
-    def unify_graphs(self, graphs: List[rdflib.Graph], save_output_in_json: bool = False, output_dir: str = None) -> rdflib.Graph:
+    def unify_graphs(
+        self,
+        graphs: List[rdflib.Graph],
+        save_output_in_json: bool = False,
+        output_dir: str = None,
+    ) -> rdflib.Graph:
         """
         Unify the knowledge graph from the current sources.
         Args:
@@ -165,9 +168,7 @@ class MlentoryTransform:
 
         if save_output_in_json:
             current_date = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-            kg_output_path = os.path.join(
-                output_dir, f"{current_date}_unified_kg.json"
-            )
+            kg_output_path = os.path.join(output_dir, f"{current_date}_unified_kg.json")
             unified_graph.serialize(destination=kg_output_path, format="json-ld")
 
         return unified_graph
