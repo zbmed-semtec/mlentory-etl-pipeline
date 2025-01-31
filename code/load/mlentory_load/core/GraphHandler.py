@@ -56,6 +56,13 @@ class GraphHandler:
             platform (str): Platform identifier
             graph_identifier (str): Main graph URI
             deprecated_graph_identifier (str): Deprecated graph URI
+            new_triplets (list): List of new triplets identify in the new data
+            old_triplets (list): List of old triplets identify in the stored data
+            curr_update_date (datetime): Date of the current update
+            models_to_index (list): List of models to be indexed
+            id_to_model_entity (dict): Dictionary to map the id of the model to the model entity
+            df (pd.DataFrame): Dataframe with the new data to be processed
+            kg (Graph): Knowledge graph with the new data to be processed
         """
         self.df_to_transform = None
         self.SQLHandler = SQLHandler
@@ -70,9 +77,10 @@ class GraphHandler:
         self.models_to_index = []
         self.id_to_model_entity = {}
         self.curr_update_date = None
-        self.df = pd.DataFrame()
+        self.df = None
+        self.kg = None
 
-    def load_df(self, df: pd.DataFrame):
+    def set_df(self, df: pd.DataFrame):
         """
         Load DataFrame for processing.
 
@@ -80,6 +88,12 @@ class GraphHandler:
             df (pd.DataFrame): Data to be processed
         """
         self.df = df
+
+    def set_kg(self, kg: Graph):
+        """
+        Set the KG to be loaded.
+        """
+        self.kg = kg
 
     def update_graph(self):
         """
@@ -91,50 +105,99 @@ class GraphHandler:
         3. Updates search indices
         """
         # This graph updates the metadata of the triplets and identifies which triplets are new and which ones are not longer valid
-        self.update_metadata_graph()
+        if self.kg is not None:
+            self.update_metadata_graph_with_kg()
+        else:
+            self.update_metadata_graph()
+
         # This update uses the new_triplets and the old_triplets list to update the current version of the graph.
         self.update_current_graph()
+
         # This updates the index with the new models and triplets
-        self.update_indexes()
+        if self.kg is not None:
+            self.update_indexes_with_kg()
+        else:
+            self.update_indexes()
 
-    def update_indexes(self):
-        """Update search indices with new and modified models."""
-        new_models = []
-        for row_num, row in tqdm(
-            self.df.iterrows(), total=len(self.df), desc="Updating indexes"
-        ):
+    def update_metadata_graph_with_kg(self):
+        """
+        Update the metadata graph with information from a knowledge graph containing metadata nodes.
 
-            # For each row we first create an m4ml:MLModel instance and their respective triplets
-            model_uri = self.models_to_index[row_num]
+        This method:
+        1. Processes each StatementMetadata node in the graph
+        2. Extracts subject, predicate, object and metadata information
+        3. Uses process_triplet to handle each triplet's metadata
+        """
+        # Define the URIs we'll need
+        META_NS = self.graph_identifier + "/meta/"
+        STATEMENT_METADATA = URIRef(str(META_NS) + "StatementMetadata")
 
-            index_model_entity = self.IndexHandler.create_hf_index_entity(
-                row, model_uri
-            )
+        print("\n\nMETA_NS\n", META_NS)
+        print("STATEMENT METADATA\n", STATEMENT_METADATA)
 
-            # Check if model already exists in elasticsearch
-            search_result = self.IndexHandler.search(
-                self.IndexHandler.hf_index,
-                {"query": {"match_phrase": {"db_identifier": str(model_uri.n3())}}},
-            )
+        max_extraction_time = None
 
-            # print("SEARCH RESULT: ", search_result)
+        triplets_metadata = {}
 
-            if not search_result:
-                # Only index if model doesn't exist
-                new_models.append(index_model_entity)
+        for triplet in self.kg:
+            if triplet[0] not in triplets_metadata:
+                triplets_metadata[triplet[0]] = {triplet[1]: triplet[2]}
             else:
-                # If model already exists, update the index
-                self.IndexHandler.update_document(
-                    index_model_entity.meta.index,
-                    search_result[0]["_id"],
-                    index_model_entity.to_dict(),
-                )
+                triplets_metadata[triplet[0]][triplet[1]] = triplet[2]
 
-        # Index the model entities
-        if len(new_models) > 0:
-            self.IndexHandler.add_documents(new_models)
+        # Get all nodes of type StatementMetadata
+        for metadata_node in triplets_metadata:
 
-        self.models_to_index = []
+            # print("METADATA NODE\n", metadata_node)
+
+            metadata_node_dict = triplets_metadata[metadata_node]
+
+            # Extract subject, predicate, object
+            subject = metadata_node_dict[URIRef(META_NS + "subject")]
+            predicate = metadata_node_dict[URIRef(META_NS + "predicate")]
+            object_value = metadata_node_dict[URIRef(META_NS + "object")]
+
+            # Extract metadata information
+            confidence = float(metadata_node_dict[URIRef(META_NS + "confidence")])
+            extraction_method = str(
+                metadata_node_dict[URIRef(META_NS + "extractionMethod")]
+            )
+            extraction_time = str(
+                metadata_node_dict[URIRef(META_NS + "extractionTime")]
+            ).split(".")[0]
+
+            # Convert datetime format from 2024-02-13T21:24:05+00:00 to our expected format
+            extraction_time = datetime.strptime(
+                extraction_time, "%Y-%m-%dT%H:%M:%S"
+            ).strftime("%Y-%m-%d_%H-%M-%S")
+
+            if max_extraction_time is None:
+                max_extraction_time = extraction_time
+            else:
+                max_extraction_time = max(max_extraction_time, extraction_time)
+
+            # Create extraction info dictionary
+            extraction_info = {
+                "confidence": confidence,
+                "extraction_method": extraction_method,
+                "extraction_time": extraction_time,
+            }
+
+            # Process the triplet with its metadata
+            self.process_triplet(
+                subject=subject,
+                predicate=predicate,
+                object=object_value,
+                extraction_info=extraction_info,
+            )
+
+        # Update the dates of models that haven't changed
+        if self.curr_update_date is None:
+            # Use the latest extraction time as current update date
+            self.curr_update_date = max_extraction_time
+
+        self.update_triplet_ranges_for_unchanged_models(self.curr_update_date)
+        self.curr_update_date = None
 
     # Construct all the triplets in the input dataframe
     def update_metadata_graph(self):
@@ -407,16 +470,23 @@ class GraphHandler:
         """
         self.SQLHandler.execute_sql(update_query)
 
-    def update_triplet_ranges_for_unchanged_models(self, curr_date: datetime) -> None:
+    def update_triplet_ranges_for_unchanged_models(self, curr_date: str) -> None:
         """
-        The idea is to update all the triplet ranges that were not modified in the last update
+        Update all triplet ranges that were not modified in the last update
         to have the same end date as the current date.
+
+        Args:
+            curr_date (str): Current date in format 'YYYY-MM-DD_HH-MM-SS'
         """
+        # Convert the date string from 'YYYY-MM-DD_HH-MM-SS' to PostgreSQL timestamp format
+        formatted_date = datetime.strptime(curr_date, "%Y-%m-%d_%H-%M-%S").strftime(
+            "%Y-%m-%d %H:%M:%S"
+        )
 
         update_query = f"""
             UPDATE "Version_Range"
-            SET use_end = '{curr_date}'
-            WHERE use_end != '{curr_date}'
+            SET use_end = '{formatted_date}'
+            WHERE use_end != '{formatted_date}'
             AND deprecated = {False}
         """
 
@@ -477,6 +547,45 @@ class GraphHandler:
                 graph_identifier=self.graph_identifier,
                 deprecated_graph_identifier=self.deprecated_graph_identifier,
             )
+
+    def update_indexes(self):
+        """Update search indices with new and modified models."""
+        new_models = []
+        for row_num, row in tqdm(
+            self.df.iterrows(), total=len(self.df), desc="Updating indexes"
+        ):
+
+            # For each row we first create an m4ml:MLModel instance and their respective triplets
+            model_uri = self.models_to_index[row_num]
+
+            index_model_entity = self.IndexHandler.create_hf_index_entity(
+                row, model_uri
+            )
+
+            # Check if model already exists in elasticsearch
+            search_result = self.IndexHandler.search(
+                self.IndexHandler.hf_index,
+                {"query": {"match_phrase": {"db_identifier": str(model_uri.n3())}}},
+            )
+
+            # print("SEARCH RESULT: ", search_result)
+
+            if not search_result:
+                # Only index if model doesn't exist
+                new_models.append(index_model_entity)
+            else:
+                # If model already exists, update the index
+                self.IndexHandler.update_document(
+                    index_model_entity.meta.index,
+                    search_result[0]["_id"],
+                    index_model_entity.to_dict(),
+                )
+
+        # Index the model entities
+        if len(new_models) > 0:
+            self.IndexHandler.add_documents(new_models)
+
+        self.models_to_index = []
 
     def get_current_graph(self) -> Graph:
         """
