@@ -85,14 +85,16 @@ class LoadProcessor:
             )
             current_graph.serialize(output_ttl_file_path, format="turtle")
 
-    def update_dbs_with_kg(self, kg: Graph):
+    def update_dbs_with_kg(self, kg: Graph, extraction_metadata: Graph):
         """
         Update all databases with new data from KG. The KG represents the metadata
 
         Args:
             kg (Graph): Knowledge graph to be loaded
+            extraction_metadata (Graph): Extraction metadata of the KG
         """
         self.GraphHandler.set_kg(kg)
+        self.GraphHandler.set_extraction_metadata(extraction_metadata)
         self.GraphHandler.update_graph()
 
     def print_DB_states(self):

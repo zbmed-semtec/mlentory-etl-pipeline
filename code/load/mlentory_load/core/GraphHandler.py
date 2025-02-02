@@ -3,6 +3,7 @@ import rdflib
 import json
 import os
 import hashlib
+import pprint
 import pandas as pd
 from rdflib import Graph, URIRef, Literal, BNode
 from rdflib.namespace import RDF, XSD, FOAF
@@ -80,6 +81,7 @@ class GraphHandler:
         self.curr_update_date = None
         self.df = None
         self.kg = None
+        self.extraction_metadata = None
         self.entities_in_kg = {}
 
     def set_df(self, df: pd.DataFrame):
@@ -96,6 +98,12 @@ class GraphHandler:
         Set the KG to be loaded.
         """
         self.kg = kg
+    
+    def set_extraction_metadata(self, extraction_metadata: Graph):
+        """
+        Set the extraction metadata to be loaded.
+        """
+        self.extraction_metadata = extraction_metadata
 
     def update_graph(self):
         """
@@ -138,7 +146,7 @@ class GraphHandler:
 
         triplets_metadata = {}
 
-        for triplet in self.kg:
+        for triplet in self.extraction_metadata:
             if triplet[0] not in triplets_metadata:
                 triplets_metadata[triplet[0]] = {triplet[1]: triplet[2]}
             else:
@@ -181,11 +189,6 @@ class GraphHandler:
                 "extraction_method": extraction_method,
                 "extraction_time": extraction_time,
             }
-
-            if subject not in self.entities_in_kg:
-                self.entities_in_kg[subject] = {predicate: object_value}
-            else:
-                self.entities_in_kg[subject][predicate] = object_value
 
             # Process the triplet with its metadata
             self.process_triplet(
@@ -557,13 +560,25 @@ class GraphHandler:
         Update search indices with new and modified models.
         """
         new_models = []
-
-        for entity in self.entities_in_kg:
-            entity_uri = entity.n3()
+        
+        # Get all the nodes in the KG that are of type MLModel
+        entities_in_kg = {}
+        for triplet in self.kg:
+            entity_uri = str(triplet[0].n3())
+            if entity_uri not in entities_in_kg:
+                entities_in_kg[entity_uri] = {triplet[1]: [str(triplet[2])]}
+            else:
+                if triplet[1] not in entities_in_kg[entity_uri]:
+                    entities_in_kg[entity_uri][triplet[1]] = [str(triplet[2])]
+                else:
+                    entities_in_kg[entity_uri][triplet[1]].append(str(triplet[2]))
+        
+        
+        for entity_uri, entity_dict in entities_in_kg.items():
+            
             if "_Model_" in entity_uri:
-                entity_series = pd.Series(self.entities_in_kg[entity])
-                index_model_entity = self.IndexHandler.create_hf_model_index_entity(
-                    entity_series, entity
+                index_model_entity = self.IndexHandler.create_hf_dataset_index_entity_with_dict(
+                    entity_dict, entity_uri
                 )
                 # Check if model already exists in elasticsearch
                 search_result = self.IndexHandler.search(

@@ -190,8 +190,8 @@ class HFDatasetManager:
             if croissant_metadata == {}:
                 return None
             # Print all the datasets properties
-            print("\nDATASEEEEEEET\n")
-            print(dataset)
+            # print("\nDATASEEEEEEET\n")
+            # print(dataset)
             return {
                 "datasetId": dataset.id,
                 "croissant_metadata": croissant_metadata,

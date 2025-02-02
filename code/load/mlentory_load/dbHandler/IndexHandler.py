@@ -1,4 +1,5 @@
 import os
+import pprint
 import numpy as np
 
 np.float_ = np.float64
@@ -106,6 +107,30 @@ class IndexHandler:
             index_model_entity.author = []
 
         # print(index_model_entity.to_dict())
+        return index_model_entity
+
+    def create_hf_dataset_index_entity_with_dict(self, info: Dict, dataset_uri: str):
+        index_model_entity = HFModel()
+
+        index_model_entity.meta.index = self.hf_index
+
+        index_model_entity.db_identifier = dataset_uri
+        index_model_entity.name = ""
+        index_model_entity.author = []
+        index_model_entity.releaseNotes = ""
+        index_model_entity.mlTask = []
+        print("INDEXING MODEL")
+        pprint.pprint(info)
+        for key, value in info.items():
+            if "identifier" in key:
+                index_model_entity.name = value[0].split("/")[-1]
+            elif "author" in key:
+                index_model_entity.author = value
+            elif "releaseNotes" in key:
+                index_model_entity.releaseNotes = value[0]
+            elif "mlTask" in key:
+                index_model_entity.mlTask = value
+        
         return index_model_entity
 
     def handle_raw_data(self, raw_data: Any):
