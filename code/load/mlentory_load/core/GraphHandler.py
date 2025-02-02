@@ -1,12 +1,13 @@
+import pprint
 import rdflib
+import json
+import os
+import hashlib
+import pandas as pd
 from rdflib import Graph, URIRef, Literal, BNode
 from rdflib.namespace import RDF, XSD, FOAF
 from rdflib.util import from_n3
-import hashlib
-import pandas as pd
 from pandas import Timestamp
-import json
-import os
 from tqdm import tqdm
 from datetime import datetime
 from typing import Callable, List, Dict, Set
@@ -79,6 +80,7 @@ class GraphHandler:
         self.curr_update_date = None
         self.df = None
         self.kg = None
+        self.entities_in_kg = {}
 
     def set_df(self, df: pd.DataFrame):
         """
@@ -88,7 +90,7 @@ class GraphHandler:
             df (pd.DataFrame): Data to be processed
         """
         self.df = df
-
+    
     def set_kg(self, kg: Graph):
         """
         Set the KG to be loaded.
@@ -109,88 +111,85 @@ class GraphHandler:
             self.update_metadata_graph_with_kg()
         else:
             self.update_metadata_graph()
-
+        
         # This update uses the new_triplets and the old_triplets list to update the current version of the graph.
         self.update_current_graph()
-
+        
         # This updates the index with the new models and triplets
         if self.kg is not None:
             self.update_indexes_with_kg()
         else:
             self.update_indexes()
 
+
     def update_metadata_graph_with_kg(self):
         """
         Update the metadata graph with information from a knowledge graph containing metadata nodes.
-
+        
         This method:
         1. Processes each StatementMetadata node in the graph
         2. Extracts subject, predicate, object and metadata information
         3. Uses process_triplet to handle each triplet's metadata
         """
         # Define the URIs we'll need
-        META_NS = self.graph_identifier + "/meta/"
+        META_NS = self.graph_identifier+"/meta/"
         STATEMENT_METADATA = URIRef(str(META_NS) + "StatementMetadata")
-
-        print("\n\nMETA_NS\n", META_NS)
-        print("STATEMENT METADATA\n", STATEMENT_METADATA)
-
+        
         max_extraction_time = None
-
+        
         triplets_metadata = {}
-
+        
         for triplet in self.kg:
             if triplet[0] not in triplets_metadata:
-                triplets_metadata[triplet[0]] = {triplet[1]: triplet[2]}
+                triplets_metadata[triplet[0]] = {triplet[1]:triplet[2]}
             else:
                 triplets_metadata[triplet[0]][triplet[1]] = triplet[2]
-
+        
         # Get all nodes of type StatementMetadata
         for metadata_node in triplets_metadata:
-
+            
             # print("METADATA NODE\n", metadata_node)
-
+            
             metadata_node_dict = triplets_metadata[metadata_node]
-
+            
             # Extract subject, predicate, object
             subject = metadata_node_dict[URIRef(META_NS + "subject")]
             predicate = metadata_node_dict[URIRef(META_NS + "predicate")]
             object_value = metadata_node_dict[URIRef(META_NS + "object")]
-
+            
             # Extract metadata information
             confidence = float(metadata_node_dict[URIRef(META_NS + "confidence")])
-            extraction_method = str(
-                metadata_node_dict[URIRef(META_NS + "extractionMethod")]
-            )
-            extraction_time = str(
-                metadata_node_dict[URIRef(META_NS + "extractionTime")]
-            ).split(".")[0]
-
+            extraction_method = str(metadata_node_dict[URIRef(META_NS + "extractionMethod")])
+            extraction_time = str(metadata_node_dict[URIRef(META_NS + "extractionTime")]).split(".")[0]
+            
             # Convert datetime format from 2024-02-13T21:24:05+00:00 to our expected format
-            extraction_time = datetime.strptime(
-                extraction_time, "%Y-%m-%dT%H:%M:%S"
-            ).strftime("%Y-%m-%d_%H-%M-%S")
-
+            extraction_time = datetime.strptime(extraction_time, "%Y-%m-%dT%H:%M:%S").strftime("%Y-%m-%d_%H-%M-%S")
+            
             if max_extraction_time is None:
                 max_extraction_time = extraction_time
             else:
                 max_extraction_time = max(max_extraction_time, extraction_time)
-
+            
             # Create extraction info dictionary
             extraction_info = {
                 "confidence": confidence,
                 "extraction_method": extraction_method,
-                "extraction_time": extraction_time,
+                "extraction_time": extraction_time
             }
-
+            
+            if subject not in self.entities_in_kg:
+                self.entities_in_kg[subject] = {predicate: object_value}
+            else:
+                self.entities_in_kg[subject][predicate] = object_value
+            
             # Process the triplet with its metadata
             self.process_triplet(
                 subject=subject,
                 predicate=predicate,
                 object=object_value,
-                extraction_info=extraction_info,
+                extraction_info=extraction_info
             )
-
+            
         # Update the dates of models that haven't changed
         if self.curr_update_date is None:
             # Use the latest extraction time as current update date
@@ -479,9 +478,7 @@ class GraphHandler:
             curr_date (str): Current date in format 'YYYY-MM-DD_HH-MM-SS'
         """
         # Convert the date string from 'YYYY-MM-DD_HH-MM-SS' to PostgreSQL timestamp format
-        formatted_date = datetime.strptime(curr_date, "%Y-%m-%d_%H-%M-%S").strftime(
-            "%Y-%m-%d %H:%M:%S"
-        )
+        formatted_date = datetime.strptime(curr_date, "%Y-%m-%d_%H-%M-%S").strftime("%Y-%m-%d %H:%M:%S")
 
         update_query = f"""
             UPDATE "Version_Range"
@@ -547,7 +544,41 @@ class GraphHandler:
                 graph_identifier=self.graph_identifier,
                 deprecated_graph_identifier=self.deprecated_graph_identifier,
             )
+    
+    def update_indexes_with_kg(self):
+        """
+        Update search indices with new and modified models.
+        """
+        new_models = []
+        
+        for entity in self.entities_in_kg:
+            entity_uri = entity.n3()
+            if "_Model_" in entity_uri:
+                entity_series = pd.Series(self.entities_in_kg[entity])
+                index_model_entity = self.IndexHandler.create_hf_model_index_entity(
+                    entity_series, entity
+                )
+                # Check if model already exists in elasticsearch
+                search_result = self.IndexHandler.search(
+                    self.IndexHandler.hf_index,
+                    {"query": {"match_phrase": {"db_identifier": str(entity_uri)}}}
+                )
 
+                if not search_result:
+                    # Only index if model doesn't exist
+                    new_models.append(index_model_entity)
+                else:
+                    # If model already exists, update the index
+                    self.IndexHandler.update_document(
+                        index_model_entity.meta.index,
+                        search_result[0]["_id"],
+                        index_model_entity.to_dict(),
+                    )
+        
+        if len(new_models) > 0:
+            self.IndexHandler.add_documents(new_models)
+            
+        
     def update_indexes(self):
         """Update search indices with new and modified models."""
         new_models = []
@@ -558,9 +589,10 @@ class GraphHandler:
             # For each row we first create an m4ml:MLModel instance and their respective triplets
             model_uri = self.models_to_index[row_num]
 
-            index_model_entity = self.IndexHandler.create_hf_index_entity(
+            index_model_entity = self.IndexHandler.create_hf_model_index_entity(
                 row, model_uri
             )
+            
 
             # Check if model already exists in elasticsearch
             search_result = self.IndexHandler.search(

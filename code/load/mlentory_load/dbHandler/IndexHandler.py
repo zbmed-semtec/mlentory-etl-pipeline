@@ -69,7 +69,7 @@ class IndexHandler:
         #     HFModel.init(index=index_name, using=self.es)
         #     self.es.indices.open(index=index_name)
 
-    def create_hf_index_entity(self, row: pd.Series, model_uri: str):
+    def create_hf_model_index_entity(self, row: pd.Series, model_uri: str):
         """
         Create an Elasticsearch document for a HuggingFace model.
 
