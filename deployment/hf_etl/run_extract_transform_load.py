@@ -3,7 +3,7 @@ import numpy as np
 np.float_ = np.float64
 import pandas as pd
 import logging
-import datetime
+from datetime import datetime
 from typing import List
 from tqdm import tqdm
 import os
@@ -14,6 +14,10 @@ from mlentory_transform.hf_transform.FieldProcessorHF import FieldProcessorHF
 from mlentory_load.core import LoadProcessor, GraphHandler
 from mlentory_load.dbHandler import RDFHandler, SQLHandler, IndexHandler
 from mlentory_transform.hf_transform.TransformHF import TransformHF
+from mlentory_transform.core.MlentoryTransform import (
+    MlentoryTransform,
+    KnowledgeGraphHandler,
+)
 
 
 def load_tsv_file_to_list(path: str) -> List[str]:
@@ -24,9 +28,9 @@ def setup_logging() -> logging.Logger:
     """
     Sets up the logging system.
     """
-    now = datetime.datetime.now()
+    now = datetime.now()
     timestamp = now.strftime("%Y-%m-%d_%H-%M-%S")
-    base_log_path = "./hf_etl/execution_logs"
+    base_log_path = "./hf_etl/outputs/execution_logs"
     os.makedirs(base_log_path, exist_ok=True)
     logging_filename = f"{base_log_path}/transform_{timestamp}.log"
 
@@ -65,7 +69,7 @@ def initialize_extractor(config_path: str) -> HFExtractor:
     )
 
 
-def initialize_transform_hf(config_path: str) -> TransformHF:
+def initialize_transform_hf(config_path: str) -> MlentoryTransform:
     """
     Initializes the transformer with the configuration data.
 
@@ -73,15 +77,26 @@ def initialize_transform_hf(config_path: str) -> TransformHF:
         config_path (str): The path to the configuration data.
 
     Returns:
-        TransformHF: The transformer instance.
+        MlentoryTransform: The transformer instance.
     """
-    new_schema = pd.read_csv(f"{config_path}/transform/M4ML_schema.tsv", sep="\t")
+    new_schema = pd.read_csv(
+        f"{config_path}/transform/M4ML_schema.csv", sep=",", lineterminator="\n"
+    )
     transformations = pd.read_csv(
         f"{config_path}/transform/column_transformations.csv",
         lineterminator="\n",
         sep=",",
     )
-    return TransformHF(new_schema, transformations)
+
+    transform_hf = TransformHF(new_schema, transformations)
+
+    kg_handler = KnowledgeGraphHandler(
+        M4ML_schema=new_schema, base_namespace="http://mlentory.com/mlentory_graph/"
+    )
+
+    transformer = MlentoryTransform(kg_handler, transform_hf)
+
+    return transformer
 
 
 def initialize_load_processor(kg_files_directory: str) -> LoadProcessor:
@@ -158,23 +173,20 @@ def parse_args() -> argparse.Namespace:
         help="Save the results of the transformation phase",
     )
     parser.add_argument(
-        "--save-load-data",
-        action="store_true",
-        default=False,
-        help="Save the data that will be loaded into the database",
-    )
-    parser.add_argument(
         "--from-date",
-        type=lambda s: datetime.datetime.strptime(s, "%Y-%m-%d"),
-        default=datetime.datetime(2000, 1, 1),
+        type=lambda s: datetime.strptime(s, "%Y-%m-%d"),
+        default=datetime(2000, 1, 1),
         help="Download models from this date (format: YYYY-MM-DD)",
     )
     parser.add_argument(
         "--num-models", type=int, default=10, help="Number of models to download"
     )
     parser.add_argument(
+        "--num-datasets", type=int, default=10, help="Number of datasets to download"
+    )
+    parser.add_argument(
         "--output-dir",
-        default="./hf_etl/outputs",
+        default="./hf_etl/outputs/files",
         help="Directory to save intermediate results",
     )
     return parser.parse_args()
@@ -188,28 +200,60 @@ def main():
     config_path = "./configuration/hf"  # Path to configuration folder
     kg_files_directory = "./../kg_files"  # Path to kg files directory
 
-    # Extract
+    # Initialize extractor
     extractor = initialize_extractor(config_path)
-    extracted_df = extractor.download_models(
+
+    # Extract data (limited sample)
+    extracted_models_df = extractor.download_models(
         num_models=args.num_models,
-        from_date=args.from_date,
-        save_result_in_json=args.save_extraction,
+        from_date=datetime(2023, 1, 1),
+        output_dir=args.output_dir,
+        save_result_in_json=False,
         save_raw_data=False,
+        update_recent=True,
+        threads=4,
     )
 
-    # Transform
+    extracted_datasets_df = extractor.download_datasets(
+        num_datasets=args.num_datasets,
+        output_dir=args.output_dir,
+        save_result_in_json=False,
+        update_recent=True,
+        threads=4,
+    )
+
+    # Initialize transformer
     transformer = initialize_transform_hf(config_path)
-    m4ml_models_df = transformer.transform_models(
-        extracted_df,
-        save_output_in_json=args.save_transformation,
+
+    models_kg, models_metadata = transformer.transform_HF_models(
+        extracted_df=extracted_models_df,
+        save_output_in_json=False,
         output_dir=args.output_dir,
     )
 
-    # Load
-    load_processor = initialize_load_processor(kg_files_directory)
-    # load_processor.clean_DBs()
-    load_processor.load_df(df=m4ml_models_df, output_ttl_file_path=args.output_dir)
-    load_processor.print_DB_states()
+    datasets_kg, datasets_metadata = transformer.transform_HF_datasets(
+        extracted_df=extracted_datasets_df,
+        save_output_in_json=False,
+        output_dir=args.output_dir,
+    )
+
+    kg_integrated = transformer.unify_graphs(
+        [models_kg, datasets_kg],
+        save_output_in_json=True,
+        output_dir=args.output_dir + "/kg",
+    )
+
+    metadata_integrated = transformer.unify_graphs(
+        [models_metadata, datasets_metadata],
+        save_output_in_json=True,
+        output_dir=args.output_dir + "/metadata",
+    )
+
+    # Initialize loader
+    loader = initialize_load_processor(kg_files_directory)
+
+    # Load data
+    loader.update_dbs_with_kg(metadata_integrated)
 
 
 if __name__ == "__main__":

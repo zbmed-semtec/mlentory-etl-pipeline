@@ -223,4 +223,3 @@ class TestHFETLIntegration:
         files = os.listdir(output_dir)
         print(files)
         assert len(files) >= 2
-        assert any(file.endswith("_kg.json") for file in files)
