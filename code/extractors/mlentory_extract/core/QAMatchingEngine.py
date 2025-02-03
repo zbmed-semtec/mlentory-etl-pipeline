@@ -55,13 +55,13 @@ class QAMatchingEngine:
 
     def _extract_sections(self, text: str) -> List[Section]:
         """
-        Extract sections from text based on markdown-style headers.
+        Extract sections from text based on markdown-style headers, maintaining header hierarchy.
 
         Args:
             text (str): The text to segment
 
         Returns:
-            List[Section]: List of extracted sections with titles and content
+            List[Section]: List of extracted sections with hierarchical titles and content
         """
         # Split text into lines
         lines = text.split("\n")
@@ -69,32 +69,52 @@ class QAMatchingEngine:
         current_title = ""
         current_content = []
         start_idx = 0
+        # Keep track of header hierarchy
+        header_stack = []
 
         for i, line in enumerate(lines):
             # Check for markdown headers (# Title, ## Subtitle, etc)
             header_match = re.match(r"^(#{1,6})\s+(.+)$", line.strip())
 
             if header_match or i == len(lines) - 1:
-                # Save previous section if exists
+                # Save previous section if exists and has content
                 if current_title and current_content:
-                    sections.append(
-                        Section(
-                            title=current_title,
-                            content=current_title + "\n" + "\n".join(current_content),
-                            start_idx=start_idx,
-                            end_idx=i,
+                    # Remove empty lines and check if there's actual content
+                    filtered_content = [l for l in current_content if l.strip()]
+                    if filtered_content:
+                        sections.append(
+                            Section(
+                                title=current_title,
+                                content=current_title
+                                + ":\n"
+                                + "\n".join(filtered_content),
+                                start_idx=start_idx,
+                                end_idx=i,
+                            )
                         )
-                    )
 
                 if header_match:
-                    current_title = header_match.group(2)
+                    level = len(header_match.group(1))  # Number of # symbols
+                    title = header_match.group(2)
+
+                    # Update header stack based on level
+                    while header_stack and header_stack[0][0] >= level:
+                        header_stack.pop(0)
+                    header_stack.insert(0, (level, title))
+
+                    # Construct hierarchical title from stack (reversed to get correct order)
+                    current_title = " > ".join(
+                        title for _, title in reversed(header_stack)
+                    )
                     current_content = []
                     start_idx = i
+                else:
+                    current_content.append(line)
             else:
                 current_content.append(line)
 
-        # If no sections found, create one section with entire text
-        if not sections:
+        # If no sections found with content, create one section with entire text
+        if not sections and text.strip():
             sections = [
                 Section(title="", content=text, start_idx=0, end_idx=len(lines))
             ]
