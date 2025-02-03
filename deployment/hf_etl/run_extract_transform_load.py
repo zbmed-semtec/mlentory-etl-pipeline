@@ -60,9 +60,9 @@ def initialize_extractor(config_path: str) -> HFExtractor:
     tags_libraries = load_tsv_file_to_list(f"{config_path}/extract/tags_libraries.tsv")
     tags_other = load_tsv_file_to_list(f"{config_path}/extract/tags_other.tsv")
     tags_task = load_tsv_file_to_list(f"{config_path}/extract/tags_task.tsv")
-    
+
     dataset_manager = HFDatasetManager(api_token=os.getenv("HF_TOKEN"))
-    
+
     return HFExtractor(
         qa_model="sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2",
         dataset_manager=dataset_manager,
@@ -256,7 +256,7 @@ def main():
 
     # Initialize loader
     loader = initialize_load_processor(kg_files_directory)
-    
+
     # loader.clean_DBs()
 
     # Load data

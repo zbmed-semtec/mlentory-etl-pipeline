@@ -128,7 +128,7 @@ class IndexHandler:
                 index_model_entity.releaseNotes = value[0]
             elif "mlTask" in key:
                 index_model_entity.mlTask = value
-        
+
         return index_model_entity
 
     def handle_raw_data(self, raw_data: Any):

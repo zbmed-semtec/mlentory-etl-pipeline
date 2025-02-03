@@ -1,0 +1,60 @@
+name: ✨ Feature Request
+description: Suggest a new feature or enhancement
+title: "✨ feat: "
+labels: ["feature"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for suggesting a new feature! 🚀
+        
+  - type: textarea
+    id: feature-description
+    attributes:
+      label: 💡 Feature Description
+      description: What would you like to add?
+      placeholder: "A clear description of the feature..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: motivation
+    attributes:
+      label: 🎯 Motivation
+      description: Why is this feature needed?
+      placeholder: "This would help because..."
+    validations:
+      required: true
+
+  - type: dropdown
+    id: scope
+    attributes:
+      label: 🔍 Scope
+      description: What area does this feature affect?
+      options:
+        - Frontend (UI/UX)
+        - Backend (API/Database)
+        - ML Pipeline
+        - Documentation
+        - Other
+    validations:
+      required: true
+
+  - type: dropdown
+    id: priority
+    attributes:
+      label: 🎯 Priority
+      options:
+        - High
+        - Medium
+        - Low
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: terms
+    attributes:
+      label: 📜 Code of Conduct
+      options:
+        - label: I agree to follow the project's Code of Conduct
+          required: true 
