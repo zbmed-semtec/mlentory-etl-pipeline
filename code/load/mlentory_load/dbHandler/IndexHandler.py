@@ -119,12 +119,10 @@ class IndexHandler:
         index_model_entity.author = []
         index_model_entity.releaseNotes = ""
         index_model_entity.mlTask = []
-        print("INDEXING MODEL")
-        pprint.pprint(info)
         for key, value in info.items():
             if "identifier" in key:
                 index_model_entity.name = value[0].split("/")[-1]
-            elif "author" in key:
+            elif "maintainer" in key:
                 index_model_entity.author = value
             elif "releaseNotes" in key:
                 index_model_entity.releaseNotes = value[0]
