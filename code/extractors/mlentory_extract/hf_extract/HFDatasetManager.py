@@ -35,7 +35,7 @@ class HFDatasetManager:
             ValueError: If the model_cards_dataset is invalid or inaccessible
         """
         self.token = None
-        if api_token:
+        if api_token != None:
             self.token = api_token
             self.api = HfApi(token=api_token)
         else:
@@ -63,9 +63,10 @@ class HFDatasetManager:
         """
         try:
             # Load base dataset
-            dataset = load_dataset("librarian-bots/model_cards_with_metadata")[
-                "train"
-            ].to_pandas()
+            dataset = load_dataset(
+                "librarian-bots/model_cards_with_metadata",
+                revision="0b3e7a79eae8a5dd28080f06065a988ca1fbf050",
+            )["train"].to_pandas()
 
             # trim the dataset to the limit
             dataset = dataset[: min(limit, len(dataset))]
