@@ -98,7 +98,7 @@ class GraphHandler:
         Set the KG to be loaded.
         """
         self.kg = kg
-    
+
     def set_extraction_metadata(self, extraction_metadata: Graph):
         """
         Set the extraction metadata to be loaded.
@@ -560,7 +560,7 @@ class GraphHandler:
         Update search indices with new and modified models.
         """
         new_models = []
-        
+
         # Get all the nodes in the KG that are of type MLModel
         entities_in_kg = {}
         for triplet in self.kg:
@@ -572,13 +572,14 @@ class GraphHandler:
                     entities_in_kg[entity_uri][triplet[1]] = [str(triplet[2])]
                 else:
                     entities_in_kg[entity_uri][triplet[1]].append(str(triplet[2]))
-        
-        
+
         for entity_uri, entity_dict in entities_in_kg.items():
-            
+
             if "_Model_" in entity_uri:
-                index_model_entity = self.IndexHandler.create_hf_dataset_index_entity_with_dict(
-                    entity_dict, entity_uri
+                index_model_entity = (
+                    self.IndexHandler.create_hf_dataset_index_entity_with_dict(
+                        entity_dict, entity_uri
+                    )
                 )
                 # Check if model already exists in elasticsearch
                 search_result = self.IndexHandler.search(
