@@ -104,7 +104,8 @@ services:
       # - ./hf_etl/outputs/files:/app/outputs/files
       # Necessary to run docker commands inside other containers
       - /var/run/docker.sock:/var/run/docker.sock 
-      
+    environment:
+      - HF_TOKEN=${HF_TOKEN}
     deploy:
       resources:
         reservations:

@@ -9,6 +9,7 @@ from tqdm import tqdm
 import os
 import argparse
 
+from mlentory_extract.hf_extract import HFDatasetManager
 from mlentory_extract.hf_extract import HFExtractor
 from mlentory_transform.hf_transform.FieldProcessorHF import FieldProcessorHF
 from mlentory_load.core import LoadProcessor, GraphHandler
@@ -59,8 +60,12 @@ def initialize_extractor(config_path: str) -> HFExtractor:
     tags_libraries = load_tsv_file_to_list(f"{config_path}/extract/tags_libraries.tsv")
     tags_other = load_tsv_file_to_list(f"{config_path}/extract/tags_other.tsv")
     tags_task = load_tsv_file_to_list(f"{config_path}/extract/tags_task.tsv")
+    
+    dataset_manager = HFDatasetManager(api_token=os.getenv("HF_TOKEN"))
+    
     return HFExtractor(
-        qa_model="Intel/dynamic_tinybert",
+        qa_model="sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2",
+        dataset_manager=dataset_manager,
         questions=questions,
         tags_language=tags_language,
         tags_libraries=tags_libraries,
@@ -210,7 +215,7 @@ def main():
         output_dir=args.output_dir,
         save_result_in_json=False,
         save_raw_data=False,
-        update_recent=True,
+        update_recent=False,
         threads=4,
     )
 
@@ -218,20 +223,20 @@ def main():
         num_datasets=args.num_datasets,
         output_dir=args.output_dir,
         save_result_in_json=False,
-        update_recent=True,
+        update_recent=False,
         threads=4,
     )
 
     # Initialize transformer
     transformer = initialize_transform_hf(config_path)
 
-    models_kg, models_metadata = transformer.transform_HF_models(
+    models_kg, models_extraction_metadata = transformer.transform_HF_models(
         extracted_df=extracted_models_df,
         save_output_in_json=False,
         output_dir=args.output_dir,
     )
 
-    datasets_kg, datasets_metadata = transformer.transform_HF_datasets(
+    datasets_kg, datasets_extraction_metadata = transformer.transform_HF_datasets(
         extracted_df=extracted_datasets_df,
         save_output_in_json=False,
         output_dir=args.output_dir,
@@ -243,17 +248,19 @@ def main():
         output_dir=args.output_dir + "/kg",
     )
 
-    metadata_integrated = transformer.unify_graphs(
-        [models_metadata, datasets_metadata],
+    extraction_metadata_integrated = transformer.unify_graphs(
+        [models_extraction_metadata, datasets_extraction_metadata],
         save_output_in_json=True,
         output_dir=args.output_dir + "/metadata",
     )
 
     # Initialize loader
     loader = initialize_load_processor(kg_files_directory)
+    
+    # loader.clean_DBs()
 
     # Load data
-    loader.update_dbs_with_kg(metadata_integrated)
+    loader.update_dbs_with_kg(kg_integrated, extraction_metadata_integrated)
 
 
 if __name__ == "__main__":
