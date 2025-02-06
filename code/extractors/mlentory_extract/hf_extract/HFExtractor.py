@@ -25,7 +25,7 @@ class HFExtractor:
 
     def __init__(
         self,
-        qa_model: str = "Intel/dynamic_tinybert",
+        qa_model: str = "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2",
         questions: List[str] = None,
         tags_language: List[str] = None,
         tags_libraries: List[str] = None,
