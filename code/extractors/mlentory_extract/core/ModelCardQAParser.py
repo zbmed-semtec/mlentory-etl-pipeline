@@ -3,7 +3,7 @@ import torch
 import transformers
 from transformers import pipeline
 from datasets import Dataset
-
+from pprint import pprint
 from typing import Any, Dict, List, Set, Union
 
 from huggingface_hub import HfApi
@@ -89,7 +89,7 @@ class ModelCardQAParser:
 
         # Assigning the question answering pipeline
         self.qa_model = qa_model
-        self.qa_engine = QAInferenceEngine(qa_model)
+        # self.qa_engine = QAInferenceEngine(qa_model)
         self.matching_engine = QAMatchingEngine(qa_model)
 
     def load_tsv_file_to_list(self, path: str) -> Set[str]:
@@ -455,7 +455,9 @@ class ModelCardQAParser:
                 else:
                     HF_df.loc[index, question] = [
                         self.add_default_extraction_info(
-                            "No context to answer the question", "Parsed_from_HF_dataset", 1.0
+                            "No context to answer the question",
+                            "Parsed_from_HF_dataset",
+                            1.0,
                         )
                     ]
 
@@ -485,7 +487,7 @@ class ModelCardQAParser:
             if not context or context.strip() == "":
                 contexts.append(None)
                 continue
-            
+
             if "---" in context:
                 sections = context.split("---")
                 if len(sections) > 1:
@@ -525,20 +527,28 @@ class ModelCardQAParser:
                 for q_idx, q_id in enumerate(questions_to_process):
                     if relevant_sections[q_idx][0] is None:
                         # Handle empty/None context
-                        answer = [{
-                            "data": "No context to answer the question",
-                            "extraction_method": "Parsed_from_HF_dataset",
-                            "confidence": 1.0,
-                            "extraction_time": datetime.now().strftime("%Y-%m-%d_%H-%M-%S"),
-                        }]
+                        answer = [
+                            {
+                                "data": "No context to answer the question",
+                                "extraction_method": "Parsed_from_HF_dataset",
+                                "confidence": 1.0,
+                                "extraction_time": datetime.now().strftime(
+                                    "%Y-%m-%d_%H-%M-%S"
+                                ),
+                            }
+                        ]
                     else:
                         section, score = relevant_sections[q_idx][0]
-                        answer = [{
-                            "data": section.content.strip(),
-                            "extraction_method": f"Semantic Matching with {self.matching_engine.model_name}",
-                            "confidence": score,
-                            "extraction_time": datetime.now().strftime("%Y-%m-%d_%H-%M-%S"),
-                        }]
+                        answer = [
+                            {
+                                "data": section.content.strip(),
+                                "extraction_method": f"Semantic Matching with {self.matching_engine.model_name}",
+                                "confidence": score,
+                                "extraction_time": datetime.now().strftime(
+                                    "%Y-%m-%d_%H-%M-%S"
+                                ),
+                            }
+                        ]
 
                     # Store the answer in the DataFrame
                     HF_df.loc[df_idx, f"q_id_{q_id}"] = answer

@@ -1,0 +1,83 @@
+name: 🐛 Bug Report
+description: Report a bug
+title: "🐛 fix: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting this bug! 🔍
+        
+  - type: textarea
+    id: bug-description
+    attributes:
+      label: 🐞 What's Wrong?
+      description: Describe the bug and how it affects you
+      placeholder: "The bug happens when..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: 🔄 Steps to Reproduce
+      description: How can we reproduce this issue?
+      placeholder: |
+        1. Go to...
+        2. Click on...
+        3. Error appears...
+    validations:
+      required: true
+
+  - type: dropdown
+    id: scope
+    attributes:
+      label: 🔍 Scope
+      description: Where is the bug occurring?
+      options:
+        - Frontend (UI/UX)
+        - Backend (API/Database)
+        - ML Pipeline
+        - Documentation
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: environment
+    attributes:
+      label: 💻 Environment
+      description: What's your setup?
+      value: |
+        - OS: [e.g. Ubuntu 20.04]
+        - Python: [e.g. 3.8.10]
+        - Browser: [if applicable]
+    validations:
+      required: true
+
+  - type: dropdown
+    id: severity
+    attributes:
+      label: 🎯 Severity
+      options:
+        - Critical ⚠️
+        - High
+        - Medium
+        - Low
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: 📝 Error Logs
+      description: Any relevant error messages or logs
+      render: shell
+
+  - type: checkboxes
+    id: terms
+    attributes:
+      label: 📜 Code of Conduct
+      options:
+        - label: I agree to follow the project's Code of Conduct
+          required: true 
