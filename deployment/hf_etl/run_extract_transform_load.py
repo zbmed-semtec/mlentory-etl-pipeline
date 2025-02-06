@@ -56,8 +56,11 @@ def initialize_extractor(config_path: str) -> HFExtractor:
         f"{config_path}/extract/tags_libraries.tsv")
     tags_other = load_tsv_file_to_list(f"{config_path}/extract/tags_other.tsv")
     tags_task = load_tsv_file_to_list(f"{config_path}/extract/tags_task.tsv")
+    
+    qa_model = "sentence-transformers/all-mpnet-base-v2"
+    
     return HFExtractor(
-        qa_model="Intel/dynamic_tinybert",
+        qa_model=qa_model,
         questions=questions,
         tags_language=tags_language,
         tags_libraries=tags_libraries,
@@ -154,7 +157,7 @@ def parse_args() -> argparse.Namespace:
         help="Save the results of the extraction phase",
     )
     parser.add_argument(
-        "--save-transformation",
+        "--save-transformation", "-st",
         action="store_true",
         default=False,
         help="Save the results of the transformation phase",
