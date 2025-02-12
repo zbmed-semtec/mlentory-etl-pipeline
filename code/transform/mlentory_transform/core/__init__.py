@@ -1,4 +1,9 @@
-from .MlentoryTransform import MlentoryTransform
-from .KnoledgeGraphHandler import KnowledgeGraphHandler
+"""Core module for MLentory transform package."""
 
-__all__ = ["MlentoryTransform", "KnowledgeGraphHandler"]
+from .KnoledgeGraphHandler import KnowledgeGraphHandler
+from .MlentoryTransform import MlentoryTransform
+
+__all__ = [
+    "MlentoryTransform",
+    "KnowledgeGraphHandler"
+]

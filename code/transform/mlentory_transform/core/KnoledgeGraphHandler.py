@@ -4,6 +4,7 @@ import pandas as pd
 from rdflib import Graph, Literal, Namespace, URIRef, BNode
 from rdflib.namespace import RDF, RDFS, XSD
 from datetime import datetime
+from ..utils.enums import SchemasURL, EntityType, ExtractionMethod
 
 
 class KnowledgeGraphHandler:
@@ -71,10 +72,10 @@ class KnowledgeGraphHandler:
         # Define and bind all required namespaces
         self.namespaces = {
             "base": self.base_namespace,
-            "schema": Namespace("http://schema.org/"),
-            "fair4ml": Namespace("http://w3id.org/fair4ml/"),
-            "codemeta": Namespace("https://w3id.org/codemeta/"),
-            "cr": Namespace("https://w3id.org/croissant/"),
+            "schema": Namespace(SchemasURL.SCHEMA),
+            "fair4ml": Namespace(SchemasURL.FAIR4ML),
+            "codemeta": Namespace(SchemasURL.CODEMETA),
+            "cr": Namespace(SchemasURL.CROISSANT),
             "rdf": RDF,
             "rdfs": RDFS,
             "xsd": XSD,

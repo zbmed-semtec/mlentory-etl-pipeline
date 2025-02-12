@@ -3,6 +3,7 @@ from typing import List, Dict
 from tqdm import tqdm
 import os
 from datetime import datetime
+from ..utils.enums import Platform, SchemasURL
 
 from .FieldProcessorHF import FieldProcessorHF
 

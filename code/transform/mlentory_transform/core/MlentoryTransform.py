@@ -6,6 +6,7 @@ from tqdm import tqdm
 import os
 from ..hf_transform.TransformHF import TransformHF
 from .KnoledgeGraphHandler import KnowledgeGraphHandler
+from ..utils.enums import Platform, ExtractionMethod
 
 
 class MlentoryTransform:
@@ -24,7 +25,7 @@ class MlentoryTransform:
         transformations (pd.DataFrame): Mapping rules for data transformation
     """
 
-    def __init__(self, kg_handler, transform_hf):
+    def __init__(self, kg_handler: KnowledgeGraphHandler, transform_hf: TransformHF):
         """
         Initialize the transformer with schema and transformation rules.
 
@@ -76,12 +77,14 @@ class MlentoryTransform:
         # Transform the dataframe to a knowledge graph
         knowledge_graph, metadata_graph = (
             self.kg_handler.dataframe_to_graph_M4ML_schema(
-                df=transformed_df, identifier_column="schema.org:name", platform="HF"
+                df=transformed_df, 
+                identifier_column="schema.org:name", 
+                platform=Platform.HUGGING_FACE.value
             )
         )
 
-        self.current_sources["HF"] = knowledge_graph
-        self.current_sources["HF_metadata"] = metadata_graph
+        self.current_sources[Platform.HUGGING_FACE.value] = knowledge_graph
+        self.current_sources[f"{Platform.HUGGING_FACE.value}_metadata"] = metadata_graph
 
         if save_output_in_json:
             current_date = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
@@ -125,12 +128,14 @@ class MlentoryTransform:
         # Transform the dataframe to a knowledge graph
         knowledge_graph, metadata_graph = (
             self.kg_handler.dataframe_to_graph_Croissant_schema(
-                df=extracted_df, identifier_column="datasetId", platform="HF"
+                df=extracted_df, 
+                identifier_column="datasetId", 
+                platform=Platform.HUGGING_FACE.value
             )
         )
 
-        self.current_sources["HF_dataset"] = knowledge_graph
-        self.current_sources["HF_dataset_metadata"] = metadata_graph
+        self.current_sources[f"{Platform.HUGGING_FACE.value}_dataset"] = knowledge_graph
+        self.current_sources[f"{Platform.HUGGING_FACE.value}_dataset_metadata"] = metadata_graph
 
         if save_output_in_json:
             current_date = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")

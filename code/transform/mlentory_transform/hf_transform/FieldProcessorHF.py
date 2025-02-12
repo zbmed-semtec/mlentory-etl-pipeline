@@ -5,6 +5,7 @@ import pandas as pd
 import json
 import ast
 from datetime import datetime
+from ..utils.enums import ExtractionMethod
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -120,8 +121,7 @@ class FieldProcessorHF:
         print("Checking building links: ",self.find_value_in_HF("q_id_0"),"\n")
         model_name = self.find_value_in_HF("q_id_0")[0]["data"]
         link = "https://huggingface.co/" + model_name + tail_info
-        # print("Link: ",link)
-        return [self.add_default_extraction_info(link, "Built in transform stage", 1.0)]
+        return [self.add_default_extraction_info(link, ExtractionMethod.BUILT_IN_TRANSFORM.value, 1.0)]
 
     def process_softwareRequirements(self) -> List:
         """
@@ -130,19 +130,15 @@ class FieldProcessorHF:
         Returns:
             List: List of software requirements with extraction metadata
         """
-
         q17_values = self.find_value_in_HF("q_id_17")
-
         values = [q17_values[0]]
-
         values.append(
             self.add_default_extraction_info(
                 data="Python",
-                extraction_method="Added in transform stage",
+                extraction_method=ExtractionMethod.BUILT_IN_TRANSFORM.value,
                 confidence=1.0,
             )
         )
-
         return values
 
     def process_trainedOn(self) -> List:
@@ -179,7 +175,7 @@ class FieldProcessorHF:
         return [
             self.add_default_extraction_info(
                 data="Not extracted",
-                extraction_method="None",
+                extraction_method=ExtractionMethod.NOT_EXTRACTED.value,
                 confidence=1.0,
             )
         ]
@@ -192,7 +188,7 @@ class FieldProcessorHF:
 
         Args:
             data (str): The extracted information
-            extraction_method (str): Method used for extraction
+            extraction_method (string): Method used for extraction
             confidence (float): Confidence score of the extraction
 
         Returns:
