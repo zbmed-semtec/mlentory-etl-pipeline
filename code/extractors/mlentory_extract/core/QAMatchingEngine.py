@@ -1,3 +1,4 @@
+import os
 import torch
 import re
 from typing import List, Dict, Tuple
@@ -40,11 +41,13 @@ class QAMatchingEngine:
             torch.backends.cuda.matmul.allow_tf32 = True
             torch.backends.cudnn.allow_tf32 = True
 
+        # print(os.getenv("HF_TOKEN"))
         # Load model in half precision for CUDA, regular precision for CPU
         self.model = AutoModel.from_pretrained(
             embedding_model,
             torch_dtype=torch.float16 if self.device.type == "cuda" else torch.float32,
             trust_remote_code=True,
+            token=os.getenv("HF_TOKEN")
         ).to(self.device)
 
         # Load tokenizer with caching
