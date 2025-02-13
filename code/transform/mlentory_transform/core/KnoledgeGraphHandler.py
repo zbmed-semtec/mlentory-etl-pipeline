@@ -179,7 +179,7 @@ class KnowledgeGraphHandler:
             entity_id = (
                 row[identifier_column][0]["data"] if identifier_column else str(idx)
             )
-            entity_uri = self.base_namespace[f"{platform}_Model_{entity_id}"]
+            entity_uri = self.base_namespace[f"?platform={platform}&type=Model&id={entity_id.replace('/', '___')}"]
 
             # Add entity type with metadata
             self.add_triple_with_metadata(
@@ -283,7 +283,7 @@ class KnowledgeGraphHandler:
                 try:
                     dataset_uri = self.base_namespace[f"?platform={platform}&type=Dataset&id={value.replace('/', '___')}"]
                     dataset_text_uri = dataset_uri.n3()
-                    self.graph.add((dataset_uri, RDF.type, self.namespaces["cr"]["Dataset"]))
+                    self.graph.add((dataset_uri, RDF.type, self.namespaces["schema"]["Dataset"]))
                     objects.append(dataset_uri)
                 except:
                     objects.append(Literal(value, datatype=XSD.string))
