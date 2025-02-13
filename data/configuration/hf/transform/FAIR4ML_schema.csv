@@ -12,7 +12,7 @@ FAIR4ML,fair4ml:sharedBy,Person or Organization,Person or Organization
 FAIR4ML,fair4ml:testedOn,Dataset or croissant:Dataset,Dataset or croissant:Dataset
 FAIR4ML,fair4ml:trainedOn,Dataset or croissant:Dataset,Dataset or croissant:Dataset 
 FAIR4ML,fair4ml:usageInstructions,Text,Text
-FAIR4ML,fair4ml:validatedOn,Dataset or croissant:Dataset,Text
+FAIR4ML,fair4ml:validatedOn,Dataset or croissant:Dataset, Dataset or croissant:Dataset or Text
 schema.org,distribution,schema:MediaObject,Text
 schema.org,memoryRequirements,Text or URL,Text or URL
 schema.org,operatingSystem,Text,Text
@@ -23,11 +23,11 @@ schema.org,softwareRequirements,Text or URL,Text or URL
 schema.org,storageRequirements,Text or URL,Text or URL
 codemeta,codemeta:buildInstructions,URL,Text
 codemeta,codemeta:developmentStatus,Text,Text
-codemeta,codemeta:issueTracker,URL,Text
-codemeta,codemeta:readme,URL,Text
+codemeta,codemeta:issueTracker,URL,URL
+codemeta,codemeta:readme,URL,URL
 codemeta,codemeta:referencePublication,ScholarlyArticle,ScholarlyArticle
 schema.org,archivedAt,URL or WebPage,URL or WebPage
-schema.org,author,Organization or Person,Organization or Person
+schema.org,author,Organization or Person,Text
 schema.org,citation,CreativeWork or Text,CreativeWork or Text
 schema.org,conditionsOfAccess,Text,Text
 schema.org,contributor,Organization or Person,Text
