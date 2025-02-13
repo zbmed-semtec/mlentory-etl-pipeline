@@ -76,7 +76,7 @@ class MlentoryTransform:
 
         # Transform the dataframe to a knowledge graph
         knowledge_graph, metadata_graph = (
-            self.kg_handler.dataframe_to_graph_M4ML_schema(
+            self.kg_handler.dataframe_to_graph_FAIR4ML_schema(
                 df=transformed_df, 
                 identifier_column="schema.org:name", 
                 platform=Platform.HUGGING_FACE.value

@@ -1,16 +1,16 @@
-Source	Property	Range
-FAIR4ML	fair4ml:ethicalLegalSocial	Text
-FAIR4ML	fair4ml:evaluatedOn	Dataset, croissant:Dataset
-FAIR4ML	fair4ml:fineTunedFrom	fair4ml:MLModel
-FAIR4ML	fair4ml:hasCO2eEmissions	Text
-FAIR4ML	fair4ml:intendedUse	Text or DefinedTerm or URL
-FAIR4ML	fair4ml:mlTask	Text or DefinedTerm
-FAIR4ML	fair4ml:modelCategory	Text or DefinedTerm
-FAIR4ML	fair4ml:modelRisks	Text
-FAIR4ML	fair4ml:sharedBy	Person or Organization
-FAIR4ML	fair4ml:testedOn	Dataset, croissant:Dataset
-FAIR4ML	fair4ml:trainedOn	Dataset, croissant:Dataset
-FAIR4ML	fair4ml:usageInstructions	Text
+Source	Property	Range	Description
+FAIR4ML	fair4ml:ethicalLegalSocial	Text	Considerations with regards to ethical legal and social aspects.
+FAIR4ML	fair4ml:evaluatedOn	Dataset, croissant:Dataset	Dataset used for evaluating the model. 
+FAIR4ML	fair4ml:fineTunedFrom	fair4ml:MLModel	Relationship to point to the source model used for fine tuning (if this model was finetuned from another one).
+FAIR4ML	fair4ml:hasCO2eEmissions	Text	Amount of CO2 equivalent emissions produced by training the model. The unit should be included in the field.
+FAIR4ML	fair4ml:intendedUse	Text or DefinedTerm or URL	Purpose and intended use stated to enable users to make a decision as to the suitability of this creative work for their intended use.
+FAIR4ML	fair4ml:mlTask	Text or DefinedTerm	The ML task that the model is designed to perform.
+FAIR4ML	fair4ml:modelCategory	Text or DefinedTerm	Category of the model.
+FAIR4ML	fair4ml:modelRisks	Text	Potential risks associated with the model.
+FAIR4ML	fair4ml:sharedBy	Person or Organization	Person or Organization that shared the model.
+FAIR4ML	fair4ml:testedOn	Dataset, croissant:Dataset	Dataset used for testing the model.
+FAIR4ML	fair4ml:trainedOn	Dataset, croissant:Dataset	Dataset used for training the model.
+FAIR4ML	fair4ml:usageInstructions	Text	Instructions for using the model.
 FAIR4ML	fair4ml:validatedOn	Dataset, croissant:Dataset
 schema.org	distribution	schema:MediaObject
 schema.org	memoryRequirements	Text or URL

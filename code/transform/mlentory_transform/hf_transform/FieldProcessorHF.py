@@ -22,7 +22,7 @@ class FieldProcessorHF:
     - Support batch processing of model data
 
     Attributes:
-        M4ML_schema (pd.DataFrame): Target schema for the transformed data
+        FAIR4ML_schema (pd.DataFrame): Target schema for the transformed data
         transformations (pd.DataFrame): Mapping of source to target fields with transformation rules
         transformation_functions (dict): Available transformation functions
         current_row (pd.Series): Currently processed row of data
@@ -36,7 +36,7 @@ class FieldProcessorHF:
             new_schema (pd.DataFrame): The target schema to transform data into
             transformations (pd.DataFrame): The transformation rules to apply
         """
-        self.M4ML_schema = new_schema
+        self.FAIR4ML_schema = new_schema
         self.transformations = transformations
         # Map of available transformation functions
         self.transformation_functions = {

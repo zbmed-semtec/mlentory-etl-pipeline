@@ -84,7 +84,7 @@ def initialize_transform() -> TransformHF:
     """
     config_path = "config/hf/transform"
     new_schema = pd.read_csv(
-        f"{config_path}/M4ML_schema.csv", sep=",", lineterminator="\n"
+        f"{config_path}/FAIR4ML_schema.csv", sep=",", lineterminator="\n"
     )
     transformations = pd.read_csv(
         f"{config_path}/column_transformations.csv",
@@ -93,7 +93,7 @@ def initialize_transform() -> TransformHF:
     )
 
     kg_handler = KnowledgeGraphHandler(
-        M4ML_schema=new_schema, base_namespace="http://mlentory.com/mlentory_graph/"
+        FAIR4ML_schema=new_schema, base_namespace="http://mlentory.com/mlentory_graph/"
     )
     transform_hf = TransformHF(new_schema, transformations)
     transformer = MlentoryTransform(kg_handler, transform_hf)

@@ -1,4 +1,5 @@
 Source,Property,Range,Real_Range
+FAIR4ML,fair4ml:legal,Text,Text
 FAIR4ML,fair4ml:ethicalLegalSocial,Text,Text
 FAIR4ML,fair4ml:evaluatedOn,Dataset or croissant:Dataset,Dataset or croissant:Dataset
 FAIR4ML,fair4ml:fineTunedFrom,fair4ml:MLModel,Text or fair4ml:MLModel
@@ -9,7 +10,7 @@ FAIR4ML,fair4ml:modelCategory,Text or DefinedTerm,Text or DefinedTerm
 FAIR4ML,fair4ml:modelRisks,Text,Text
 FAIR4ML,fair4ml:sharedBy,Person or Organization,Person or Organization
 FAIR4ML,fair4ml:testedOn,Dataset or croissant:Dataset,Dataset or croissant:Dataset
-FAIR4ML,fair4ml:trainedOn,Dataset or croissant:Dataset,Dataset or croissant:Dataset
+FAIR4ML,fair4ml:trainedOn,Dataset or croissant:Dataset,Dataset or croissant:Dataset 
 FAIR4ML,fair4ml:usageInstructions,Text,Text
 FAIR4ML,fair4ml:validatedOn,Dataset or croissant:Dataset,Text
 schema.org,distribution,schema:MediaObject,Text

@@ -24,7 +24,7 @@ class TestFieldProcessorHF:
             current_dir, "..", "..", "..", "config", "hf", "transform"
         )
 
-        new_schema = pd.read_csv(f"{config_path}/M4ML_schema.tsv", sep="\t")
+        new_schema = pd.read_csv(f"{config_path}/FAIR4ML_schema.tsv", sep="\t")
         transformations = pd.read_csv(
             f"{config_path}/column_transformations.csv", lineterminator="\n", sep=","
         )

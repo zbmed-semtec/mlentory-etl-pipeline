@@ -43,7 +43,7 @@ class KnowledgeGraphHandler:
     def __init__(
         self,
         base_namespace: str = "http://example.org/",
-        M4ML_schema: pd.DataFrame = None,
+        FAIR4ML_schema: pd.DataFrame = None,
     ) -> None:
         """
         Initialize the KnowledgeGraphHandler.
@@ -51,14 +51,14 @@ class KnowledgeGraphHandler:
         Args:
             base_namespace (str): The base URI namespace for the knowledge graph entities.
                 Default: "http://example.org/"
-            M4ML_schema (pd.DataFrame): DataFrame containing the M4ML schema with columns
+            FAIR4ML_schema (pd.DataFrame): DataFrame containing the FAIR4ML schema with columns
                 'Source', 'Property', and 'Range'.
 
         Raises:
-            ValueError: If the base_namespace is not a valid URI string or if M4ML_schema
+            ValueError: If the base_namespace is not a valid URI string or if FAIR4ML_schema
                 has an invalid format.
         """
-        self.M4ML_schema = M4ML_schema
+        self.FAIR4ML_schema = FAIR4ML_schema
 
         # Initialize base namespace and graph
         self.base_namespace = Namespace(base_namespace)
@@ -148,14 +148,14 @@ class KnowledgeGraphHandler:
 
         return self.graph, self.metadata_graph
 
-    def dataframe_to_graph_M4ML_schema(
+    def dataframe_to_graph_FAIR4ML_schema(
         self,
         df: pd.DataFrame,
         identifier_column: Optional[str] = None,
         platform: str = None,
     ) -> Graph:
         """
-        Function to convert a DataFrame to a Knowledge Graph using the M4ML schema.
+        Function to convert a DataFrame to a Knowledge Graph using the FAIR4ML schema.
 
         Args:
             df (pd.DataFrame): The DataFrame to convert to a Knowledge Graph.
@@ -196,7 +196,7 @@ class KnowledgeGraphHandler:
                     values = row[column]
 
                     for value_info in values:
-                        rdf_objects = self.generate_objects_for_M4ML_schema(
+                        rdf_objects = self.generate_objects_for_FAIR4ML_schema(
                             column, value_info["data"], platform
                         )
                         for rdf_object in rdf_objects:
@@ -215,7 +215,7 @@ class KnowledgeGraphHandler:
 
         return self.graph, self.metadata_graph
 
-    def generate_objects_for_M4ML_schema(
+    def generate_objects_for_FAIR4ML_schema(
         self, predicate: str, values: List[Dict], platform: str
     ) -> List[Literal]:
         """
@@ -234,7 +234,7 @@ class KnowledgeGraphHandler:
         Example:
             >>> predicate = "schema.org:dateCreated"
             >>> values = [{'data': 'user/model_1', 'extraction_method': 'Parsed_from_HF_dataset', 'confidence': 1.0, 'extraction_time': '2025-01-24_07-43-32'}]
-            >>> objects = self.generate_objects_for_M4ML_schema(predicate, values,"HF")
+            >>> objects = self.generate_objects_for_FAIR4ML_schema(predicate, values,"HF")
             >>> print(objects)
             [Literal('2023-01-01', datatype=XSD.date)]
         """
@@ -245,8 +245,8 @@ class KnowledgeGraphHandler:
             values = [values]
 
         # Find the range where the predicate contains the Property value
-        predicate_info = self.M4ML_schema.loc[
-            self.M4ML_schema["Property"].apply(lambda x: x in predicate)
+        predicate_info = self.FAIR4ML_schema.loc[
+            self.FAIR4ML_schema["Property"].apply(lambda x: x in predicate)
         ]
 
         range_value = predicate_info["Real_Range"].values[0]
@@ -682,7 +682,7 @@ class KnowledgeGraphHandler:
         Reset the internal graphs while preserving namespace and schema configurations.
 
         This method clears both the main graph and metadata graph while maintaining
-        the initialized namespaces and M4ML schema.
+        the initialized namespaces and FAIR4ML schema.
 
         Example:
             >>> kg_handler.reset_graphs()

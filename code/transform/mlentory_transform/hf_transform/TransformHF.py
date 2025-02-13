@@ -93,7 +93,7 @@ class TransformHF:
         self, dataset_id: str, croissant_metadata: dict, extraction_metadata: dict
     ) -> List[dict]:
         """
-        Transform Croissant metadata into rows compatible with M4ML schema.
+        Transform Croissant metadata into rows compatible with FAIR4ML schema.
 
         Args:
             dataset_id (str): The HuggingFace dataset ID
