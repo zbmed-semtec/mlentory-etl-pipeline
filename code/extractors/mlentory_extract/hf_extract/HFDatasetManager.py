@@ -172,7 +172,7 @@ class HFDatasetManager:
         # Fetch initial batch of datasets (100x limit to have enough valid ones)
         datasets = list(
             itertools.islice(
-                self.api.list_datasets(sort="lastModified", direction=-1), limit + 10000
+                self.api.list_datasets(sort="lastModified", direction=-1), limit + 1000
             )
         )
 
