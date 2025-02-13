@@ -43,7 +43,7 @@ class KnowledgeGraphHandler:
     def __init__(
         self,
         base_namespace: str = "http://example.org/",
-        FAIR4ML_schema: pd.DataFrame = None,
+        FAIR4ML_schema_data: pd.DataFrame = None,
     ) -> None:
         """
         Initialize the KnowledgeGraphHandler.
@@ -51,14 +51,14 @@ class KnowledgeGraphHandler:
         Args:
             base_namespace (str): The base URI namespace for the knowledge graph entities.
                 Default: "http://example.org/"
-            FAIR4ML_schema (pd.DataFrame): DataFrame containing the FAIR4ML schema with columns
+            FAIR4ML_schema_data (pd.DataFrame): DataFrame containing the FAIR4ML schema with columns
                 'Source', 'Property', and 'Range'.
 
         Raises:
-            ValueError: If the base_namespace is not a valid URI string or if FAIR4ML_schema
+            ValueError: If the base_namespace is not a valid URI string or if FAIR4ML_schema_data
                 has an invalid format.
         """
-        self.FAIR4ML_schema = FAIR4ML_schema
+        self.FAIR4ML_schema_data = FAIR4ML_schema_data
 
         # Initialize base namespace and graph
         self.base_namespace = Namespace(base_namespace)
@@ -72,10 +72,10 @@ class KnowledgeGraphHandler:
         # Define and bind all required namespaces
         self.namespaces = {
             "base": self.base_namespace,
-            "schema": Namespace(SchemasURL.SCHEMA),
-            "fair4ml": Namespace(SchemasURL.FAIR4ML),
-            "codemeta": Namespace(SchemasURL.CODEMETA),
-            "cr": Namespace(SchemasURL.CROISSANT),
+            "schema": Namespace(SchemasURL.SCHEMA.value),
+            "fair4ml": Namespace(SchemasURL.FAIR4ML.value),
+            "codemeta": Namespace(SchemasURL.CODEMETA.value),
+            "cr": Namespace(SchemasURL.CROISSANT.value),
             "rdf": RDF,
             "rdfs": RDFS,
             "xsd": XSD,
@@ -185,11 +185,11 @@ class KnowledgeGraphHandler:
             self.add_triple_with_metadata(
                 entity_uri,
                 RDF.type,
-                self.base_namespace[f"{platform}_Model"],
+                self.namespaces["fair4ml"]["ML_Model"],
                 {"extraction_method": "System", "confidence": 1.0},
             )
 
-            # Add properties
+            # Go through the properties of the model
             for column in df.columns:
                 if column != identifier_column:
                     predicate = self.get_predicate_uri(column)
@@ -245,8 +245,8 @@ class KnowledgeGraphHandler:
             values = [values]
 
         # Find the range where the predicate contains the Property value
-        predicate_info = self.FAIR4ML_schema.loc[
-            self.FAIR4ML_schema["Property"].apply(lambda x: x in predicate)
+        predicate_info = self.FAIR4ML_schema_data.loc[
+            self.FAIR4ML_schema_data["Property"].apply(lambda x: x in predicate)
         ]
 
         range_value = predicate_info["Real_Range"].values[0]
@@ -279,10 +279,20 @@ class KnowledgeGraphHandler:
                 objects.append(Literal(formatted_dt, datatype=XSD.dateTime))
 
             elif "Dataset" in range_value:
-                objects.append(Literal(value, datatype=XSD.string))
+                #Check if the value can be encoded in a URI
+                try:
+                    dataset_uri = self.base_namespace[f"?platform={platform}&type=Dataset&id={value.replace('/', '___')}"]
+                    dataset_text_uri = dataset_uri.n3()
+                    self.graph.add((dataset_uri, RDF.type, self.namespaces["cr"]["Dataset"]))
+                    objects.append(dataset_uri)
+                except:
+                    objects.append(Literal(value, datatype=XSD.string))
 
             elif "ScholarlyArticle" in range_value:
-                objects.append(self.base_namespace[f"{platform}_Article_{value}"])
+                scholarly_article_uri = self.base_namespace[f"?platform={platform}&type=ScholarlyArticle&id={value.replace('/', '___')}"]
+                self.graph.add((scholarly_article_uri, RDF.type, self.namespaces["schema"]["ScholarlyArticle"]))
+                self.graph.add((scholarly_article_uri, self.namespaces["schema"]["url"], Literal("https://arxiv.org/abs/"+value, datatype=XSD.string)))
+                objects.append(scholarly_article_uri)
 
             elif "Boolean" in range_value:
                 objects.append(Literal(bool(value), datatype=XSD.boolean))
@@ -290,8 +300,20 @@ class KnowledgeGraphHandler:
             elif "URL" in range_value:
                 objects.append(URIRef(value))
 
-            elif "Person" in range_value or "Organization" in range_value:
-                objects.append(Literal(value, datatype=XSD.string))
+            elif "Person" in range_value:
+                person_uri = self.base_namespace[f"?platform={platform}&type=Person&id={value.replace('/', '___')}"]
+                self.graph.add((person_uri, RDF.type, self.namespaces["schema"]["Person"]))
+                self.graph.add((person_uri, self.namespaces["schema"]["name"], Literal(value, datatype=XSD.string)))
+                self.graph.add((person_uri, self.namespaces["schema"]["url"], Literal("https://huggingface.co/"+value, datatype=XSD.string)))
+                objects.append(person_uri)
+                
+            elif "Organization" in range_value:
+                organization_uri = self.base_namespace[f"?platform={platform}&type=Organization&id={value.replace('/', '___')}"]
+                self.graph.add((organization_uri, RDF.type, self.namespaces["schema"]["Organization"]))
+                self.graph.add((organization_uri, self.namespaces["schema"]["name"], Literal(value, datatype=XSD.string)))
+                self.graph.add((organization_uri, self.namespaces["schema"]["url"], Literal("https://huggingface.co/"+value, datatype=XSD.string)))
+                objects.append(organization_uri)
+                
 
         return objects
 
@@ -585,12 +607,12 @@ class KnowledgeGraphHandler:
             for field_node in temp_graph.subjects(RDF.type, field_type):
                 if isinstance(field_node, URIRef):
                     # Extract the original ID path component
-                    original_path = str(field_node).split("/")[-1]
+                    original_type = str(field_node).split("/")[-1]
 
                     # Create new ID with dataset prefix
-                    dataset_id = row["datasetId"].replace("/", "_")
-                    new_id = f"{dataset_id}/{original_path}"
-                    new_uri = URIRef(f"{self.base_namespace}{new_id}")
+                    dataset_id = row["datasetId"].replace("/", "___")
+                    new_id = f"{dataset_id}_{original_type}"
+                    new_uri = self.base_namespace[f"?platform={platform}&type={original_type}&id={new_id}"]
 
                     # Replace all occurrences in the graph
                     self.replace_node(
@@ -643,8 +665,10 @@ class KnowledgeGraphHandler:
 
         if new_uri is None and isinstance(new_id, str):
             if not new_id.startswith("http"):
+                new_id = new_id.replace(' ', '_')
+                new_id = new_id.replace('/', '___')
                 new_uri = self.base_namespace[
-                    f"{platform}_{type.split('/')[-1]}_{new_id.replace(' ', '_')}"
+                    f"?platform={platform}&type={type.split('/')[-1]}&id={new_id}"
                 ]
             else:
                 new_uri = URIRef(new_id.replace(" ", "_"))
