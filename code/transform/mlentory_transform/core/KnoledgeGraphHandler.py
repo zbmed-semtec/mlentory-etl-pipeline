@@ -4,6 +4,8 @@ import pandas as pd
 from rdflib import Graph, Literal, Namespace, URIRef, BNode
 from rdflib.namespace import RDF, RDFS, XSD
 from datetime import datetime
+import hashlib
+import json
 from ..utils.enums import SchemasURL, EntityType, ExtractionMethod
 
 
@@ -179,7 +181,10 @@ class KnowledgeGraphHandler:
             entity_id = (
                 row[identifier_column][0]["data"] if identifier_column else str(idx)
             )
-            entity_uri = self.base_namespace[f"?platform={platform}&type=Model&id={entity_id.replace('/', '___')}"]
+            
+            id_hash = self.generate_entity_hash(platform, "Model", entity_id)
+            entity_uri = self.base_namespace[id_hash]
+            
 
             # Add entity type with metadata
             self.add_triple_with_metadata(
@@ -281,15 +286,16 @@ class KnowledgeGraphHandler:
             elif "Dataset" in range_value:
                 #Check if the value can be encoded in a URI
                 try:
-                    dataset_uri = self.base_namespace[f"?platform={platform}&type=Dataset&id={value.replace('/', '___')}"]
-                    dataset_text_uri = dataset_uri.n3()
+                    id_hash = self.generate_entity_hash(platform, "Dataset", value)
+                    dataset_uri = self.base_namespace[id_hash]
                     self.graph.add((dataset_uri, RDF.type, self.namespaces["schema"]["Dataset"]))
                     objects.append(dataset_uri)
                 except:
                     objects.append(Literal(value, datatype=XSD.string))
 
             elif "ScholarlyArticle" in range_value:
-                scholarly_article_uri = self.base_namespace[f"?platform={platform}&type=ScholarlyArticle&id={value.replace('/', '___')}"]
+                id_hash = self.generate_entity_hash(platform, "ScholarlyArticle", value)
+                scholarly_article_uri = self.base_namespace[id_hash]
                 self.graph.add((scholarly_article_uri, RDF.type, self.namespaces["schema"]["ScholarlyArticle"]))
                 self.graph.add((scholarly_article_uri, self.namespaces["schema"]["url"], Literal("https://arxiv.org/abs/"+value, datatype=XSD.string)))
                 objects.append(scholarly_article_uri)
@@ -301,14 +307,16 @@ class KnowledgeGraphHandler:
                 objects.append(URIRef(value))
 
             elif "Person" in range_value:
-                person_uri = self.base_namespace[f"?platform={platform}&type=Person&id={value.replace('/', '___')}"]
+                id_hash = self.generate_entity_hash(platform, "Person", value)
+                person_uri = self.base_namespace[id_hash]
                 self.graph.add((person_uri, RDF.type, self.namespaces["schema"]["Person"]))
                 self.graph.add((person_uri, self.namespaces["schema"]["name"], Literal(value, datatype=XSD.string)))
                 self.graph.add((person_uri, self.namespaces["schema"]["url"], Literal("https://huggingface.co/"+value, datatype=XSD.string)))
                 objects.append(person_uri)
                 
             elif "Organization" in range_value:
-                organization_uri = self.base_namespace[f"?platform={platform}&type=Organization&id={value.replace('/', '___')}"]
+                id_hash = self.generate_entity_hash(platform, "Organization", value)
+                organization_uri = self.base_namespace[id_hash]
                 self.graph.add((organization_uri, RDF.type, self.namespaces["schema"]["Organization"]))
                 self.graph.add((organization_uri, self.namespaces["schema"]["name"], Literal(value, datatype=XSD.string)))
                 self.graph.add((organization_uri, self.namespaces["schema"]["url"], Literal("https://huggingface.co/"+value, datatype=XSD.string)))
@@ -622,6 +630,37 @@ class KnowledgeGraphHandler:
                         node_type=field_type,
                     )
 
+    def generate_entity_hash(self, platform: str, entity_type: str, entity_id: str) -> str:
+        """
+        Generate a consistent hash from entity properties.
+
+        Args:
+            platform (str): The platform identifier (e.g., 'HF')
+            entity_type (str): The type of entity (e.g., 'Dataset', 'Person')
+            entity_id (str): The unique identifier for the entity
+
+        Returns:
+            str: A SHA-256 hash of the concatenated properties
+
+        Example:
+            >>> hash = kg_handler.generate_entity_hash('HF', 'Dataset', 'dataset1')
+            >>> print(hash)
+            '8a1c0c50e3e4f0b8a9d5c9e8b7a6f5d4c3b2a1'
+        """
+        # Create a sorted dictionary of properties to ensure consistent hashing
+        properties = {
+            "platform": platform,
+            "type": entity_type,
+            "id": entity_id
+        }
+        
+        # Convert to JSON string to ensure consistent serialization
+        properties_str = json.dumps(properties, sort_keys=True)
+        
+        # Generate SHA-256 hash
+        hash_obj = hashlib.sha256(properties_str.encode())
+        return hash_obj.hexdigest()
+
     def replace_node(
         self,
         old_id: Union[str, URIRef],
@@ -666,10 +705,10 @@ class KnowledgeGraphHandler:
         if new_uri is None and isinstance(new_id, str):
             if not new_id.startswith("http"):
                 new_id = new_id.replace(' ', '_')
-                new_id = new_id.replace('/', '___')
-                new_uri = self.base_namespace[
-                    f"?platform={platform}&type={type.split('/')[-1]}&id={new_id}"
-                ]
+                entity_type = type.split('/')[-1]
+                # Generate hash for the entity
+                entity_hash = self.generate_entity_hash(platform, entity_type, new_id)
+                new_uri = self.base_namespace[entity_hash]
             else:
                 new_uri = URIRef(new_id.replace(" ", "_"))
 

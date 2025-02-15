@@ -12,6 +12,7 @@ from pandas import Timestamp
 from tqdm import tqdm
 from datetime import datetime
 from typing import Callable, List, Dict, Set
+import pprint
 
 from mlentory_load.dbHandler import SQLHandler, RDFHandler, IndexHandler
 from mlentory_load.core.Entities import HFModel
@@ -566,16 +567,18 @@ class GraphHandler:
         for triplet in self.kg:
             entity_uri = str(triplet[0].n3())
             if entity_uri not in entities_in_kg:
-                entities_in_kg[entity_uri] = {triplet[1]: [str(triplet[2])]}
+                entities_in_kg[entity_uri] = {triplet[1].n3(): [str(triplet[2])]}
             else:
-                if triplet[1] not in entities_in_kg[entity_uri]:
-                    entities_in_kg[entity_uri][triplet[1]] = [str(triplet[2])]
+                if triplet[1].n3() not in entities_in_kg[entity_uri]:
+                    entities_in_kg[entity_uri][triplet[1].n3()] = [str(triplet[2])]
                 else:
-                    entities_in_kg[entity_uri][triplet[1]].append(str(triplet[2]))
+                    entities_in_kg[entity_uri][triplet[1].n3()].append(str(triplet[2]))
 
         for entity_uri, entity_dict in entities_in_kg.items():
+            # Check if the entity is a model from the entity_dict
+            # pprint.pprint(entity_dict["<http://www.w3.org/1999/02/22-rdf-syntax-ns#type>"])
 
-            if "_Model_" in entity_uri:
+            if "ML_Model" in entity_dict["<http://www.w3.org/1999/02/22-rdf-syntax-ns#type>"][0]:
                 index_model_entity = (
                     self.IndexHandler.create_hf_dataset_index_entity_with_dict(
                         entity_dict, entity_uri
