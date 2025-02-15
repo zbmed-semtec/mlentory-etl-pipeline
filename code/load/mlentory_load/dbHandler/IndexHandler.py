@@ -116,19 +116,24 @@ class IndexHandler:
 
         index_model_entity.db_identifier = dataset_uri
         index_model_entity.name = ""
-        index_model_entity.author = []
+        index_model_entity.sharedBy = []
         index_model_entity.releaseNotes = ""
         index_model_entity.mlTask = []
+        index_model_entity.relatedDatasets = []
+        
         for key, value in info.items():
             if "identifier" in key:
-                index_model_entity.name = value[0].split("/")[-1]
-            elif "maintainer" in key:
-                index_model_entity.author = value
+                index_model_entity.name = value[0].split("/")[-2]+"/"+value[0].split("/")[-1]
             elif "releaseNotes" in key:
                 index_model_entity.releaseNotes = value[0]
             elif "mlTask" in key:
                 index_model_entity.mlTask = value
-
+            elif "trainedOn" in key:
+                index_model_entity.relatedDatasets.append(value[0])
+            elif "testedOn" in key:
+                index_model_entity.relatedDatasets.append(value[0])
+            elif "sharedBy" in key:
+                index_model_entity.sharedBy = value[0]
         return index_model_entity
 
     def handle_raw_data(self, raw_data: Any):
