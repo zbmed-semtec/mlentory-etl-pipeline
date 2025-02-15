@@ -65,7 +65,7 @@ class HFDatasetManager:
             # Load base dataset
             dataset = load_dataset(
                 "librarian-bots/model_cards_with_metadata",
-                revision="0b3e7a79eae8a5dd28080f06065a988ca1fbf050",
+                # revision="0b3e7a79eae8a5dd28080f06065a988ca1fbf050",
             )["train"].to_pandas()
 
             # trim the dataset to the limit
