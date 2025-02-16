@@ -147,14 +147,15 @@ class GraphHandler:
 
         triplets_metadata = {}
 
-        for triplet in self.extraction_metadata:
+        print("Processing extraction metadata...")
+        for triplet in tqdm(self.extraction_metadata, desc="Creating triples dictionaries"):
             if triplet[0] not in triplets_metadata:
                 triplets_metadata[triplet[0]] = {triplet[1]: triplet[2]}
             else:
                 triplets_metadata[triplet[0]][triplet[1]] = triplet[2]
 
         # Get all nodes of type StatementMetadata
-        for metadata_node in triplets_metadata:
+        for metadata_node in tqdm(triplets_metadata, desc="Processing extraction metadata nodes"):
 
             # print("METADATA NODE\n", metadata_node)
 
@@ -257,7 +258,7 @@ class GraphHandler:
             )
 
         # Go through all the columns and add the triplets
-        for column in tqdm(self.df.columns, desc=f"Processing columns for {model_uri}"):
+        for column in tqdm(self.df.columns, desc=f"Processing properties for model {model_uri}"):
             # if column == "schema.org:name":
             #     continue
             # Handle the cases where a new entity has to be created
@@ -509,6 +510,7 @@ class GraphHandler:
         2. Creates deprecated triplets graph
         3. Updates the RDF store
         """
+        print("Updating current graph...")
         new_triplets_graph = rdflib.Graph(identifier=self.graph_identifier)
         new_triplets_graph.bind("fair4ml", URIRef("http://fair4ml.com/"))
         new_triplets_graph.bind("codemeta", URIRef("http://codemeta.com/"))
@@ -523,20 +525,24 @@ class GraphHandler:
         old_triplets_graph.bind("mlentory", URIRef("https://mlentory.com/"))
         old_triplets_graph.bind("prov", URIRef("http://www.w3.org/ns/prov#"))
 
-        for new_triplet in self.new_triplets:
+        print("Adding new triplets...")
+        for new_triplet in tqdm(self.new_triplets, desc="Processing new triplets"):
             new_triplets_graph.add(new_triplet)
 
-        for old_triplet in self.old_triplets:
+        print("Processing deprecated triplets...")
+        for old_triplet in tqdm(self.old_triplets, desc="Processing deprecated triplets"):
             old_triplets_graph.add(old_triplet)
 
         current_date = datetime.now().strftime("%Y-%m-%d")
         path_new_triplets_graph = os.path.join(
             self.kg_files_directory, f"new_triplets_graph_{current_date}.ttl"
         )
+        print(f"Serializing new triplets to {path_new_triplets_graph}")
         new_triplets_graph.serialize(
             destination=path_new_triplets_graph, format="turtle"
         )
 
+        print("Loading new triplets into RDF store...")
         self.RDFHandler.load_graph(
             ttl_file_path=path_new_triplets_graph,
             graph_identifier=self.graph_identifier,
@@ -546,10 +552,12 @@ class GraphHandler:
             path_old_triplets_graph = os.path.join(
                 self.kg_files_directory, f"old_triplets_graph_{current_date}.ttl"
             )
+            print(f"Serializing deprecated triplets to {path_old_triplets_graph}")
             old_triplets_graph.serialize(
                 destination=path_old_triplets_graph, format="turtle"
             )
 
+            print("Updating RDF store with deprecated triplets...")
             self.RDFHandler.delete_graph(
                 ttl_file_path=path_old_triplets_graph,
                 graph_identifier=self.graph_identifier,
@@ -564,7 +572,8 @@ class GraphHandler:
 
         # Get all the nodes in the KG that are of type MLModel
         entities_in_kg = {}
-        for triplet in self.kg:
+        print("Updating search indices...")
+        for triplet in tqdm(self.kg, desc="Processing current KG triplets"):
             entity_uri = str(triplet[0].n3())
             if entity_uri not in entities_in_kg:
                 entities_in_kg[entity_uri] = {triplet[1].n3(): [str(triplet[2])]}
@@ -574,7 +583,8 @@ class GraphHandler:
                 else:
                     entities_in_kg[entity_uri][triplet[1].n3()].append(str(triplet[2]))
 
-        for entity_uri, entity_dict in entities_in_kg.items():
+        print("Updating search indices...")
+        for entity_uri, entity_dict in tqdm(entities_in_kg.items(), desc="Processing entities"):
             # Check if the entity is a model from the entity_dict
             # pprint.pprint(entity_dict["<http://www.w3.org/1999/02/22-rdf-syntax-ns#type>"])
 
@@ -602,6 +612,7 @@ class GraphHandler:
                     )
 
         if len(new_models) > 0:
+            print(f"Adding {len(new_models)} new models to search index...")
             self.IndexHandler.add_documents(new_models)
 
     def update_indexes(self):
