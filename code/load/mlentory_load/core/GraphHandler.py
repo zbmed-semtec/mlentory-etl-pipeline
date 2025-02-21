@@ -11,7 +11,7 @@ from rdflib.util import from_n3
 from pandas import Timestamp
 from tqdm import tqdm
 from datetime import datetime
-from typing import Callable, List, Dict, Set
+from typing import Callable, List, Dict, Set, Tuple
 import pprint
 
 from mlentory_load.dbHandler import SQLHandler, RDFHandler, IndexHandler
@@ -354,34 +354,33 @@ class GraphHandler:
 
         return model_uri
 
-    # This function helps us identify if a triplet is new or old
-    # In case the triplet is new, we add it to the graph
-    # In case the triplet already exists, we update its metadata information
-    def process_triplet(self, subject, predicate, object, extraction_info):
+    def _get_or_create_triplet_id(self, subject: URIRef, predicate: URIRef, object: URIRef) -> Tuple[int, bool]:
+        """
+        Get or create a triplet ID in the database.
+
+        Args:
+            subject (URIRef): The subject of the triplet
+            predicate (URIRef): The predicate of the triplet
+            object (URIRef): The object of the triplet
+
+        Returns:
+            tuple[int, bool]: A tuple containing the triplet ID and a boolean indicating if it's new
+
+        Raises:
+            SQLError: If there's an error executing the SQL query
+        """
         subject_json = str(subject.n3())
         predicate_json = str(predicate.n3())
         object_json = str(object.n3())
-        is_new_triplet = False
-
-        triplet_id = -1
-
         object_hash = hashlib.md5(object_json.encode()).hexdigest()
 
         triplet_id_df = self.SQLHandler.query(
             f"""SELECT id FROM "Triplet" WHERE subject = '{subject_json}'
-                                                                                     AND predicate = '{predicate_json}' 
-                                                                                     AND md5(object) = '{object_hash}'"""
-        )
-
-        extraction_info_id = -1
-        extraction_info_id_df = self.SQLHandler.query(
-            f"""SELECT id FROM "Triplet_Extraction_Info" WHERE 
-                                                                    method_description = '{extraction_info["extraction_method"]}' 
-                                                                    AND extraction_confidence = {extraction_info["confidence"]}"""
+                                                   AND predicate = '{predicate_json}' 
+                                                   AND md5(object) = '{object_hash}'"""
         )
 
         if triplet_id_df.empty:
-            # We have to create a new triplet
             triplet_id = self.SQLHandler.insert(
                 "Triplet",
                 {
@@ -390,38 +389,61 @@ class GraphHandler:
                     "object": object_json,
                 },
             )
-            is_new_triplet = True
-        else:
-            triplet_id = triplet_id_df.iloc[0]["id"]
+            return triplet_id, True
+        return triplet_id_df.iloc[0]["id"], False
+
+    def _get_or_create_extraction_info_id(self, extraction_info: dict) -> int:
+        """
+        Get or create an extraction info ID in the database.
+
+        Args:
+            extraction_info (dict): Dictionary containing extraction method and confidence
+
+        Returns:
+            int: The extraction info ID
+
+        Raises:
+            SQLError: If there's an error executing the SQL query
+        """
+        extraction_info_id_df = self.SQLHandler.query(
+            f"""SELECT id FROM "Triplet_Extraction_Info" WHERE 
+                                                method_description = '{extraction_info["extraction_method"]}' 
+                                                AND extraction_confidence = {extraction_info["confidence"]}"""
+        )
 
         if extraction_info_id_df.empty:
-            # We have to create a new extraction info
-            extraction_info_id = self.SQLHandler.insert(
+            return self.SQLHandler.insert(
                 "Triplet_Extraction_Info",
                 {
                     "method_description": extraction_info["extraction_method"],
                     "extraction_confidence": extraction_info["confidence"],
                 },
             )
-        else:
-            extraction_info_id = extraction_info_id_df.iloc[0]["id"]
+        return extraction_info_id_df.iloc[0]["id"]
 
-        # We already have the triplet and the extraction info
-        # We need to check if there is already a version range for this triplet
+    def _manage_version_range(
+        self, triplet_id: int, extraction_info_id: int, extraction_time: datetime
+    ) -> None:
+        """
+        Manage version range for a triplet, either creating a new one or updating existing.
+
+        Args:
+            triplet_id (int): The ID of the triplet
+            extraction_info_id (int): The ID of the extraction info
+            extraction_time (datetime): The extraction timestamp
+
+        Raises:
+            SQLError: If there's an error executing the SQL query
+        """
         version_range_df = self.SQLHandler.query(
             f"""SELECT vr.id, vr.use_start, vr.use_end FROM "Version_Range" vr WHERE
-                                                                        triplet_id = '{triplet_id}'
-                                                                        AND extraction_info_id = '{extraction_info_id}'
-                                                                        AND deprecated = {False}"""
-        )
-        version_range_id = -1
-        extraction_time = datetime.strptime(
-            extraction_info["extraction_time"], "%Y-%m-%d_%H-%M-%S"
+                                                    triplet_id = '{triplet_id}'
+                                                    AND extraction_info_id = '{extraction_info_id}'
+                                                    AND deprecated = {False}"""
         )
 
         if version_range_df.empty:
-            # We have to create a new version range
-            version_range_id = self.SQLHandler.insert(
+            self.SQLHandler.insert(
                 "Version_Range",
                 {
                     "triplet_id": str(triplet_id),
@@ -438,6 +460,29 @@ class GraphHandler:
                 {"use_end": extraction_time},
                 f"id = '{version_range_id}'",
             )
+
+    def process_triplet(self, subject, predicate, object, extraction_info):
+        """
+        Process a triplet by managing its storage and version control in the database.
+
+        Args:
+            subject: The subject of the triplet
+            predicate: The predicate of the triplet
+            object: The object of the triplet
+            extraction_info (dict): Dictionary containing extraction metadata
+
+        Raises:
+            SQLError: If there's an error executing any SQL query
+            ValueError: If extraction_info lacks required fields
+        """
+        triplet_id, is_new_triplet = self._get_or_create_triplet_id(subject, predicate, object)
+        extraction_info_id = self._get_or_create_extraction_info_id(extraction_info)
+        
+        extraction_time = datetime.strptime(
+            extraction_info["extraction_time"], "%Y-%m-%d_%H-%M-%S"
+        )
+        
+        self._manage_version_range(triplet_id, extraction_info_id, extraction_time)
 
         if is_new_triplet:
             self.new_triplets.append((subject, predicate, object))
