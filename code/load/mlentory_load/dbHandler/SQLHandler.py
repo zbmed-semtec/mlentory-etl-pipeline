@@ -37,7 +37,6 @@ class SQLHandler:
         self.password = password
         self.database = database
         self.connection = None
-        self.batch_size = 1000  # Default batch size for operations
 
     def connect(self) -> None:
         """Establish connection to the PostgreSQL database."""
@@ -155,9 +154,17 @@ class SQLHandler:
         cursor.close()
 
     def clean_all_tables(self):
-        """Remove all data from tables while preserving structure."""
+        """
+        Remove all data from tables while preserving structure and reset sequences.
 
+        This method:
+        1. Defers all constraints
+        2. Deletes all data from tables
+        3. Resets all sequences (auto-increment counters) to 1
+        """
         cursor = self.connection.cursor()
+        
+        # Get all tables
         cursor.execute(
             """
             SELECT table_name FROM information_schema.tables
@@ -166,15 +173,18 @@ class SQLHandler:
         )
         tables = cursor.fetchall()
 
+        # Defer constraints and truncate tables
         cursor.execute("SET CONSTRAINTS ALL DEFERRED")
-
+        
         for table in tables:
-            cursor.execute(f'DELETE FROM "{table[0]}" CASCADE')
+            table_name = table[0]
+            # TRUNCATE is faster than DELETE and resets sequences automatically
+            cursor.execute(f'TRUNCATE TABLE "{table_name}" CASCADE')
 
         self.connection.commit()
         cursor.close()
 
-    def batch_insert(self, table: str, columns: List[str], values: List[tuple]) -> List[int]:
+    def batch_insert(self, table: str, columns: List[str], values: List[tuple], batch_size: int = 1000) -> List[int]:
         """
         Insert multiple records into the specified table in batches.
 
@@ -190,23 +200,28 @@ class SQLHandler:
         inserted_ids = []
         
         # Process in batches
-        for i in range(0, len(values), self.batch_size):
-            batch = values[i:i + self.batch_size]
+        for i in range(0, len(values), batch_size):
+            batch = values[i:min(i + batch_size, len(values))]
+            # print("BATCH SIZE: ", len(batch))
             
             # Create the INSERT query with RETURNING id
             columns_str = ", ".join(f'"{col}"' for col in columns)
-            query = f'INSERT INTO "{table}" ({columns_str}) VALUES %s RETURNING id'
+            placeholders = ",".join([f"({','.join(['%s'] * len(columns))})" for _ in batch])
+            query = f'INSERT INTO "{table}" ({columns_str}) VALUES {placeholders} RETURNING id'
             
-            # Execute batch insert and get returned IDs
-            execute_values(cursor, query, batch, fetch=True)
-            batch_ids = [row[0] for row in cursor.fetchall()]
-            inserted_ids.extend(batch_ids)
+            # Flatten the batch values into a single list
+            flat_values = [val for tup in batch for val in tup]
+            
+            # Execute directly without execute_values
+            cursor.execute(query, flat_values)
+            batch_ids = cursor.fetchall()
+            inserted_ids.extend([row[0] for row in batch_ids])
             
         self.connection.commit()
         cursor.close()
         return inserted_ids
 
-    def batch_update(self, table: str, updates: List[Dict[str, Any]], conditions: List[str]) -> None:
+    def batch_update(self, table: str, updates: List[Dict[str, Any]], conditions: List[str], batch_size: int = 1000) -> None:
         """
         Update multiple records in a table based on conditions.
 
@@ -217,9 +232,9 @@ class SQLHandler:
         """
         cursor = self.connection.cursor()
         
-        for i in range(0, len(updates), self.batch_size):
-            batch_updates = updates[i:i + self.batch_size]
-            batch_conditions = conditions[i:i + self.batch_size]
+        for i in range(0, len(updates), batch_size):
+            batch_updates = updates[i:min(i + batch_size, len(updates))]
+            batch_conditions = conditions[i:min(i + batch_size, len(conditions))]
             
             for update_dict, condition in zip(batch_updates, batch_conditions):
                 set_clause = ", ".join([f'"{key}" = %s' for key in update_dict.keys()])

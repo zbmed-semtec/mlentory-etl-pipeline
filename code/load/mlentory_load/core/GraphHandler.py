@@ -154,6 +154,9 @@ class GraphHandler:
             else:
                 triplets_metadata[triplet[0]][triplet[1]] = triplet[2]
 
+        batch_size = 100
+        batch_triplets = []
+        
         # Get all nodes of type StatementMetadata
         for metadata_node in tqdm(triplets_metadata, desc="Processing extraction metadata nodes"):
 
@@ -193,12 +196,19 @@ class GraphHandler:
             }
 
             # Process the triplet with its metadata
-            self.process_triplet(
-                subject=subject,
-                predicate=predicate,
-                object=object_value,
-                extraction_info=extraction_info,
-            )
+            batch_triplets.append((subject, predicate, object_value, extraction_info))
+            if len(batch_triplets) == batch_size:
+                self.process_triplet_batch(batch_triplets)
+                batch_triplets = []
+            # self.process_triplet(
+            #     subject=subject,
+            #     predicate=predicate,
+            #     object=object_value,
+            #     extraction_info=extraction_info,
+            # )
+            
+        if len(batch_triplets) > 0:
+            self.process_triplet_batch(batch_triplets)
 
         # Update the dates of models that haven't changed
         if self.curr_update_date is None:
@@ -354,6 +364,33 @@ class GraphHandler:
 
         return model_uri
 
+    def process_triplet(self, subject, predicate, object, extraction_info):
+        """
+        Process a triplet by managing its storage and version control in the database.
+
+        Args:
+            subject: The subject of the triplet
+            predicate: The predicate of the triplet
+            object: The object of the triplet
+            extraction_info (dict): Dictionary containing extraction metadata
+
+        Raises:
+            SQLError: If there's an error executing any SQL query
+            ValueError: If extraction_info lacks required fields
+        """
+        triplet_id, is_new_triplet = self._get_or_create_triplet_id(subject, predicate, object)
+        
+        extraction_info_id = self._get_or_create_extraction_info_id(extraction_info)
+        
+        extraction_time = datetime.strptime(
+            extraction_info["extraction_time"], "%Y-%m-%d_%H-%M-%S"
+        )
+        
+        self._manage_version_range(triplet_id, extraction_info_id, extraction_time)
+
+        if is_new_triplet:
+            self.new_triplets.append((subject, predicate, object))
+            
     def _get_or_create_triplet_id(self, subject: URIRef, predicate: URIRef, object: URIRef) -> Tuple[int, bool]:
         """
         Get or create a triplet ID in the database.
@@ -461,31 +498,7 @@ class GraphHandler:
                 f"id = '{version_range_id}'",
             )
 
-    def process_triplet(self, subject, predicate, object, extraction_info):
-        """
-        Process a triplet by managing its storage and version control in the database.
-
-        Args:
-            subject: The subject of the triplet
-            predicate: The predicate of the triplet
-            object: The object of the triplet
-            extraction_info (dict): Dictionary containing extraction metadata
-
-        Raises:
-            SQLError: If there's an error executing any SQL query
-            ValueError: If extraction_info lacks required fields
-        """
-        triplet_id, is_new_triplet = self._get_or_create_triplet_id(subject, predicate, object)
-        extraction_info_id = self._get_or_create_extraction_info_id(extraction_info)
-        
-        extraction_time = datetime.strptime(
-            extraction_info["extraction_time"], "%Y-%m-%d_%H-%M-%S"
-        )
-        
-        self._manage_version_range(triplet_id, extraction_info_id, extraction_time)
-
-        if is_new_triplet:
-            self.new_triplets.append((subject, predicate, object))
+    
 
     def deprecate_old_triplets(self, model_uri):
 
@@ -732,3 +745,227 @@ class GraphHandler:
 
     def text_to_uri_term(self, text):
         return URIRef(f"mlentory:/{self.platform}/{text}")
+
+    def _batch_get_or_create_triplet_ids(
+        self, triplets: List[Tuple[URIRef, URIRef, URIRef]]
+    ) -> Tuple[List[int], List[bool]]:
+        """
+        Get or create multiple triplet IDs in the database using batch processing.
+
+        Args:
+            triplets (List[Tuple[URIRef, URIRef, URIRef]]): List of triplets to process
+
+        Returns:
+            Tuple[List[int], List[bool]]: Lists of triplet IDs and their new status
+
+        Raises:
+            SQLError: If there's an error executing the SQL queries
+        """
+        # Convert triplets to JSON format and calculate hashes
+        triplet_data = [
+            {
+                "subject": str(subject.n3()),
+                "predicate": str(predicate.n3()),
+                "object": str(object_.n3()),
+                "object_hash": hashlib.md5(str(object_.n3()).encode()).hexdigest()
+            }
+            for subject, predicate, object_ in triplets
+        ]
+
+        # Build batch query to find existing triplets
+        query = " UNION ".join([
+            f"""SELECT id, '{i}' as idx FROM "Triplet" 
+            WHERE subject = '{t["subject"]}' 
+            AND predicate = '{t["predicate"]}' 
+            AND md5(object) = '{t["object_hash"]}'"""
+            for i, t in enumerate(triplet_data)
+        ])
+        
+        existing_triplets_df = self.SQLHandler.query(query) if triplet_data else pd.DataFrame()
+        
+        # Initialize results
+        triplet_ids = [-1] * len(triplets)
+        is_new = [True] * len(triplets)
+        
+        # Process existing triplets
+        for _, row in existing_triplets_df.iterrows():
+            idx = int(row["idx"])
+            triplet_ids[idx] = row["id"]
+            is_new[idx] = False
+            
+        # Prepare batch insert for new triplets
+        new_triplets_data = [
+            (data["subject"], data["predicate"], data["object"])
+            for i, data in enumerate(triplet_data)
+            if is_new[i]
+        ]
+        
+        if len(new_triplets_data) > 0:
+            new_ids = self.SQLHandler.batch_insert(
+                "Triplet",
+                ["subject", "predicate", "object"],
+                new_triplets_data,
+                batch_size=len(new_triplets_data)
+            )
+            
+            # Update triplet_ids with new IDs
+            new_id_idx = 0
+            for i in range(len(triplets)):
+                if is_new[i]:
+                    triplet_ids[i] = new_ids[new_id_idx]
+                    new_id_idx += 1
+                    
+        return triplet_ids, is_new
+
+    def _batch_get_or_create_extraction_info_ids(
+        self, extraction_infos: List[Dict]
+    ) -> List[int]:
+        """
+        Get or create multiple extraction info IDs in the database using batch processing.
+
+        Args:
+            extraction_infos (List[Dict]): List of extraction info dictionaries
+
+        Returns:
+            List[int]: List of extraction info IDs
+
+        Raises:
+            SQLError: If there's an error executing the SQL queries
+        """
+        # Build batch query to find existing extraction infos
+        query = " UNION ".join([
+            f"""SELECT id, '{i}' as idx FROM "Triplet_Extraction_Info" 
+            WHERE method_description = '{info["extraction_method"]}' 
+            AND extraction_confidence = {info["confidence"]}"""
+            for i, info in enumerate(extraction_infos)
+        ])
+        
+        existing_infos_df = self.SQLHandler.query(query) if extraction_infos else pd.DataFrame()
+        
+        # Initialize results
+        info_ids = [-1] * len(extraction_infos)
+        
+        # Process existing infos
+        for _, row in existing_infos_df.iterrows():
+            idx = int(row["idx"])
+            info_ids[idx] = row["id"]
+            
+        # Prepare batch insert for new infos
+        new_infos_data = [
+            (info["extraction_method"], info["confidence"])
+            for i, info in enumerate(extraction_infos)
+            if info_ids[i] == -1
+        ]
+        
+        if new_infos_data:
+            new_ids = self.SQLHandler.batch_insert(
+                "Triplet_Extraction_Info",
+                ["method_description", "extraction_confidence"],
+                new_infos_data,
+                batch_size=len(new_infos_data)
+            )
+            
+            # Update info_ids with new IDs
+            new_id_idx = 0
+            for i in range(len(extraction_infos)):
+                if info_ids[i] == -1:
+                    info_ids[i] = new_ids[new_id_idx]
+                    new_id_idx += 1
+                    
+        return info_ids
+
+    def _batch_manage_version_ranges(
+        self,
+        triplet_ids: List[int],
+        extraction_info_ids: List[int],
+        extraction_times: List[datetime]
+    ) -> None:
+        """
+        Manage version ranges for multiple triplets using batch processing.
+
+        Args:
+            triplet_ids (List[int]): List of triplet IDs
+            extraction_info_ids (List[int]): List of extraction info IDs
+            extraction_times (List[datetime]): List of extraction timestamps
+
+        Raises:
+            SQLError: If there's an error executing the SQL queries
+        """
+        # Build batch query to find existing version ranges
+        query = " UNION ".join([
+            f"""SELECT id, '{i}' as idx FROM "Version_Range" 
+            WHERE triplet_id = '{t_id}' 
+            AND extraction_info_id = '{e_id}' 
+            AND deprecated = false"""
+            for i, (t_id, e_id) in enumerate(zip(triplet_ids, extraction_info_ids))
+        ])
+        
+        existing_ranges_df = self.SQLHandler.query(query) if triplet_ids else pd.DataFrame()
+        
+        # Prepare updates for existing ranges
+        updates = []
+        conditions = []
+        for _, row in existing_ranges_df.iterrows():
+            idx = int(row["idx"])
+            updates.append({"use_end": extraction_times[idx]})
+            conditions.append(f"id = '{row['id']}'")
+            
+        if updates:
+            self.SQLHandler.batch_update("Version_Range", updates, conditions)
+            
+        # Prepare batch insert for new ranges
+        existing_indices = set(int(row["idx"]) for _, row in existing_ranges_df.iterrows())
+        new_ranges_data = [
+            (str(t_id), str(e_id), time, time, False)
+            for i, (t_id, e_id, time) in enumerate(zip(triplet_ids, extraction_info_ids, extraction_times))
+            if i not in existing_indices
+        ]
+        
+        if new_ranges_data:
+            self.SQLHandler.batch_insert(
+                "Version_Range",
+                ["triplet_id", "extraction_info_id", "use_start", "use_end", "deprecated"],
+                new_ranges_data,
+                batch_size=len(new_ranges_data)
+            )
+
+    def process_triplet_batch(
+        self, triplets_data: List[Tuple[URIRef, URIRef, URIRef, Dict]]
+    ) -> None:
+        """
+        Process multiple triplets in batch for efficient database operations.
+
+        Args:
+            triplets_data (List[Tuple[URIRef, URIRef, URIRef, Dict]]): List of tuples containing
+                (subject, predicate, object, extraction_info)
+
+        Raises:
+            SQLError: If there's an error executing any SQL query
+            ValueError: If extraction_info lacks required fields
+        """
+        if not triplets_data:
+            return
+
+        # Unzip the triplets data
+        subjects, predicates, objects, extraction_infos = zip(*triplets_data)
+        triplets = list(zip(subjects, predicates, objects))
+        
+        # Process triplets in batch
+        triplet_ids, is_new = self._batch_get_or_create_triplet_ids(triplets)
+        
+        # Process extraction infos in batch
+        extraction_info_ids = self._batch_get_or_create_extraction_info_ids(extraction_infos)
+        
+        # Process extraction times
+        extraction_times = [
+            datetime.strptime(info["extraction_time"], "%Y-%m-%d_%H-%M-%S")
+            for info in extraction_infos
+        ]
+        
+        # Manage version ranges in batch
+        self._batch_manage_version_ranges(triplet_ids, extraction_info_ids, extraction_times)
+        
+        # Add new triplets to the list
+        for i, (is_new_triplet, triplet) in enumerate(zip(is_new, triplets)):
+            if is_new_triplet:
+                self.new_triplets.append(triplet)

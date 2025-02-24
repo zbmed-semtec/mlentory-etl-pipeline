@@ -99,21 +99,20 @@ class LoadProcessor:
 
     def print_DB_states(self):
         """Print current state of all databases for debugging."""
-        triplets_df = self.GraphHandler.SQLHandler.query('SELECT * FROM "Triplet"')
-        ranges_df = self.GraphHandler.SQLHandler.query('SELECT * FROM "Version_Range"')
-        extraction_info_df = self.GraphHandler.SQLHandler.query(
-            'SELECT * FROM "Triplet_Extraction_Info"'
+        triplets_df = self.GraphHandler.SQLHandler.query('SELECT count(*) FROM "Triplet"')
+        ranges_df = self.GraphHandler.SQLHandler.query('SELECT count(*) FROM "Version_Range"')
+        triplets_extraction_info_df = self.GraphHandler.SQLHandler.query(
+            'SELECT COUNT(*) FROM "Triplet_Extraction_Info"'
         )
-
         print("SQL TRIPlETS\n", triplets_df)
         print("SQL RANGES\n", ranges_df)
-        print("SQL EXTRACTION INFO\n", extraction_info_df)
+        print("SQL EXTRACTION INFO\n", triplets_extraction_info_df)
 
         result_graph = self.GraphHandler.get_current_graph()
 
-        print("VIRTUOSO TRIPlETS\n")
-        for i, (s, p, o) in enumerate(result_graph):
-            print(f"{i}: {s} {p} {o}")
+        # print("VIRTUOSO TRIPlETS\n")
+        # for i, (s, p, o) in enumerate(result_graph):
+        #     print(f"{i}: {s} {p} {o}")
 
         result_count = result_graph.query(
             """SELECT (COUNT(DISTINCT ?s) AS ?count) WHERE{?s ?p ?o}"""
@@ -127,7 +126,7 @@ class LoadProcessor:
             index="hf_models",
             body={"query": {"match_all": {}}},
         )
-        print("Check Elasticsearch: ", result, "\n")
+        # print("Check Elasticsearch: ", result, "\n")
 
     def clean_DBs(self):
         """Clean all databases, removing existing data."""
