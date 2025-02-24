@@ -25,7 +25,6 @@ CREATE TABLE IF NOT EXISTS "Version_Range" (
 
 -- Add indexes for frequently queried columns
 CREATE INDEX IF NOT EXISTS idx_triplet_subject ON "Triplet" USING hash(subject);
-CREATE INDEX IF NOT EXISTS idx_triplet_predicate ON "Triplet" USING hash(predicate);
 CREATE INDEX IF NOT EXISTS idx_triplet_object_hash ON "Triplet" USING hash(md5(object));
 
 -- Composite index for triplet lookups
