@@ -67,6 +67,9 @@ class HFDatasetManager:
                 "librarian-bots/model_cards_with_metadata",
                 # revision="0b3e7a79eae8a5dd28080f06065a988ca1fbf050",
             )["train"].to_pandas()
+            
+            # Discard all models with a card with a length less than 1000
+            dataset = dataset[dataset["card"].str.len() > 1000]
 
             # trim the dataset to the limit
             dataset = dataset[: min(limit, len(dataset))]
@@ -149,7 +152,7 @@ class HFDatasetManager:
             }
             for future in as_completed(future_to_model):
                 result = future.result()
-                if result is not None:
+                if result is not None and result["card"] is not None and len(result["card"]) > 1000:
                     model_data.append(result)
 
         return pd.DataFrame(model_data)
