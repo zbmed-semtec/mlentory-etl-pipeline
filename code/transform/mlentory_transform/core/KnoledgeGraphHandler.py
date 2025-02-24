@@ -125,10 +125,13 @@ class KnowledgeGraphHandler:
                 data=item_json_ld, format="json-ld", base=URIRef(self.base_namespace)
             )
 
+            self.delete_unwanted_nodes(temp_graph)
             self.replace_blank_nodes_with_type(temp_graph, row, platform)
-            # self.replace_blank_nodes_with_no_type(temp_graph,row,platform)
-            # self.replace_default_nodes(temp_graph, row, platform)
             self.delete_remaining_blank_nodes(temp_graph)
+            # self.replace_blank_nodes_with_no_type(temp_graph,row,platform)
+            # self.delete_remaining_blank_nodes(temp_graph)
+            self.replace_default_nodes(temp_graph, row, platform)
+            
 
             # Go through the triples and add them
             for triple in temp_graph:
@@ -603,10 +606,11 @@ class KnowledgeGraphHandler:
         # Find all Field nodes using SPARQL query
         field_types = [
             URIRef("http://mlcommons.org/croissant/Field"),
-            URIRef("http://mlcommons.org/croissant/FileSet"),
-            URIRef("http://mlcommons.org/croissant/File"),
-            URIRef("http://mlcommons.org/croissant/FileObject"),
-            URIRef("http://mlcommons.org/croissant/FileObjectSet"),
+            # We will ignore the following types for now, they don't add meningfull information
+            # URIRef("http://mlcommons.org/croissant/FileSet"),
+            # URIRef("http://mlcommons.org/croissant/File"),
+            # URIRef("http://mlcommons.org/croissant/FileObject"),
+            # URIRef("http://mlcommons.org/croissant/FileObjectSet"),
             URIRef("http://mlcommons.org/croissant/RecordSet"),
         ]
 
@@ -615,12 +619,18 @@ class KnowledgeGraphHandler:
             for field_node in temp_graph.subjects(RDF.type, field_type):
                 if isinstance(field_node, URIRef):
                     # Extract the original ID path component
-                    original_type = str(field_node).split("/")[-1]
+                    original_type = str(field_type).split("/")[-1]
+                    field_node_id = str(field_node).split("mlentory_graph/")[-1]+"/"+row["datasetId"]
+                    
+                    # print("----------------------------")
+                    # print("Platform:", platform)                    
+                    # print("Original type:", original_type)
+                    # print("Field node ID:", field_node_id)
+                    # print("----------------------------")
 
                     # Create new ID with dataset prefix
-                    dataset_id = row["datasetId"].replace("/", "___")
-                    new_id = f"{dataset_id}_{original_type}"
-                    new_uri = self.base_namespace[f"?platform={platform}&type={original_type}&id={new_id}"]
+                    hash = self.generate_entity_hash(platform, original_type, field_node_id)
+                    new_uri = self.base_namespace[hash]
 
                     # Replace all occurrences in the graph
                     self.replace_node(
@@ -629,6 +639,8 @@ class KnowledgeGraphHandler:
                         graph=temp_graph,
                         node_type=field_type,
                     )
+                    # Add a name property to not forget the name of the field
+                    temp_graph.add((new_uri, self.namespaces["schema"]["name"], Literal(str(field_node).split("mlentory_graph/")[-1], datatype=XSD.string)))
 
     def generate_entity_hash(self, platform: str, entity_type: str, entity_id: str) -> str:
         """
@@ -727,18 +739,57 @@ class KnowledgeGraphHandler:
             graph.remove((s, p, o))
             graph.add((s, p, new_uri))
 
-    def delete_remaining_blank_nodes(self, graph: Graph):
+    def delete_remaining_blank_nodes(self, graph: Graph) -> None:
         """
         Delete all triples related to a blank node
 
         Args:
             graph (Graph): The RDF graph to delete blank nodes from
         """
+        # Collect triples to remove
+        triples_to_remove = [
+            triple for triple in graph
+            if isinstance(triple[0], BNode) or isinstance(triple[1], BNode) or isinstance(triple[2], BNode)
+        ]
+        
+        # Remove collected triples
+        for triple in triples_to_remove:
+            graph.remove(triple)
 
-        for triple in graph:
-            s, p, o = triple
-            if isinstance(s, BNode) or isinstance(o, BNode) or isinstance(p, BNode):
-                graph.remove(triple)
+    def delete_unwanted_nodes(self, graph: Graph) -> None:
+        """
+        Delete all triples related to unwanted entity types (FileSet, File, FileObject, FileObjectSet).
+
+        This method removes all triples where either the subject or object is an entity of the
+        specified unwanted types from the Croissant schema.
+
+        Args:
+            graph (Graph): The RDF graph to delete nodes from
+
+        Example:
+            >>> kg_handler.delete_unwanted_nodes(graph)
+        """
+        unwanted_types = [
+            URIRef("http://mlcommons.org/croissant/FileSet"),
+            URIRef("http://mlcommons.org/croissant/File"),
+            URIRef("http://mlcommons.org/croissant/FileObject"),
+            URIRef("http://mlcommons.org/croissant/FileObjectSet"),
+        ]
+
+        # First, find all nodes of unwanted types
+        unwanted_nodes = set()
+        for type_uri in unwanted_types:
+            unwanted_nodes.update(graph.subjects(RDF.type, type_uri))
+
+        # Collect all triples that contain unwanted nodes
+        triples_to_remove = [
+            triple for triple in graph
+            if (triple[0] in unwanted_nodes) or (triple[2] in unwanted_nodes)
+        ]
+
+        # Remove collected triples
+        for triple in triples_to_remove:
+            graph.remove(triple)
 
     def reset_graphs(self) -> None:
         """
@@ -758,3 +809,5 @@ class KnowledgeGraphHandler:
         for prefix, namespace in self.namespaces.items():
             self.graph.bind(prefix, namespace)
             self.metadata_graph.bind(prefix, namespace)
+
+    

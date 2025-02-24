@@ -119,6 +119,7 @@ class FieldProcessorHF:
             str: Complete HuggingFace model link
         """
         # print("Checking building links: ",self.find_value_in_HF("q_id_0"),"\n")
+        print("Building links: ", self.find_value_in_HF("q_id_0"))
         model_name = self.find_value_in_HF("q_id_0")[0]["data"]
         link = "https://huggingface.co/" + model_name + tail_info
         return [self.add_default_extraction_info(link, ExtractionMethod.BUILT_IN_TRANSFORM.value, 1.0)]
