@@ -56,6 +56,12 @@ jobs:
           name: Run the project tests.
           command: bash validate_tests.sh
           working_directory: ./tests/scripts
+      - run:
+          name: Upload coverage reports to Codecov
+          command: |
+            curl -Os https://uploader.codecov.io/latest/linux/codecov
+            chmod +x codecov
+            ./codecov -t ${CODECOV_TOKEN}
       # - docker-compose logs -f
 
 
