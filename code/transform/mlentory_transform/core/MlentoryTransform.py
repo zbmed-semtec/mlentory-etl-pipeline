@@ -173,8 +173,6 @@ class MlentoryTransform:
 
         if save_output_in_json:
             current_date = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-            kg_output_path = os.path.join(output_dir, f"{current_date}_unified_kg.json")
-            unified_graph.serialize(destination=kg_output_path, format="json-ld")
             kg_output_path = os.path.join(output_dir, f"{current_date}_unified_kg.ttl")
             unified_graph.serialize(destination=kg_output_path, format="turtle")
 

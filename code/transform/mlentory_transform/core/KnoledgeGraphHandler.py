@@ -130,7 +130,7 @@ class KnowledgeGraphHandler:
             self.delete_remaining_blank_nodes(temp_graph)
             # self.replace_blank_nodes_with_no_type(temp_graph,row,platform)
             # self.delete_remaining_blank_nodes(temp_graph)
-            self.replace_default_nodes(temp_graph, row, platform)
+            # self.replace_default_nodes(temp_graph, row, platform)
             
 
             # Go through the triples and add them
@@ -173,7 +173,7 @@ class KnowledgeGraphHandler:
         """
 
         if df.empty:
-            raise ValueError("Cannot convert empty DataFrame to graph")
+            return self.graph, self.metadata_graph
 
         if identifier_column and identifier_column not in df.columns:
             raise ValueError(
@@ -774,6 +774,8 @@ class KnowledgeGraphHandler:
             URIRef("http://mlcommons.org/croissant/File"),
             URIRef("http://mlcommons.org/croissant/FileObject"),
             URIRef("http://mlcommons.org/croissant/FileObjectSet"),
+            URIRef("http://mlcommons.org/croissant/RecordSet"),
+            URIRef("http://mlcommons.org/croissant/Field"),
         ]
 
         # First, find all nodes of unwanted types
