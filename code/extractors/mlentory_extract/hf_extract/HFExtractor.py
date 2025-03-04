@@ -136,7 +136,9 @@ class HFExtractor:
 
         # Improve column naming
         HF_df.columns = HF_df.columns.map(self._augment_column_name)
-
+        
+        #Drop any rows with nan
+        HF_df = HF_df.dropna()
         # Save results
         if not os.path.exists(output_dir):
             os.makedirs(output_dir)
