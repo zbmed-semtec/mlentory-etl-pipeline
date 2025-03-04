@@ -119,6 +119,7 @@ class IndexHandler:
         index_model_entity.sharedBy = []
         index_model_entity.releaseNotes = ""
         index_model_entity.mlTask = []
+        index_model_entity.license = ""
         index_model_entity.relatedDatasets = []
         
         for key, value in info.items():
@@ -134,6 +135,8 @@ class IndexHandler:
                 index_model_entity.relatedDatasets.append(value[0])
             elif "sharedBy" in key:
                 index_model_entity.sharedBy = value[0]
+            elif "license" in key:
+                index_model_entity.license = value[0]
         return index_model_entity
 
     def handle_raw_data(self, raw_data: Any):
