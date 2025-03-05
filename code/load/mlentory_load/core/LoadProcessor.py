@@ -63,7 +63,7 @@ class LoadProcessor:
         """
 
         # The graph handler updates the SQL and RDF databases with the new data
-        self.GraphHandler.load_df(df)
+        self.GraphHandler.set_df(df)
         self.GraphHandler.update_graph()
 
     def load_df(self, df: DataFrame, output_ttl_file_path: str = None):
@@ -84,6 +84,18 @@ class LoadProcessor:
                 output_ttl_file_path, f"{current_date}_mlentory_graph.ttl"
             )
             current_graph.serialize(output_ttl_file_path, format="turtle")
+
+    def update_dbs_with_kg(self, kg: Graph, extraction_metadata: Graph):
+        """
+        Update all databases with new data from KG. The KG represents the metadata
+
+        Args:
+            kg (Graph): Knowledge graph to be loaded
+            extraction_metadata (Graph): Extraction metadata of the KG
+        """
+        self.GraphHandler.set_kg(kg)
+        self.GraphHandler.set_extraction_metadata(extraction_metadata)
+        self.GraphHandler.update_graph()
 
     def print_DB_states(self):
         """Print current state of all databases for debugging."""

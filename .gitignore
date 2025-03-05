@@ -194,7 +194,6 @@ cython_debug/
 
 #Extensions related to VS code enviroments
 .devcontainer/
-.github/
 
 # Cursor rules
 .cursorrules

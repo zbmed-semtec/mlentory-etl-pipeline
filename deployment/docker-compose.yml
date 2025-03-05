@@ -6,7 +6,7 @@ services:
   scheduler:
     container_name: airflow_scheduler
     profiles:
-      # - gpu
+      - gpu
       - no_gpu
       - airflow_test
     image: apache/airflow:2.10.1  # Use the latest stable Airflow image
@@ -39,7 +39,7 @@ services:
   webserver:
     container_name: airflow_webserver
     profiles:
-      # - gpu
+      - gpu
       - no_gpu
       - airflow_test
     image: apache/airflow:2.10.1
@@ -104,7 +104,8 @@ services:
       # - ./hf_etl/outputs/files:/app/outputs/files
       # Necessary to run docker commands inside other containers
       - /var/run/docker.sock:/var/run/docker.sock 
-      
+    environment:
+      - HF_TOKEN=${HF_TOKEN}
     deploy:
       resources:
         reservations:

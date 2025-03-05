@@ -54,7 +54,7 @@ class QAInferenceEngine:
 
             else:
                 model = transformers.AutoModelForQuestionAnswering.from_pretrained(
-                    self.model_name
+                    self.model_name, trust_remote_code=True
                 )
                 model.half()
                 model.to(self.device)
