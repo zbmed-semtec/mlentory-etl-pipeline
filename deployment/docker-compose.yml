@@ -139,6 +139,22 @@ services:
     networks:
       - mlentory_network
 
+  openml_etl_with_no_gpu:
+    profiles: [openml_no_gpu]
+    container_name: openml_no_gpu
+    build: 
+      context: ../
+      dockerfile: deployment/openml_etl/Dockerfile.no_gpu
+    volumes:
+      - ../data/configuration/openml:/app/configuration/openml
+      - ../code/extractors:/app/extractors 
+      - ./openml_etl:/app/openml_etl
+    dns:
+      - 1.1.1.1
+    command: ["tail", "-f", "/dev/null"]
+    networks:
+      - mlentory_network
+
   ### Module in charge of transforming the data to the RDA FAIR4ML schema
   # transform:
   #   profiles:
@@ -268,4 +284,3 @@ services:
 networks:
   mlentory_network:
     external: true
-
