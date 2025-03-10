@@ -17,6 +17,9 @@ deployment/
 │ ├── plugins/
 │ ├── scripts/
 │ └── requirements.txt
+├── start_mlentory.sh                     # Script to set up and start the environment
+├── setup_pgadmin.sh                      # Script to set up pgAdmin permissions
+├── db_connect.py                         # Database connection utility
 └── requirements.txt
 ```
 
@@ -37,7 +40,26 @@ If you want further information on how to configure your machine to run the MLen
 docker network create mlentory_network
 ```
 
-2. Choose your deployment profile:
+2. Use the automated setup script (recommended):
+
+```bash
+sudo ./start_mlentory.sh
+```
+
+This script will:
+- Detect if GPU is available and select the appropriate profile
+- Create required directories
+- Set proper permissions for data directories
+- Create the Docker network if it doesn't exist
+- Start all containers with the appropriate profile
+
+You can override the profile selection:
+
+```bash
+sudo ./start_mlentory.sh --profile no_gpu
+```
+
+3. Alternatively, choose your deployment profile manually:
 
 Make sure to be in the deployment folder when running the following commands.
 
@@ -64,6 +86,58 @@ For docker compose version 2.0 or higher run:
 
 ```bash
 docker compose --profile no_gpu up -d
+```
+
+## Database Management
+
+The MLentory system includes tools for database management and visualization:
+
+### pgAdmin for PostgreSQL Visualization
+
+A pgAdmin container is included to provide a web-based interface for managing PostgreSQL databases:
+
+- Access URL: http://localhost:5050
+- Default credentials:
+  - Email: admin@admin.com
+  - Password: admin
+
+To set up server connections in pgAdmin:
+
+1. Log in to pgAdmin
+2. Right-click on "Servers" in the left panel and select "Create" > "Server..."
+3. In the "General" tab, give your server a name (e.g., "Main Database" or "Airflow Database")
+4. In the "Connection" tab, enter:
+   - For main database:
+     - Host: postgres
+     - Port: 5432
+     - Username: user
+     - Password: password
+     - Database: history_DB
+   - For Airflow database:
+     - Host: airflow_postgres
+     - Port: 5442
+     - Username: airflow
+     - Password: airflow
+     - Database: airflow
+
+### Database Connection Utility
+
+The `db_connect.py` script provides connection strings for various database clients:
+
+```bash
+python db_connect.py
+```
+
+This will display connection information for:
+- PostgreSQL command line (psql)
+- JDBC connection URL
+- SQLAlchemy connection URI
+- Python connection code
+
+You can specify a particular format:
+
+```bash
+python db_connect.py --format psql
 ```
 
 ## Running ETL Jobs
@@ -104,9 +178,13 @@ The system consists of several containerized services:
   - Virtuoso RDF Store (Ports 1111, 8890)
   - Elasticsearch (Ports 9200, 9300)
 
+- **Management Services**:
+  - pgAdmin (Port 5050)
+
 ## Accessing Services
 
 - Airflow UI: http://localhost:8080 (default credentials: admin/admin)
+- pgAdmin: http://localhost:5050 (default credentials: admin@admin.com/admin)
 - Virtuoso SPARQL endpoint: http://localhost:8890/sparql
 - Elasticsearch: http://localhost:9200
 - PostgreSQL: localhost:5432
@@ -135,13 +213,13 @@ sudo apt install apt-transport-https ca-certificates curl software-properties-co
 
 3. Add the GPG key for the official Docker repository:
 
-```console
+```
 curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -
 ```
 
 4. Add the Docker repository to APT sources:
 
-```console
+```
 sudo add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu focal stable"
 ```
 
@@ -285,3 +363,7 @@ wsl.exe --shutdown
    - Verify NVIDIA drivers are installed
    - Check NVIDIA Container Toolkit is properly configured
    - Run `nvidia-smi` to confirm GPU access
+
+3. For database connection issues:
+   - Use the `db_connect.py` utility to verify connection parameters
+   - Check if the database containers are running: `docker ps | grep postgres`

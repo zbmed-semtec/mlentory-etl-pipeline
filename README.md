@@ -84,12 +84,15 @@ The project structure is the following:
 │   ├── hf_etl
 │   ├── scheduler
 │   ├── docker-compose.yml
+│   ├── start_mlentory.sh
+│   ├── db_connect.py
 │   └── requirements.txt
 ├── data
 │   ├── configuration
 │   ├── datasets
 │   ├── elasticsearch_data
 │   ├── postgres_data
+│   ├── pgadmin_data
 │   └── virtuoso_data
 ├── docs
 │   ├── Analysis_graphs

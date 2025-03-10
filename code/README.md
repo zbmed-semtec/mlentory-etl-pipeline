@@ -41,9 +41,36 @@ For detailed information, see the [load documentation](load/README.md) .
 
 ## Run the project
 
-If you want to run the full extraction, transformation and loading process you can follow the instructions in the [deployment documentation](deployment/README.md).
+### Full ETL Pipeline
 
-If you want to run any of the specific components you need to have the prerequisites installed from the [deployment documentation](deployment/README.md#prerequisites), if you already have them installed you can follow the instuctions from any of the components folders.
+To run the full extraction, transformation and loading process, use the automated setup script:
+
+```bash
+cd deployment
+sudo ./start_mlentory.sh
+```
+
+This script will:
+- Detect if GPU is available and select the appropriate profile
+- Create required directories with proper permissions
+- Start all containers with the appropriate profile
+
+For more options and details, see the [deployment documentation](../deployment/README.md).
+
+### Database Management
+
+The MLentory system includes tools for database management and visualization:
+
+#### pgAdmin for PostgreSQL Visualization
+
+Access the PostgreSQL databases through a web interface:
+- URL: http://localhost:5050
+- Credentials: admin@admin.com / admin
+
+
+### Individual Components
+
+If you want to run any of the specific components, you need to have the prerequisites installed from the [deployment documentation](../deployment/README.md#prerequisites). If you already have them installed, you can follow the instructions from any of the component folders.
 
 
 
