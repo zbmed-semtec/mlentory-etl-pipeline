@@ -139,64 +139,6 @@ services:
     networks:
       - mlentory_network
 
-  ### Module in charge of transforming the data to the RDA FAIR4ML schema
-  # transform:
-  #   profiles:
-  #     - gpu
-  #     - no_gpu
-  #   container_name: transform
-  #   build: 
-  #     context: .
-  #     dockerfile: ./transform/Dockerfile  # Path to extractor Dockerfile
-  #   # Define volumes to mount extractor scripts or dependencies
-  #   volumes:
-  #     - ./transform:/app
-  #     - ../data/transform_queue:/transform_queue
-  #     - ../data/load_queue:/load_queue
-  #     - ../data/datasets:/datasets
-  #     - ./config_data:/config_data
-  #   dns:
-  #     - 1.1.1.1
-
-  #   # Uncomment this line to test the script
-  #   command: ["tail", "-f", "/dev/null"]
-  #   # command: ["python3", "main.py"]
-  #   networks:
-  #     - mlentory_network
-  #   # Uncomment for production
-  #   #command: ["python3", "ExtractFromDataset.py"]
-
-  ### Module in charge of loading the data into the database
-  # load:    
-  #   depends_on:
-  #     - transform
-  #     - postgres
-  #     - virtuoso
-  #     - elastic
-  #   profiles:
-  #     - gpu
-  #     - no_gpu
-  #   container_name: load
-  #   build: 
-  #     context: .
-  #     dockerfile: ./load/Dockerfile  # Path to extractor Dockerfile
-  #   # Define volumes to mount extractor scripts or dependencies
-  #   volumes:
-  #     - ./load:/app
-  #     - ../data/load_queue:/load_queue
-  #     - ../data/virtuoso_data/kg_files:/kg_files
-  #     - ./config_data:/config_data
-  #     # Necessary to run docker commands inside other containers
-  #     - /var/run/docker.sock:/var/run/docker.sock 
-  #   dns:
-  #     - 1.1.1.1
-
-  #   # Uncomment this line to test the script
-  #   command: ["tail", "-f", "/dev/null"]
-  #   # command: ["python3", "main.py"]
-  #   networks:
-  #     - mlentory_network
-
   ### SQL for storage database
   postgres:
     profiles:
@@ -215,6 +157,28 @@ services:
       - ../data/postgres_data:/var/lib/postgresql/data
     networks:
       - mlentory_network
+
+  ### Database visualization tool
+  pgadmin:
+    profiles:
+      - gpu
+      - no_gpu
+    container_name: pgadmin
+    image: dpage/pgadmin4:latest
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@admin.com
+      PGADMIN_DEFAULT_PASSWORD: admin
+      PGADMIN_CONFIG_SERVER_MODE: 'False'
+    ports:
+      - "5050:80"
+    volumes:
+      - ../data/pgadmin_data:/var/lib/pgadmin
+    depends_on:
+      - postgres
+      # - airflow_postgres
+    networks:
+      - mlentory_network
+    restart: always
 
   ### RDF database
   virtuoso:
