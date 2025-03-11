@@ -291,7 +291,11 @@ class KnowledgeGraphHandler:
                 try:
                     id_hash = self.generate_entity_hash(platform, "Dataset", value)
                     dataset_uri = self.base_namespace[id_hash]
-                    self.graph.add((dataset_uri, RDF.type, self.namespaces["schema"]["Dataset"]))
+                    self.add_triple_with_metadata(
+                        dataset_uri, 
+                        RDF.type, 
+                        self.namespaces["fair4ml"]["Dataset"], 
+                        {"extraction_method": "System", "confidence": 1.0})
                     objects.append(dataset_uri)
                 except:
                     objects.append(Literal(value, datatype=XSD.string))
@@ -299,8 +303,16 @@ class KnowledgeGraphHandler:
             elif "ScholarlyArticle" in range_value:
                 id_hash = self.generate_entity_hash(platform, "ScholarlyArticle", value)
                 scholarly_article_uri = self.base_namespace[id_hash]
-                self.graph.add((scholarly_article_uri, RDF.type, self.namespaces["schema"]["ScholarlyArticle"]))
-                self.graph.add((scholarly_article_uri, self.namespaces["schema"]["url"], Literal("https://arxiv.org/abs/"+value, datatype=XSD.string)))
+                self.add_triple_with_metadata(
+                    scholarly_article_uri, 
+                    RDF.type, 
+                    self.namespaces["schema"]["ScholarlyArticle"], 
+                    {"extraction_method": "System", "confidence": 1.0})
+                self.add_triple_with_metadata(
+                    scholarly_article_uri, 
+                    self.namespaces["schema"]["url"], 
+                    Literal("https://arxiv.org/abs/"+value, datatype=XSD.string), 
+                    {"extraction_method": "System", "confidence": 1.0})
                 objects.append(scholarly_article_uri)
 
             elif "Boolean" in range_value:
@@ -313,16 +325,42 @@ class KnowledgeGraphHandler:
                 id_hash = self.generate_entity_hash(platform, "Person", value)
                 person_uri = self.base_namespace[id_hash]
                 self.graph.add((person_uri, RDF.type, self.namespaces["schema"]["Person"]))
-                self.graph.add((person_uri, self.namespaces["schema"]["name"], Literal(value, datatype=XSD.string)))
-                self.graph.add((person_uri, self.namespaces["schema"]["url"], Literal("https://huggingface.co/"+value, datatype=XSD.string)))
+                
+                self.add_triple_with_metadata(
+                    person_uri, 
+                    RDF.type, 
+                    self.namespaces["schema"]["Person"], 
+                    {"extraction_method": "System", "confidence": 1.0})
+                self.add_triple_with_metadata(
+                    person_uri, 
+                    self.namespaces["schema"]["name"], 
+                    Literal(value, datatype=XSD.string), 
+                    {"extraction_method": "System", "confidence": 1.0})
+                self.add_triple_with_metadata(
+                    person_uri, 
+                    self.namespaces["schema"]["url"], 
+                    Literal("https://huggingface.co/"+value, datatype=XSD.string), 
+                    {"extraction_method": "System", "confidence": 1.0})
                 objects.append(person_uri)
                 
             elif "Organization" in range_value:
                 id_hash = self.generate_entity_hash(platform, "Organization", value)
                 organization_uri = self.base_namespace[id_hash]
-                self.graph.add((organization_uri, RDF.type, self.namespaces["schema"]["Organization"]))
-                self.graph.add((organization_uri, self.namespaces["schema"]["name"], Literal(value, datatype=XSD.string)))
-                self.graph.add((organization_uri, self.namespaces["schema"]["url"], Literal("https://huggingface.co/"+value, datatype=XSD.string)))
+                self.add_triple_with_metadata(
+                    organization_uri, 
+                    RDF.type, 
+                    self.namespaces["schema"]["Organization"], 
+                    {"extraction_method": "System", "confidence": 1.0})
+                self.add_triple_with_metadata(
+                    organization_uri, 
+                    self.namespaces["schema"]["name"], 
+                    Literal(value, datatype=XSD.string), 
+                    {"extraction_method": "System", "confidence": 1.0})
+                self.add_triple_with_metadata(
+                    organization_uri, 
+                    self.namespaces["schema"]["url"], 
+                    Literal("https://huggingface.co/"+value, datatype=XSD.string), 
+                    {"extraction_method": "System", "confidence": 1.0})
                 objects.append(organization_uri)
                 
 
@@ -381,6 +419,10 @@ class KnowledgeGraphHandler:
             metadata (Dict[str, any]): Dictionary containing metadata about the triple
             extraction_time (Optional[str]): Timestamp of when the triple was extracted
         """
+        #Check if the triple already exists
+        if (subject, predicate, object_) in self.graph:
+            return
+
         # Add the main triple to the knowledge graph
         self.graph.add((subject, predicate, object_))
 

@@ -1,6 +1,6 @@
 """Core module for MLentory transform package."""
 
-from .KnoledgeGraphHandler import KnowledgeGraphHandler
+from .KnowledgeGraphHandler import KnowledgeGraphHandler
 from .MlentoryTransform import MlentoryTransform
 
 __all__ = [
