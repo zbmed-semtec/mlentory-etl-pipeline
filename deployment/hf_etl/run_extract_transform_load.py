@@ -1,6 +1,6 @@
 import shutil
 import numpy as np
-
+import time
 np.float_ = np.float64
 import pandas as pd
 from rdflib import Graph
@@ -65,8 +65,8 @@ def initialize_extractor(config_path: str) -> HFExtractor:
     dataset_manager = HFDatasetManager(api_token=os.getenv("HF_TOKEN"))
 
     return HFExtractor(
-        # qa_model="sentence-transformers/all-MiniLM-L6-v2",
-        qa_model="BAAI/bge-m3",
+        qa_model="sentence-transformers/all-MiniLM-L6-v2",
+        # qa_model="BAAI/bge-m3",
         dataset_manager=dataset_manager,
         questions=questions,
         tags_language=tags_language,
@@ -187,10 +187,10 @@ def parse_args() -> argparse.Namespace:
         help="Download models from this date (format: YYYY-MM-DD)",
     )
     parser.add_argument(
-        "--num-models", "-nm", type=int, default=1000, help="Number of models to download"
+        "--num-models", "-nm", type=int, default=200, help="Number of models to download"
     )
     parser.add_argument(
-        "--num-datasets", type=int, default=1000, help="Number of datasets to download"
+        "--num-datasets", "-nd", type=int, default=200, help="Number of datasets to download"
     )
     parser.add_argument(
         "--output-dir",
@@ -265,21 +265,25 @@ def main():
             [models_extraction_metadata, datasets_extraction_metadata],
             save_output_in_json=True,
             output_dir=args.output_dir + "/extraction_metadata",
+            disambiguate_extraction_metadata=True,
         )
     else:
         # load kg with rdflib   
-        kg_integrated.parse(args.output_dir + "/kg/2025-02-16_16-39-30_unified_kg.json", format="json-ld")
-        extraction_metadata_integrated.parse(args.output_dir + "/extraction_metadata/2025-02-16_16-41-01_unified_kg.json", format="json-ld")
+        kg_integrated.parse(args.output_dir + "/kg/2025-02-24_05-23-35_unified_kg.ttl", format="turtle")
+        extraction_metadata_integrated.parse(args.output_dir + "/extraction_metadata/2025-02-24_05-24-15_unified_kg.ttl", format="turtle")
 
     # Initialize loader
     loader = initialize_load_processor(kg_files_directory)
 
     # loader.clean_DBs()
+    
+    # Wait for 5 seconds
+    # time.sleep(5)
 
     # Load data
     loader.update_dbs_with_kg(kg_integrated, extraction_metadata_integrated)
     
-    loader.print_DB_states()
+    # loader.print_DB_states()
 
 
 if __name__ == "__main__":
