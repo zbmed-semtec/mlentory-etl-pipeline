@@ -296,6 +296,29 @@ class KnowledgeGraphHandler:
                         RDF.type, 
                         self.namespaces["fair4ml"]["Dataset"], 
                         {"extraction_method": "System", "confidence": 1.0})
+                    if( len(value) < 100):
+                        self.add_triple_with_metadata(
+                            dataset_uri, 
+                            self.namespaces["schema"]["name"], 
+                            Literal(value, datatype=XSD.string), 
+                            {"extraction_method": "System", "confidence": 1.0})
+                        self.add_triple_with_metadata(
+                            dataset_uri, 
+                            self.namespaces["schema"]["url"], 
+                            Literal("https://huggingface.co/"+value, datatype=XSD.string), 
+                            {"extraction_method": "System", "confidence": 1.0})
+                    else:
+                        self.add_triple_with_metadata(
+                            dataset_uri, 
+                            self.namespaces["schema"]["description"], 
+                            Literal(value, datatype=XSD.string), 
+                            {"extraction_method": "System", "confidence": 1.0})
+                        self.add_triple_with_metadata(
+                            dataset_uri, 
+                            self.namespaces["schema"]["name"], 
+                            Literal("Extracted model info: "+value[:50]+"...", datatype=XSD.string), 
+                            {"extraction_method": "System", "confidence": 1.0})
+                    
                     objects.append(dataset_uri)
                 except:
                     objects.append(Literal(value, datatype=XSD.string))
@@ -313,6 +336,11 @@ class KnowledgeGraphHandler:
                     self.namespaces["schema"]["url"], 
                     Literal("https://arxiv.org/abs/"+value, datatype=XSD.string), 
                     {"extraction_method": "System", "confidence": 1.0})
+                self.add_triple_with_metadata(
+                    scholarly_article_uri, 
+                    self.namespaces["schema"]["name"], 
+                    Literal(value, datatype=XSD.string), 
+                    {"extraction_method": "System", "confidence": 1.0})
                 objects.append(scholarly_article_uri)
 
             elif "Boolean" in range_value:
@@ -324,7 +352,6 @@ class KnowledgeGraphHandler:
             elif "Person" in range_value:
                 id_hash = self.generate_entity_hash(platform, "Person", value)
                 person_uri = self.base_namespace[id_hash]
-                self.graph.add((person_uri, RDF.type, self.namespaces["schema"]["Person"]))
                 
                 self.add_triple_with_metadata(
                     person_uri, 

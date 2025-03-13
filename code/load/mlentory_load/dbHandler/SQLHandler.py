@@ -121,15 +121,19 @@ class SQLHandler:
         self.connection.commit()
         cursor.close()
 
-    def execute_sql(self, sql: str) -> None:
+    def execute_sql(self, sql: str, params: tuple = None) -> None:
         """
         Execute a SQL query without returning results.
 
         Args:
             sql (str): SQL query to execute
+            params (tuple, optional): Query parameters
+
+        Raises:
+            psycopg2.Error: If there's an error executing the SQL query
         """
         cursor = self.connection.cursor()
-        cursor.execute(sql)
+        cursor.execute(sql, params or ())
         self.connection.commit()
         cursor.close()
 

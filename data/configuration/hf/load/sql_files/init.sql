@@ -5,7 +5,8 @@ CREATE TABLE IF NOT EXISTS "Triplet" (
     "id" BIGSERIAL PRIMARY KEY,
     "subject" VARCHAR(1024) NOT NULL,
     "predicate" VARCHAR(2048) NOT NULL,
-    "object" TEXT NOT NULL
+    "object" TEXT NOT NULL,
+    "triplet_hash" VARCHAR(128) NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS "Triplet_Extraction_Info" (
@@ -26,6 +27,7 @@ CREATE TABLE IF NOT EXISTS "Version_Range" (
 -- Add indexes for frequently queried columns
 CREATE INDEX IF NOT EXISTS idx_triplet_subject ON "Triplet" USING hash(subject);
 CREATE INDEX IF NOT EXISTS idx_triplet_object_hash ON "Triplet" USING hash(md5(object));
+CREATE INDEX IF NOT EXISTS idx_triplet_hash ON "Triplet" USING hash(triplet_hash);
 
 -- Composite index for triplet lookups
 CREATE INDEX IF NOT EXISTS idx_triplet_composite ON "Triplet" 
