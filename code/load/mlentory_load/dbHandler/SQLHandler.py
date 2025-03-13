@@ -167,7 +167,7 @@ class SQLHandler:
         3. Resets all sequences (auto-increment counters) to 1
         """
         cursor = self.connection.cursor()
-        
+
         # Get all tables
         cursor.execute(
             """
@@ -179,7 +179,7 @@ class SQLHandler:
 
         # Defer constraints and truncate tables
         cursor.execute("SET CONSTRAINTS ALL DEFERRED")
-        
+
         for table in tables:
             table_name = table[0]
             # TRUNCATE is faster than DELETE and resets sequences automatically
@@ -188,7 +188,13 @@ class SQLHandler:
         self.connection.commit()
         cursor.close()
 
-    def batch_insert(self, table: str, columns: List[str], values: List[tuple], batch_size: int = 1000) -> List[int]:
+    def batch_insert(
+        self,
+        table: str,
+        columns: List[str],
+        values: List[tuple],
+        batch_size: int = 1000,
+    ) -> List[int]:
         """
         Insert multiple records into the specified table in batches.
 
@@ -202,30 +208,38 @@ class SQLHandler:
         """
         cursor = self.connection.cursor()
         inserted_ids = []
-        
+
         # Process in batches
         for i in range(0, len(values), batch_size):
-            batch = values[i:min(i + batch_size, len(values))]
+            batch = values[i : min(i + batch_size, len(values))]
             # print("BATCH SIZE: ", len(batch))
-            
+
             # Create the INSERT query with RETURNING id
             columns_str = ", ".join(f'"{col}"' for col in columns)
-            placeholders = ",".join([f"({','.join(['%s'] * len(columns))})" for _ in batch])
+            placeholders = ",".join(
+                [f"({','.join(['%s'] * len(columns))})" for _ in batch]
+            )
             query = f'INSERT INTO "{table}" ({columns_str}) VALUES {placeholders} RETURNING id'
-            
+
             # Flatten the batch values into a single list
             flat_values = [val for tup in batch for val in tup]
-            
+
             # Execute directly without execute_values
             cursor.execute(query, flat_values)
             batch_ids = cursor.fetchall()
             inserted_ids.extend([row[0] for row in batch_ids])
-            
+
         self.connection.commit()
         cursor.close()
         return inserted_ids
 
-    def batch_update(self, table: str, updates: List[Dict[str, Any]], conditions: List[str], batch_size: int = 1000) -> None:
+    def batch_update(
+        self,
+        table: str,
+        updates: List[Dict[str, Any]],
+        conditions: List[str],
+        batch_size: int = 1000,
+    ) -> None:
         """
         Update multiple records in a table based on conditions.
 
@@ -235,16 +249,16 @@ class SQLHandler:
             conditions (List[str]): List of WHERE clauses for updates
         """
         cursor = self.connection.cursor()
-        
+
         for i in range(0, len(updates), batch_size):
-            batch_updates = updates[i:min(i + batch_size, len(updates))]
-            batch_conditions = conditions[i:min(i + batch_size, len(conditions))]
-            
+            batch_updates = updates[i : min(i + batch_size, len(updates))]
+            batch_conditions = conditions[i : min(i + batch_size, len(conditions))]
+
             for update_dict, condition in zip(batch_updates, batch_conditions):
                 set_clause = ", ".join([f'"{key}" = %s' for key in update_dict.keys()])
                 sql = f'UPDATE "{table}" SET {set_clause} WHERE {condition}'
                 cursor.execute(sql, list(update_dict.values()))
-                
+
         self.connection.commit()
         cursor.close()
 
@@ -260,7 +274,7 @@ class SQLHandler:
         """
         results = []
         cursor = self.connection.cursor()
-        
+
         for query in queries:
             cursor.execute(query)
             if cursor.description:  # If the query returns results
@@ -269,6 +283,6 @@ class SQLHandler:
                 results.append(pd.DataFrame(result, columns=columns))
             else:
                 results.append(pd.DataFrame())
-                
+
         cursor.close()
         return results

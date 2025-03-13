@@ -121,10 +121,12 @@ class IndexHandler:
         index_model_entity.mlTask = []
         index_model_entity.license = ""
         index_model_entity.relatedDatasets = []
-        
+
         for key, value in info.items():
             if "identifier" in key:
-                index_model_entity.name = value[0].split("/")[-2]+"/"+value[0].split("/")[-1]
+                index_model_entity.name = (
+                    value[0].split("/")[-2] + "/" + value[0].split("/")[-1]
+                )
             elif "releaseNotes" in key:
                 index_model_entity.releaseNotes = value[0]
             elif "mlTask" in key:
