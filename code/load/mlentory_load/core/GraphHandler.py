@@ -1,4 +1,3 @@
-import pprint
 import rdflib
 import json
 import os
@@ -58,16 +57,8 @@ class GraphHandler:
             kg_files_directory (str): Path to graph files
             platform (str): Platform identifier
             graph_identifier (str): Main graph URI
-            deprecated_graph_identifier (str): Deprecated graph URI
-            new_triplets (list): List of new triplets identify in the new data
-            old_triplets (list): List of old triplets identify in the stored data
-            curr_update_date (datetime): Date of the current update
-            models_to_index (list): List of models to be indexed
-            id_to_model_entity (dict): Dictionary to map the id of the model to the model entity
-            df (pd.DataFrame): Dataframe with the new data to be processed
-            kg (Graph): Knowledge graph with the new data to be processed
+            deprecated_graph_identifier (str): Deprecated graph
         """
-        self.df_to_transform = None
         self.SQLHandler = SQLHandler
         self.RDFHandler = RDFHandler
         self.IndexHandler = IndexHandler
@@ -75,489 +66,9 @@ class GraphHandler:
         self.platform = platform
         self.graph_identifier = graph_identifier
         self.deprecated_graph_identifier = deprecated_graph_identifier
+
         self.new_triplets = []
         self.old_triplets = []
-        self.models_to_index = []
-        self.id_to_model_entity = {}
-        self.curr_update_date = None
-        self.df = None
-        self.kg = None
-        self.extraction_metadata = None
-        self.entities_in_kg = {}
-
-    def set_df(self, df: pd.DataFrame):
-        """
-        Load DataFrame for processing.
-
-        Args:
-            df (pd.DataFrame): Data to be processed
-        """
-        self.df = df
-
-    def set_kg(self, kg: Graph):
-        """
-        Set the KG to be loaded.
-        """
-        self.kg = kg
-
-    def set_extraction_metadata(self, extraction_metadata: Graph):
-        """
-        Set the extraction metadata to be loaded.
-        """
-        self.extraction_metadata = extraction_metadata
-
-    def update_graph(self):
-        """
-        Update graphs across all databases.
-
-        This method:
-        1. Updates metadata graph
-        2. Updates current graph
-        3. Updates search indices
-        """
-        # This graph updates the metadata of the triplets and identifies which triplets are new and which ones are not longer valid
-        if self.kg is not None:
-            self.update_metadata_graph_with_kg()
-        else:
-            self.update_metadata_graph()
-
-        # This update uses the new_triplets and the old_triplets list to update the current version of the graph.
-        self.update_current_graph()
-
-        # This updates the index with the new models and triplets
-        if self.kg is not None:
-            self.update_indexes_with_kg()
-        else:
-            self.update_indexes()
-
-    def update_metadata_graph_with_kg(self):
-        """
-        Update the metadata graph with information from a knowledge graph containing metadata nodes.
-
-        This method:
-        1. Processes each StatementMetadata node in the graph
-        2. Extracts subject, predicate, object and metadata information
-        3. Uses process_triplet to handle each triplet's metadata
-        """
-        # Define the URIs we'll need
-        META_NS = self.graph_identifier + "/meta/"
-        STATEMENT_METADATA = URIRef(str(META_NS) + "StatementMetadata")
-
-        max_extraction_time = None
-
-        triplets_metadata = {}
-
-        print("Processing extraction metadata...")
-        for triplet in tqdm(self.extraction_metadata, desc="Creating triples dictionaries"):
-            if triplet[0] not in triplets_metadata:
-                triplets_metadata[triplet[0]] = {triplet[1]: triplet[2]}
-            else:
-                triplets_metadata[triplet[0]][triplet[1]] = triplet[2]
-
-        batch_size = 100
-        batch_triplets = []
-        
-        # Get all nodes of type StatementMetadata
-        for metadata_node in tqdm(triplets_metadata, desc="Processing extraction metadata nodes"):
-
-            # print("METADATA NODE\n", metadata_node)
-
-            metadata_node_dict = triplets_metadata[metadata_node]
-
-            # Extract subject, predicate, object
-            subject = metadata_node_dict[URIRef(META_NS + "subject")]
-            predicate = metadata_node_dict[URIRef(META_NS + "predicate")]
-            object_value = metadata_node_dict[URIRef(META_NS + "object")]
-
-            # Extract metadata information
-            confidence = float(metadata_node_dict[URIRef(META_NS + "confidence")])
-            extraction_method = str(
-                metadata_node_dict[URIRef(META_NS + "extractionMethod")]
-            )
-            extraction_time = str(
-                metadata_node_dict[URIRef(META_NS + "extractionTime")]
-            ).split(".")[0]
-
-            # Convert datetime format from 2024-02-13T21:24:05+00:00 to our expected format
-            extraction_time = datetime.strptime(
-                extraction_time, "%Y-%m-%dT%H:%M:%S"
-            ).strftime("%Y-%m-%d_%H-%M-%S")
-
-            if max_extraction_time is None:
-                max_extraction_time = extraction_time
-            else:
-                max_extraction_time = max(max_extraction_time, extraction_time)
-
-            # Create extraction info dictionary
-            extraction_info = {
-                "confidence": confidence,
-                "extraction_method": extraction_method,
-                "extraction_time": extraction_time,
-            }
-
-            # Process the triplet with its metadata
-            batch_triplets.append((subject, predicate, object_value, extraction_info))
-            if len(batch_triplets) == batch_size:
-                self.process_triplet_batch(batch_triplets)
-                batch_triplets = []
-            # self.process_triplet(
-            #     subject=subject,
-            #     predicate=predicate,
-            #     object=object_value,
-            #     extraction_info=extraction_info,
-            # )
-            
-        if len(batch_triplets) > 0:
-            self.process_triplet_batch(batch_triplets)
-
-        # Update the dates of models that haven't changed
-        if self.curr_update_date is None:
-            # Use the latest extraction time as current update date
-            self.curr_update_date = max_extraction_time
-
-        self.update_triplet_ranges_for_unchanged_models(self.curr_update_date)
-        self.curr_update_date = None
-
-    # Construct all the triplets in the input dataframe
-    def update_metadata_graph(self):
-        """
-        Update metadata graph with new information.
-
-        This method:
-        1. Processes each model
-        2. Updates triplet metadata
-        3. Handles deprecation of old data
-        """
-
-        for index, row in tqdm(
-            self.df.iterrows(), total=len(self.df), desc="Updating metadata graph"
-        ):
-            # For each row we first create an m4ml:MLModel instance and their respective triplets
-            model_uri = self.process_model(row)
-            self.models_to_index.append(model_uri)
-
-            # Deprecate all the triplets that were not created or updated for the current model
-            self.deprecate_old_triplets(model_uri)
-
-        # Update the dates of the models that have not been updated
-        self.update_triplet_ranges_for_unchanged_models(self.curr_update_date)
-        self.curr_update_date = None
-
-    def process_model(self, row):
-        """
-        Process a single model row into graph triplets.
-
-        Args:
-            row (pd.Series): Model data to process
-
-        Returns:
-            URIRef: URI reference for the processed model
-        """
-        model_uri = self.text_to_uri_term(str(row["schema.org:name"][0]["data"]))
-
-        self.process_triplet(
-            subject=model_uri,
-            predicate=RDF.type,
-            object=URIRef("fair4ml:MLModel"),
-            extraction_info=row["schema.org:name"][0],
-        )
-
-        if self.curr_update_date == None:
-            self.curr_update_date = datetime.strptime(
-                row["schema.org:name"][0]["extraction_time"], "%Y-%m-%d_%H-%M-%S"
-            )
-
-        # Go through all the columns and add the triplets
-        for column in tqdm(self.df.columns, desc=f"Processing properties for model {model_uri}"):
-            # if column == "schema.org:name":
-            #     continue
-            # Handle the cases where a new entity has to be created
-            if column in [
-                "fair4ml:mlTask",
-                "fair4ml:sharedBy",
-                "fair4ml:testedOn",
-                "fair4ml:evaluatedOn",
-                "fair4ml:trainedOn",
-                "codemeta:referencePublication",
-            ]:
-                # Go through the different sources that can create information about the entity
-                if type(row[column]) != list and pd.isna(row[column]):
-                    continue
-                for source in row[column]:
-                    if source["data"] == None:
-                        self.process_triplet(
-                            subject=model_uri,
-                            predicate=URIRef(column),
-                            object=Literal("None"),
-                            extraction_info=source,
-                        )
-                    elif type(source["data"]) == str:
-                        data = source["data"]
-                        self.process_triplet(
-                            subject=model_uri,
-                            predicate=URIRef(column),
-                            object=self.text_to_uri_term(data.replace(" ", "_")),
-                            extraction_info=source,
-                        )
-                    elif type(source["data"]) == list:
-                        for entity in source["data"]:
-                            self.process_triplet(
-                                subject=model_uri,
-                                predicate=URIRef(column),
-                                object=self.text_to_uri_term(entity.replace(" ", "_")),
-                                extraction_info=source,
-                            )
-            # Handle dates
-            if column in [
-                "schema.org:datePublished",
-                "schema.org:dateCreated",
-                "schema.org:dateModified",
-            ]:
-                self.process_triplet(
-                    subject=model_uri,
-                    predicate=URIRef(column),
-                    object=Literal(row[column][0]["data"], datatype=XSD.date),
-                    extraction_info=row[column][0],
-                )
-            # Handle text values
-            if column in [
-                "schema.org:storageRequirements",
-                "schema.org:name",
-                "schema.org:author",
-                "schema.org:discussionUrl",
-                "schema.org:identifier",
-                "schema.org:url",
-                "schema.org:releaseNotes",
-                "schema.org:license",
-                "codemeta:readme",
-                "codemeta:issueTracker",
-                "fair4ml:intendedUse",
-            ]:
-                if type(row[column]) != list and pd.isna(row[column]):
-                    continue
-                for source in row[column]:
-                    if source["data"] == None:
-                        self.process_triplet(
-                            subject=model_uri,
-                            predicate=URIRef(column),
-                            object=Literal("", datatype=XSD.string),
-                            extraction_info=source,
-                        )
-                    elif type(source["data"]) == str:
-                        data = source["data"]
-                        self.process_triplet(
-                            subject=model_uri,
-                            predicate=URIRef(column),
-                            object=Literal(row[column][0]["data"], datatype=XSD.string),
-                            extraction_info=source,
-                        )
-                    elif type(source["data"]) == list:
-                        for entity in source["data"]:
-                            self.process_triplet(
-                                subject=model_uri,
-                                predicate=URIRef(column),
-                                object=Literal(
-                                    row[column][0]["data"], datatype=XSD.string
-                                ),
-                                extraction_info=source,
-                            )
-
-        return model_uri
-
-    def process_triplet(self, subject, predicate, object, extraction_info):
-        """
-        Process a triplet by managing its storage and version control in the database.
-
-        Args:
-            subject: The subject of the triplet
-            predicate: The predicate of the triplet
-            object: The object of the triplet
-            extraction_info (dict): Dictionary containing extraction metadata
-
-        Raises:
-            SQLError: If there's an error executing any SQL query
-            ValueError: If extraction_info lacks required fields
-        """
-        triplet_id, is_new_triplet = self._get_or_create_triplet_id(subject, predicate, object)
-        
-        extraction_info_id = self._get_or_create_extraction_info_id(extraction_info)
-        
-        extraction_time = datetime.strptime(
-            extraction_info["extraction_time"], "%Y-%m-%d_%H-%M-%S"
-        )
-        
-        self._manage_version_range(triplet_id, extraction_info_id, extraction_time)
-
-        if is_new_triplet:
-            self.new_triplets.append((subject, predicate, object))
-            
-    def _get_or_create_triplet_id(self, subject: URIRef, predicate: URIRef, object: URIRef) -> Tuple[int, bool]:
-        """
-        Get or create a triplet ID in the database.
-
-        Args:
-            subject (URIRef): The subject of the triplet
-            predicate (URIRef): The predicate of the triplet
-            object (URIRef): The object of the triplet
-
-        Returns:
-            tuple[int, bool]: A tuple containing the triplet ID and a boolean indicating if it's new
-
-        Raises:
-            SQLError: If there's an error executing the SQL query
-        """
-        subject_json = str(subject.n3())
-        predicate_json = str(predicate.n3())
-        object_json = str(object.n3())
-        object_hash = hashlib.md5(object_json.encode()).hexdigest()
-
-        triplet_id_df = self.SQLHandler.query(
-            f"""SELECT id FROM "Triplet" WHERE subject = '{subject_json}'
-                                                   AND predicate = '{predicate_json}' 
-                                                   AND md5(object) = '{object_hash}'"""
-        )
-
-        if triplet_id_df.empty:
-            triplet_id = self.SQLHandler.insert(
-                "Triplet",
-                {
-                    "subject": subject_json,
-                    "predicate": predicate_json,
-                    "object": object_json,
-                },
-            )
-            return triplet_id, True
-        return triplet_id_df.iloc[0]["id"], False
-
-    def _get_or_create_extraction_info_id(self, extraction_info: dict) -> int:
-        """
-        Get or create an extraction info ID in the database.
-
-        Args:
-            extraction_info (dict): Dictionary containing extraction method and confidence
-
-        Returns:
-            int: The extraction info ID
-
-        Raises:
-            SQLError: If there's an error executing the SQL query
-        """
-        extraction_info_id_df = self.SQLHandler.query(
-            f"""SELECT id FROM "Triplet_Extraction_Info" WHERE 
-                                                method_description = '{extraction_info["extraction_method"]}' 
-                                                AND extraction_confidence = {extraction_info["confidence"]}"""
-        )
-
-        if extraction_info_id_df.empty:
-            return self.SQLHandler.insert(
-                "Triplet_Extraction_Info",
-                {
-                    "method_description": extraction_info["extraction_method"],
-                    "extraction_confidence": extraction_info["confidence"],
-                },
-            )
-        return extraction_info_id_df.iloc[0]["id"]
-
-    def _manage_version_range(
-        self, triplet_id: int, extraction_info_id: int, extraction_time: datetime
-    ) -> None:
-        """
-        Manage version range for a triplet, either creating a new one or updating existing.
-
-        Args:
-            triplet_id (int): The ID of the triplet
-            extraction_info_id (int): The ID of the extraction info
-            extraction_time (datetime): The extraction timestamp
-
-        Raises:
-            SQLError: If there's an error executing the SQL query
-        """
-        version_range_df = self.SQLHandler.query(
-            f"""SELECT vr.id, vr.use_start, vr.use_end FROM "Version_Range" vr WHERE
-                                                    triplet_id = '{triplet_id}'
-                                                    AND extraction_info_id = '{extraction_info_id}'
-                                                    AND deprecated = {False}"""
-        )
-
-        if version_range_df.empty:
-            self.SQLHandler.insert(
-                "Version_Range",
-                {
-                    "triplet_id": str(triplet_id),
-                    "extraction_info_id": str(extraction_info_id),
-                    "use_start": extraction_time,
-                    "use_end": extraction_time,
-                    "deprecated": False,
-                },
-            )
-        else:
-            version_range_id = version_range_df.iloc[0]["id"]
-            self.SQLHandler.update(
-                "Version_Range",
-                {"use_end": extraction_time},
-                f"id = '{version_range_id}'",
-            )
-
-    
-
-    def deprecate_old_triplets(self, model_uri):
-
-        model_uri_json = str(model_uri.n3())
-
-        old_triplets_df = self.SQLHandler.query(
-            f"""SELECT t.id,t.subject,t.predicate,t.object, vr.deprecated, vr.use_end
-                                                  FROM "Triplet" t 
-                                                      JOIN "Version_Range" vr 
-                                                      ON t.id = vr.triplet_id
-                                                      WHERE t.subject = '{model_uri_json}'
-                                                      AND vr.deprecated = {False}
-                                                      AND vr.use_end < '{self.curr_update_date}'
-                                                    """
-        )
-
-        if not old_triplets_df.empty:
-            for index, old_triplet in old_triplets_df.iterrows():
-                self.old_triplets.append(
-                    (
-                        self.n3_to_term(old_triplet["subject"]),
-                        self.n3_to_term(old_triplet["predicate"]),
-                        self.n3_to_term(old_triplet["object"]),
-                    )
-                )
-
-        update_query = f"""
-            UPDATE "Version_Range" vr
-            SET deprecated = {True}, use_end = '{self.curr_update_date}'
-            FROM "Triplet" t
-                JOIN "Version_Range" on t.id = triplet_id
-            WHERE t.subject = '{model_uri_json}'
-            AND vr.use_end < '{self.curr_update_date}'
-            AND vr.deprecated = {False}
-            AND vr.triplet_id = t.id
-        """
-        self.SQLHandler.execute_sql(update_query)
-
-    def update_triplet_ranges_for_unchanged_models(self, curr_date: str) -> None:
-        """
-        Update all triplet ranges that were not modified in the last update
-        to have the same end date as the current date.
-
-        Args:
-            curr_date (str): Current date in format 'YYYY-MM-DD_HH-MM-SS'
-        """
-        # Convert the date string from 'YYYY-MM-DD_HH-MM-SS' to PostgreSQL timestamp format
-        formatted_date = datetime.strptime(curr_date, "%Y-%m-%d_%H-%M-%S").strftime(
-            "%Y-%m-%d %H:%M:%S"
-        )
-
-        update_query = f"""
-            UPDATE "Version_Range"
-            SET use_end = '{formatted_date}'
-            WHERE use_end != '{formatted_date}'
-            AND deprecated = {False}
-        """
-
-        self.SQLHandler.execute_sql(update_query)
 
     def update_current_graph(self):
         """
@@ -588,7 +99,9 @@ class GraphHandler:
             new_triplets_graph.add(new_triplet)
 
         print("Processing deprecated triplets...")
-        for old_triplet in tqdm(self.old_triplets, desc="Processing deprecated triplets"):
+        for old_triplet in tqdm(
+            self.old_triplets, desc="Processing deprecated triplets"
+        ):
             old_triplets_graph.add(old_triplet)
 
         current_date = datetime.now().strftime("%Y-%m-%d")
@@ -622,95 +135,216 @@ class GraphHandler:
                 deprecated_graph_identifier=self.deprecated_graph_identifier,
             )
 
-    def update_indexes_with_kg(self):
+
+    def process_triplet(self, subject, predicate, object, extraction_info):
         """
-        Update search indices with new and modified models.
+        Process a triplet by managing its storage and version control in the database.
+
+        Args:
+            subject: The subject of the triplet
+            predicate: The predicate of the triplet
+            object: The object of the triplet
+            extraction_info (dict): Dictionary containing extraction metadata
+
+        Raises:
+            SQLError: If there's an error executing any SQL query
+            ValueError: If extraction_info lacks required fields
         """
-        new_models = []
+        triplet_id, is_new_triplet = self._get_or_create_triplet_id(
+            subject, predicate, object
+        )
 
-        # Get all the nodes in the KG that are of type MLModel
-        entities_in_kg = {}
-        print("Updating search indices...")
-        for triplet in tqdm(self.kg, desc="Processing current KG triplets"):
-            entity_uri = str(triplet[0].n3())
-            if entity_uri not in entities_in_kg:
-                entities_in_kg[entity_uri] = {triplet[1].n3(): [str(triplet[2])]}
-            else:
-                if triplet[1].n3() not in entities_in_kg[entity_uri]:
-                    entities_in_kg[entity_uri][triplet[1].n3()] = [str(triplet[2])]
-                else:
-                    entities_in_kg[entity_uri][triplet[1].n3()].append(str(triplet[2]))
+        extraction_info_id = self._get_or_create_extraction_info_id(extraction_info)
 
-        print("Updating search indices...")
-        for entity_uri, entity_dict in tqdm(entities_in_kg.items(), desc="Processing entities"):
-            # Check if the entity is a model from the entity_dict
-            # pprint.pprint(entity_dict["<http://www.w3.org/1999/02/22-rdf-syntax-ns#type>"])
+        extraction_time = datetime.strptime(
+            extraction_info["extraction_time"], "%Y-%m-%d_%H-%M-%S"
+        )
 
-            if "ML_Model" in entity_dict["<http://www.w3.org/1999/02/22-rdf-syntax-ns#type>"][0]:
-                index_model_entity = (
-                    self.IndexHandler.create_hf_dataset_index_entity_with_dict(
-                        entity_dict, entity_uri
-                    )
-                )
-                # Check if model already exists in elasticsearch
-                search_result = self.IndexHandler.search(
-                    self.IndexHandler.hf_index,
-                    {"query": {"match_phrase": {"db_identifier": str(entity_uri)}}},
-                )
+        self._manage_version_range(triplet_id, extraction_info_id, extraction_time)
 
-                if not search_result:
-                    # Only index if model doesn't exist
-                    new_models.append(index_model_entity)
-                else:
-                    # If model already exists, update the index
-                    self.IndexHandler.update_document(
-                        index_model_entity.meta.index,
-                        search_result[0]["_id"],
-                        index_model_entity.to_dict(),
-                    )
+        if is_new_triplet:
+            self.new_triplets.append((subject, predicate, object))
 
-        if len(new_models) > 0:
-            print(f"Adding {len(new_models)} new models to search index...")
-            self.IndexHandler.add_documents(new_models)
+    def _get_or_create_triplet_id(
+        self, subject: URIRef, predicate: URIRef, object: URIRef
+    ) -> Tuple[int, bool]:
+        """
+        Get or create a triplet ID in the database.
 
-    def update_indexes(self):
-        """Update search indices with new and modified models."""
-        new_models = []
-        for row_num, row in tqdm(
-            self.df.iterrows(), total=len(self.df), desc="Updating indexes"
-        ):
+        Args:
+            subject (URIRef): The subject of the triplet
+            predicate (URIRef): The predicate of the triplet
+            object (URIRef): The object of the triplet
 
-            # For each row we first create an m4ml:MLModel instance and their respective triplets
-            model_uri = self.models_to_index[row_num]
+        Returns:
+            tuple[int, bool]: A tuple containing the triplet ID and a boolean indicating if it's new
 
-            index_model_entity = self.IndexHandler.create_hf_model_index_entity(
-                row, model_uri
+        Raises:
+            SQLError: If there's an error executing the SQL query
+        """
+        subject_json = str(subject.n3())
+        predicate_json = str(predicate.n3())
+        object_json = str(object.n3())
+
+        # Create a combined hash of all three components of the triplet
+        triplet_hash = hashlib.md5(
+            (subject_json + predicate_json + object_json).encode()
+        ).hexdigest()
+
+        # First try to find the triplet by its hash
+        triplet_id_df = self.SQLHandler.query(
+            """SELECT id FROM "Triplet" WHERE triplet_hash = %s""", (triplet_hash,)
+        )
+
+        if triplet_id_df.empty:
+            # If not found by hash, insert new triplet
+            triplet_id = self.SQLHandler.insert(
+                "Triplet",
+                {
+                    "subject": subject_json,
+                    "predicate": predicate_json,
+                    "object": object_json,
+                    "triplet_hash": triplet_hash,
+                },
+            )
+            return triplet_id, True
+        return triplet_id_df.iloc[0]["id"], False
+
+    def _get_or_create_extraction_info_id(self, extraction_info: dict) -> int:
+        """
+        Get or create an extraction info ID in the database.
+
+        Args:
+            extraction_info (dict): Dictionary containing extraction method and confidence
+
+        Returns:
+            int: The extraction info ID
+
+        Raises:
+            SQLError: If there's an error executing the SQL query
+        """
+        extraction_info_id_df = self.SQLHandler.query(
+            """SELECT id FROM "Triplet_Extraction_Info" WHERE 
+               method_description = %s 
+               AND extraction_confidence = %s""",
+            (extraction_info["extraction_method"], extraction_info["confidence"]),
+        )
+
+        if extraction_info_id_df.empty:
+            return self.SQLHandler.insert(
+                "Triplet_Extraction_Info",
+                {
+                    "method_description": extraction_info["extraction_method"],
+                    "extraction_confidence": extraction_info["confidence"],
+                },
+            )
+        return extraction_info_id_df.iloc[0]["id"]
+
+    def _manage_version_range(
+        self, triplet_id: int, extraction_info_id: int, extraction_time: datetime
+    ) -> None:
+        """
+        Manage version range for a triplet, either creating a new one or updating existing.
+
+        Args:
+            triplet_id (int): The ID of the triplet
+            extraction_info_id (int): The ID of the extraction info
+            extraction_time (datetime): The extraction timestamp
+
+        Raises:
+            SQLError: If there's an error executing the SQL query
+        """
+        version_range_df = self.SQLHandler.query(
+            """SELECT vr.id, vr.use_start, vr.use_end FROM "Version_Range" vr WHERE
+               triplet_id = %s
+               AND extraction_info_id = %s
+               AND deprecated = %s""",
+            (str(triplet_id), str(extraction_info_id), False),
+        )
+
+        if version_range_df.empty:
+            self.SQLHandler.insert(
+                "Version_Range",
+                {
+                    "triplet_id": str(triplet_id),
+                    "extraction_info_id": str(extraction_info_id),
+                    "use_start": extraction_time,
+                    "use_end": extraction_time,
+                    "deprecated": False,
+                },
+            )
+        else:
+            version_range_id = version_range_df.iloc[0]["id"]
+            # Use execute_sql instead of query for UPDATE statements
+            self.SQLHandler.execute_sql(
+                """UPDATE "Version_Range" SET use_end = %s WHERE id = %s""",
+                (extraction_time, version_range_id),
             )
 
-            # Check if model already exists in elasticsearch
-            search_result = self.IndexHandler.search(
-                self.IndexHandler.hf_index,
-                {"query": {"match_phrase": {"db_identifier": str(model_uri.n3())}}},
-            )
+    def deprecate_old_triplets(self, model_uri):
 
-            # print("SEARCH RESULT: ", search_result)
+        model_uri_json = str(model_uri.n3())
 
-            if not search_result:
-                # Only index if model doesn't exist
-                new_models.append(index_model_entity)
-            else:
-                # If model already exists, update the index
-                self.IndexHandler.update_document(
-                    index_model_entity.meta.index,
-                    search_result[0]["_id"],
-                    index_model_entity.to_dict(),
+        old_triplets_df = self.SQLHandler.query(
+            """SELECT t.id,t.subject,t.predicate,t.object, vr.deprecated, vr.use_end
+               FROM "Triplet" t 
+               JOIN "Version_Range" vr 
+               ON t.id = vr.triplet_id
+               WHERE t.subject = %s
+               AND vr.deprecated = %s
+               AND vr.use_end < %s""",
+            (model_uri_json, False, self.curr_update_date),
+        )
+
+        if not old_triplets_df.empty:
+            for index, old_triplet in old_triplets_df.iterrows():
+                self.old_triplets.append(
+                    (
+                        self.n3_to_term(old_triplet["subject"]),
+                        self.n3_to_term(old_triplet["predicate"]),
+                        self.n3_to_term(old_triplet["object"]),
+                    )
                 )
 
-        # Index the model entities
-        if len(new_models) > 0:
-            self.IndexHandler.add_documents(new_models)
+        # Use parameterized query for update
+        update_query = """
+            UPDATE "Version_Range" vr
+            SET deprecated = %s, use_end = %s
+            FROM "Triplet" t
+            JOIN "Version_Range" on t.id = triplet_id
+            WHERE t.subject = %s
+            AND vr.use_end < %s
+            AND vr.deprecated = %s
+            AND vr.triplet_id = t.id
+        """
+        self.SQLHandler.execute_sql(
+            update_query,
+            (True, self.curr_update_date, model_uri_json, self.curr_update_date, False),
+        )
 
-        self.models_to_index = []
+    def update_triplet_ranges_for_unchanged_models(self, curr_date: str) -> None:
+        """
+        Update all triplet ranges that were not modified in the last update
+        to have the same end date as the current date.
+
+        Args:
+            curr_date (str): Current date in format 'YYYY-MM-DD_HH-MM-SS'
+        """
+        # Convert the date string from 'YYYY-MM-DD_HH-MM-SS' to PostgreSQL timestamp format
+        formatted_date = datetime.strptime(curr_date, "%Y-%m-%d_%H-%M-%S").strftime(
+            "%Y-%m-%d %H:%M:%S"
+        )
+
+        update_query = """
+            UPDATE "Version_Range"
+            SET use_end = %s
+            WHERE use_end != %s
+            AND deprecated = %s
+        """
+
+        self.SQLHandler.execute_sql(
+            update_query, (formatted_date, formatted_date, False)
+        )
 
     def get_current_graph(self) -> Graph:
         """
@@ -761,60 +395,77 @@ class GraphHandler:
         Raises:
             SQLError: If there's an error executing the SQL queries
         """
+        if not triplets:
+            return [], []
+
         # Convert triplets to JSON format and calculate hashes
         triplet_data = [
             {
                 "subject": str(subject.n3()),
                 "predicate": str(predicate.n3()),
                 "object": str(object_.n3()),
-                "object_hash": hashlib.md5(str(object_.n3()).encode()).hexdigest()
+                "triplet_hash": hashlib.md5(
+                    (
+                        str(subject.n3()) + str(predicate.n3()) + str(object_.n3())
+                    ).encode()
+                ).hexdigest(),
             }
             for subject, predicate, object_ in triplets
         ]
 
-        # Build batch query to find existing triplets
-        query = " UNION ".join([
-            f"""SELECT id, '{i}' as idx FROM "Triplet" 
-            WHERE subject = '{t["subject"]}' 
-            AND predicate = '{t["predicate"]}' 
-            AND md5(object) = '{t["object_hash"]}'"""
-            for i, t in enumerate(triplet_data)
-        ])
-        
-        existing_triplets_df = self.SQLHandler.query(query) if triplet_data else pd.DataFrame()
-        
+        # Create a list to store query parts and parameters
+        query_parts = []
+        params = []
+
+        # Build batch query to find existing triplets by hash
+        for i, data in enumerate(triplet_data):
+            query_parts.append(
+                f"""SELECT id, %s as idx FROM "Triplet" 
+                WHERE triplet_hash = %s"""
+            )
+            params.extend([str(i), data["triplet_hash"]])
+
+        # Join the query parts with UNION
+        query = " UNION ".join(query_parts)
+
+        existing_triplets_df = (
+            self.SQLHandler.query(query, tuple(params))
+            if triplet_data
+            else pd.DataFrame()
+        )
+
         # Initialize results
         triplet_ids = [-1] * len(triplets)
         is_new = [True] * len(triplets)
-        
+
         # Process existing triplets
         for _, row in existing_triplets_df.iterrows():
             idx = int(row["idx"])
             triplet_ids[idx] = row["id"]
             is_new[idx] = False
-            
+
         # Prepare batch insert for new triplets
         new_triplets_data = [
-            (data["subject"], data["predicate"], data["object"])
+            (data["subject"], data["predicate"], data["object"], data["triplet_hash"])
             for i, data in enumerate(triplet_data)
             if is_new[i]
         ]
-        
+
         if len(new_triplets_data) > 0:
             new_ids = self.SQLHandler.batch_insert(
                 "Triplet",
-                ["subject", "predicate", "object"],
+                ["subject", "predicate", "object", "triplet_hash"],
                 new_triplets_data,
-                batch_size=len(new_triplets_data)
+                batch_size=len(new_triplets_data),
             )
-            
+
             # Update triplet_ids with new IDs
             new_id_idx = 0
             for i in range(len(triplets)):
                 if is_new[i]:
                     triplet_ids[i] = new_ids[new_id_idx]
                     new_id_idx += 1
-                    
+
         return triplet_ids, is_new
 
     def _batch_get_or_create_extraction_info_ids(
@@ -832,53 +483,68 @@ class GraphHandler:
         Raises:
             SQLError: If there's an error executing the SQL queries
         """
+        if not extraction_infos:
+            return []
+
+        # Create a list to store query parts and parameters
+        query_parts = []
+        params = []
+
         # Build batch query to find existing extraction infos
-        query = " UNION ".join([
-            f"""SELECT id, '{i}' as idx FROM "Triplet_Extraction_Info" 
-            WHERE method_description = '{info["extraction_method"]}' 
-            AND extraction_confidence = {info["confidence"]}"""
-            for i, info in enumerate(extraction_infos)
-        ])
-        
-        existing_infos_df = self.SQLHandler.query(query) if extraction_infos else pd.DataFrame()
-        
+        for i, info in enumerate(extraction_infos):
+            query_parts.append(
+                f"""SELECT id, %s as idx FROM "Triplet_Extraction_Info" 
+                WHERE method_description = %s 
+                AND extraction_confidence = %s"""
+            )
+            params.extend([str(i), info["extraction_method"], info["confidence"]])
+
+        # Join the query parts with UNION
+        query = " UNION ".join(query_parts)
+
+        existing_infos_df = (
+            self.SQLHandler.query(query, tuple(params))
+            if extraction_infos
+            else pd.DataFrame()
+        )
+
         # Initialize results
         info_ids = [-1] * len(extraction_infos)
-        
+
         # Process existing infos
         for _, row in existing_infos_df.iterrows():
             idx = int(row["idx"])
             info_ids[idx] = row["id"]
-            
+
         # Prepare batch insert for new infos
         new_infos_data = [
             (info["extraction_method"], info["confidence"])
             for i, info in enumerate(extraction_infos)
             if info_ids[i] == -1
         ]
-        
+
         if new_infos_data:
             new_ids = self.SQLHandler.batch_insert(
                 "Triplet_Extraction_Info",
                 ["method_description", "extraction_confidence"],
                 new_infos_data,
-                batch_size=len(new_infos_data)
+                batch_size=len(new_infos_data),
             )
-            
+
             # Update info_ids with new IDs
             new_id_idx = 0
             for i in range(len(extraction_infos)):
                 if info_ids[i] == -1:
                     info_ids[i] = new_ids[new_id_idx]
                     new_id_idx += 1
-                    
+
         return info_ids
 
     def _batch_manage_version_ranges(
         self,
         triplet_ids: List[int],
         extraction_info_ids: List[int],
-        extraction_times: List[datetime]
+        extraction_times: List[datetime],
     ) -> None:
         """
         Manage version ranges for multiple triplets using batch processing.
@@ -891,42 +557,77 @@ class GraphHandler:
         Raises:
             SQLError: If there's an error executing the SQL queries
         """
+        if not triplet_ids:
+            return
+
+        # Create a list to store query parts and parameters
+        query_parts = []
+        params = []
+
         # Build batch query to find existing version ranges
-        query = " UNION ".join([
-            f"""SELECT id, '{i}' as idx FROM "Version_Range" 
-            WHERE triplet_id = '{t_id}' 
-            AND extraction_info_id = '{e_id}' 
-            AND deprecated = false"""
-            for i, (t_id, e_id) in enumerate(zip(triplet_ids, extraction_info_ids))
-        ])
-        
-        existing_ranges_df = self.SQLHandler.query(query) if triplet_ids else pd.DataFrame()
-        
+        for i, (t_id, e_id) in enumerate(zip(triplet_ids, extraction_info_ids)):
+            query_parts.append(
+                f"""SELECT id, %s as idx FROM "Version_Range" 
+                WHERE triplet_id = %s 
+                AND extraction_info_id = %s 
+                AND deprecated = %s"""
+            )
+            params.extend([str(i), str(t_id), str(e_id), False])
+
+        # Join the query parts with UNION
+        query = " UNION ".join(query_parts)
+
+        existing_ranges_df = (
+            self.SQLHandler.query(query, tuple(params))
+            if triplet_ids
+            else pd.DataFrame()
+        )
+
         # Prepare updates for existing ranges
         updates = []
         conditions = []
         for _, row in existing_ranges_df.iterrows():
             idx = int(row["idx"])
             updates.append({"use_end": extraction_times[idx]})
-            conditions.append(f"id = '{row['id']}'")
-            
+            # Use parameterized condition instead of string interpolation
+            conditions.append(f"id = %s")
+
         if updates:
-            self.SQLHandler.batch_update("Version_Range", updates, conditions)
-            
+            # For each update, we need to add the condition parameter (row id)
+            condition_params = [row["id"] for _, row in existing_ranges_df.iterrows()]
+
+            # Update each row individually with parameterized queries
+            for i, (update_dict, condition) in enumerate(zip(updates, conditions)):
+                # Use execute_sql instead of query for UPDATE statements
+                self.SQLHandler.execute_sql(
+                    f"""UPDATE "Version_Range" SET use_end = %s WHERE {condition}""",
+                    (update_dict["use_end"], condition_params[i]),
+                )
+
         # Prepare batch insert for new ranges
-        existing_indices = set(int(row["idx"]) for _, row in existing_ranges_df.iterrows())
+        existing_indices = set(
+            int(row["idx"]) for _, row in existing_ranges_df.iterrows()
+        )
         new_ranges_data = [
             (str(t_id), str(e_id), time, time, False)
-            for i, (t_id, e_id, time) in enumerate(zip(triplet_ids, extraction_info_ids, extraction_times))
+            for i, (t_id, e_id, time) in enumerate(
+                zip(triplet_ids, extraction_info_ids, extraction_times)
+            )
             if i not in existing_indices
         ]
-        
+
         if new_ranges_data:
             self.SQLHandler.batch_insert(
                 "Version_Range",
-                ["triplet_id", "extraction_info_id", "use_start", "use_end", "deprecated"],
+                [
+                    "triplet_id",
+                    "extraction_info_id",
+                    "use_start",
+                    "use_end",
+                    "deprecated",
+                ],
                 new_ranges_data,
-                batch_size=len(new_ranges_data)
+                batch_size=len(new_ranges_data),
             )
 
     def process_triplet_batch(
@@ -949,22 +650,26 @@ class GraphHandler:
         # Unzip the triplets data
         subjects, predicates, objects, extraction_infos = zip(*triplets_data)
         triplets = list(zip(subjects, predicates, objects))
-        
+
         # Process triplets in batch
         triplet_ids, is_new = self._batch_get_or_create_triplet_ids(triplets)
-        
+
         # Process extraction infos in batch
-        extraction_info_ids = self._batch_get_or_create_extraction_info_ids(extraction_infos)
-        
+        extraction_info_ids = self._batch_get_or_create_extraction_info_ids(
+            extraction_infos
+        )
+
         # Process extraction times
         extraction_times = [
             datetime.strptime(info["extraction_time"], "%Y-%m-%d_%H-%M-%S")
             for info in extraction_infos
         ]
-        
+
         # Manage version ranges in batch
-        self._batch_manage_version_ranges(triplet_ids, extraction_info_ids, extraction_times)
-        
+        self._batch_manage_version_ranges(
+            triplet_ids, extraction_info_ids, extraction_times
+        )
+
         # Add new triplets to the list
         for i, (is_new_triplet, triplet) in enumerate(zip(is_new, triplets)):
             if is_new_triplet:

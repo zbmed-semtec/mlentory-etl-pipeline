@@ -99,8 +99,12 @@ class LoadProcessor:
 
     def print_DB_states(self):
         """Print current state of all databases for debugging."""
-        triplets_df = self.GraphHandler.SQLHandler.query('SELECT count(*) FROM "Triplet"')
-        ranges_df = self.GraphHandler.SQLHandler.query('SELECT count(*) FROM "Version_Range"')
+        triplets_df = self.GraphHandler.SQLHandler.query(
+            'SELECT count(*) FROM "Triplet"'
+        )
+        ranges_df = self.GraphHandler.SQLHandler.query(
+            'SELECT count(*) FROM "Version_Range"'
+        )
         triplets_extraction_info_df = self.GraphHandler.SQLHandler.query(
             'SELECT COUNT(*) FROM "Triplet_Extraction_Info"'
         )
