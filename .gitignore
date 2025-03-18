@@ -24,7 +24,6 @@ data/transform_queue/*.tsv
 data/transform_queue/*.json
 data/transform_queue/
 
-deployment/hf_etl/execution_logs/*.log
 deployment/scheduler/logs
 deployment/scheduler/sql_config_files
 .env
@@ -34,7 +33,11 @@ tests/integration/dbs/virtuoso/kg_files/*.ttl
 # tests/fixtures/dbs/postgres
 tests/integration/dbs/elastic
 
+deployment/hf_etl/execution_logs/*.log
 deployment/hf_etl/outputs/
+deployment/openml_etl/execution_logs/
+deployment/openml_etl/outputs/
+
 data/datasets/
 
 

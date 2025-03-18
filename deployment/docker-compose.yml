@@ -93,7 +93,8 @@ services:
     container_name: hf_gpu
     build: 
       context: ../
-      dockerfile: deployment/hf_etl/Dockerfile.gpu
+      dockerfile: deployment/Dockerfile.gpu
+      target: gpu_hf
     volumes:
       - ../data/configuration/hf:/app/configuration/hf
       - ../data/virtuoso_data/kg_files:/kg_files
@@ -124,7 +125,8 @@ services:
     container_name: hf_no_gpu
     build: 
       context: ../
-      dockerfile: deployment/hf_etl/Dockerfile.no_gpu
+      dockerfile: deployment/Dockerfile.no_gpu
+      target: no_gpu_hf
     volumes:
       - ../data/configuration/hf:/app/configuration/hf
       - ../data/transform_queue:/transform_queue
@@ -138,6 +140,81 @@ services:
     command: ["tail", "-f", "/dev/null"]
     networks:
       - mlentory_network
+
+  openml_etl_with_no_gpu:
+    profiles: [no_gpu,openml_no_gpu]
+    container_name: openml_no_gpu
+    build: 
+      context: ../
+      dockerfile: deployment/Dockerfile.no_gpu
+      target: no_gpu_openml
+    volumes:
+      - ../data/configuration/openml:/app/configuration/openml
+      - ../code/extractors:/app/extractors 
+      - ./openml_etl:/app/openml_etl
+    dns:
+      - 1.1.1.1
+    command: ["tail", "-f", "/dev/null"]
+    networks:
+      - mlentory_network
+
+  ### Module in charge of transforming the data to the RDA FAIR4ML schema
+  # transform:
+  #   profiles:
+  #     - gpu
+  #     - no_gpu
+  #   container_name: transform
+  #   build: 
+  #     context: .
+  #     dockerfile: ./transform/Dockerfile  # Path to extractor Dockerfile
+  #   # Define volumes to mount extractor scripts or dependencies
+  #   volumes:
+  #     - ./transform:/app
+  #     - ../data/transform_queue:/transform_queue
+  #     - ../data/load_queue:/load_queue
+  #     - ../data/datasets:/datasets
+  #     - ./config_data:/config_data
+  #   dns:
+  #     - 1.1.1.1
+
+  #   # Uncomment this line to test the script
+  #   command: ["tail", "-f", "/dev/null"]
+  #   # command: ["python3", "main.py"]
+  #   networks:
+  #     - mlentory_network
+  #   # Uncomment for production
+  #   #command: ["python3", "ExtractFromDataset.py"]
+
+  ### Module in charge of loading the data into the database
+  # load:    
+  #   depends_on:
+  #     - transform
+  #     - postgres
+  #     - virtuoso
+  #     - elastic
+  #   profiles:
+  #     - gpu
+  #     - no_gpu
+  #   container_name: load
+  #   build: 
+  #     context: .
+  #     dockerfile: ./load/Dockerfile  # Path to extractor Dockerfile
+  #   # Define volumes to mount extractor scripts or dependencies
+  #   volumes:
+  #     - ./load:/app
+  #     - ../data/load_queue:/load_queue
+  #     - ../data/virtuoso_data/kg_files:/kg_files
+  #     - ./config_data:/config_data
+  #     # Necessary to run docker commands inside other containers
+  #     - /var/run/docker.sock:/var/run/docker.sock 
+  #   dns:
+  #     - 1.1.1.1
+
+  #   # Uncomment this line to test the script
+  #   command: ["tail", "-f", "/dev/null"]
+  #   # command: ["python3", "main.py"]
+  #   networks:
+  #     - mlentory_network
 
   ### SQL for storage database
   postgres:
@@ -232,4 +309,3 @@ services:
 networks:
   mlentory_network:
     external: true
-
