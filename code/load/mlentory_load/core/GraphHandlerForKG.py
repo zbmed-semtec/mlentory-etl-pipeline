@@ -196,11 +196,23 @@ class GraphHandlerForKG(GraphHandler):
                         entity_dict, entity_uri
                     )
                 )
-                # Check if model already exists in elasticsearch
+                
+                search_result = None
+                
+                #Check if index exists
+                # if not self.IndexHandler.index_exists(self.IndexHandler.hf_index):
+                #     self.IndexHandler.create_index(self.IndexHandler.hf_index)
+                # else:
+                #     # Check if model already exists in elasticsearch
+                #     search_result = self.IndexHandler.search(
+                #         self.IndexHandler.hf_index,
+                #         {"query": {"match_phrase": {"db_identifier": str(entity_uri)}}},
+                #     )
+                
                 search_result = self.IndexHandler.search(
-                    self.IndexHandler.hf_index,
-                    {"query": {"match_phrase": {"db_identifier": str(entity_uri)}}},
-                )
+                        self.IndexHandler.hf_index,
+                        {"query": {"match_phrase": {"db_identifier": str(entity_uri)}}},
+                    )
 
                 if not search_result:
                     # Only index if model doesn't exist

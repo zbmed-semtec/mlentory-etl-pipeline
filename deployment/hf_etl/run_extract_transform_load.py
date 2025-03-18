@@ -13,7 +13,7 @@ import argparse
 
 from mlentory_extract.hf_extract import HFDatasetManager
 from mlentory_extract.hf_extract import HFExtractor
-from mlentory_load.core import LoadProcessor, GraphHandler
+from mlentory_load.core import LoadProcessor, GraphHandlerForKG
 from mlentory_load.dbHandler import RDFHandler, SQLHandler, IndexHandler
 from mlentory_transform.hf_transform import TransformHF
 from mlentory_transform.core.MlentoryTransform import (
@@ -141,7 +141,7 @@ def initialize_load_processor(kg_files_directory: str) -> LoadProcessor:
     elasticsearchHandler.initialize_HF_index(index_name="hf_models")
 
     # Initializing the graph creator
-    graphHandler = GraphHandler(
+    graphHandler = GraphHandlerForKG(
         SQLHandler=sqlHandler,
         RDFHandler=rdfHandler,
         IndexHandler=elasticsearchHandler,
@@ -265,7 +265,7 @@ def main():
             [models_extraction_metadata, datasets_extraction_metadata],
             save_output_in_json=True,
             output_dir=args.output_dir + "/extraction_metadata",
-            disambiguate_extraction_metadata=True,
+            # disambiguate_extraction_metadata=True,
         )
     else:
         # load kg with rdflib   
