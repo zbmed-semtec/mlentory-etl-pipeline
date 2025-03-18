@@ -102,10 +102,10 @@ def main():
     logger.info(f"Number of Columns: {extracted_df.shape[1]}")
 
     logger.info("\n--- Column Info ---\n")
-    logger.info(extracted_df.info(),"\n")  # Shows data types and missing values
+    logger.info(str(extracted_df.info()) + "\n")  # Shows data types and missing values
 
     logger.info("--- First Few Rows ---\n")
-    logger.info(extracted_df.head(),"\n")  # Displays first 5 rows
+    logger.info(str(extracted_df.head()) + "\n")  # Displays first 5 rows
 
     logger.info(f"Extraction Time: {end_time - start_time:.2f} seconds")
     
