@@ -1,4 +1,4 @@
-FROM nvidia/cuda:11.2.2-cudnn8-devel-ubuntu20.04
+FROM nvidia/cuda:11.2.2-cudnn8-devel-ubuntu20.04 AS gpu_base
 
 ARG DEBIAN_FRONTEND=noninteractive
 
@@ -28,4 +28,10 @@ RUN pip3 install -e /app/transform
 
 COPY code/load /app/load
 RUN pip3 install -e /app/load
+
+FROM gpu_base AS gpu_openml
+RUN echo "Building OpenML ETL image for GPU..."
+
+FROM gpu_base AS gpu_hf
+RUN echo "Building HF ETL image for GPU..."
 

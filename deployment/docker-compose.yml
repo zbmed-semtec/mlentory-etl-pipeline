@@ -93,7 +93,8 @@ services:
     container_name: hf_gpu
     build: 
       context: ../
-      dockerfile: deployment/hf_etl/Dockerfile.gpu
+      dockerfile: deployment/Dockerfile.gpu
+      target: gpu_hf
     volumes:
       - ../data/configuration/hf:/app/configuration/hf
       - ../data/virtuoso_data/kg_files:/kg_files
@@ -124,7 +125,8 @@ services:
     container_name: hf_no_gpu
     build: 
       context: ../
-      dockerfile: deployment/hf_etl/Dockerfile.no_gpu
+      dockerfile: deployment/Dockerfile.no_gpu
+      target: no_gpu_hf
     volumes:
       - ../data/configuration/hf:/app/configuration/hf
       - ../data/transform_queue:/transform_queue
@@ -133,6 +135,23 @@ services:
       - ../code/transform:/app/transform
       - ../code/load:/app/load
       - ./hf_etl:/app/hf_etl
+    dns:
+      - 1.1.1.1
+    command: ["tail", "-f", "/dev/null"]
+    networks:
+      - mlentory_network
+
+  openml_etl_with_no_gpu:
+    profiles: [no_gpu,openml_no_gpu]
+    container_name: openml_no_gpu
+    build: 
+      context: ../
+      dockerfile: deployment/Dockerfile.no_gpu
+      target: no_gpu_openml
+    volumes:
+      - ../data/configuration/openml:/app/configuration/openml
+      - ../code/extractors:/app/extractors 
+      - ./openml_etl:/app/openml_etl
     dns:
       - 1.1.1.1
     command: ["tail", "-f", "/dev/null"]
@@ -268,4 +287,3 @@ services:
 networks:
   mlentory_network:
     external: true
-

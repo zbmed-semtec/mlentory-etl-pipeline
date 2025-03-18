@@ -1,0 +1,45 @@
+{
+  "run": {
+    "name": "Run_{run.id}",
+    "url": "run.openml_url",
+    "version": "flow.version",
+    "description": "flow.description",
+    "intendedUse": "flow.description",
+    "keywords": "run.tags",
+    "mlTask": "task.task_type",
+    "modelCategory": "run.flow_name",
+    "evaluatedOn": "dataset.name",
+    "hasEvaluations": "run.evaluations",
+    "author": {
+          "name": "run.uploader_name",
+          "profile": "https://www.openml.org/u/{run.uploader}"
+      }, 
+    "sharedBy": {
+          "name": "run.uploader_name",
+          "profile": "https://www.openml.org/u/{run.uploader}"
+      }, 
+    "maintainer": {
+          "name": "run.uploader_name",
+          "profile": "https://www.openml.org/u/{run.uploader}"
+      }, 
+    "trainedOn": {
+          "dataset name" : "dataset.name", 
+          "dataset page": "dataset.openml_url", 
+          "estimation procedure" : "task.estimation_procedure"
+      },
+    "testedOn": {
+          "dataset name" : "dataset.name", 
+          "dataset page": "dataset.openml_url", 
+          "estimation procedure" : "task.estimation_procedure"
+      },
+    "validatedOn": {
+          "dataset name" : "dataset.name", 
+          "dataset page": "dataset.openml_url", 
+          "estimation procedure" : "task.estimation_procedure"
+      },
+    "dateCreated": "flow.upload_date",
+    "dateModified": "flow.upload_date",
+    "datePublished = ": "flow.upload_date",
+    "inLanguage": "flow.language"
+    }
+  }
