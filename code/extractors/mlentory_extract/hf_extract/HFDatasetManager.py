@@ -69,7 +69,13 @@ class HFDatasetManager:
             )["train"].to_pandas()
             
             # Discard all models with a card with a length less than 1000
-            dataset = dataset[dataset["card"].str.len() > 1000]
+            dataset = dataset[dataset["card"].str.len() > 200]
+            
+            # Discard all models with no pipeline_tag
+            dataset = dataset[dataset["pipeline_tag"].notna()]
+            
+            # Discard models with no modeltags 
+            dataset = dataset[dataset["tags"].notna()]
 
             # trim the dataset to the limit
             dataset = dataset[: min(limit, len(dataset))]
