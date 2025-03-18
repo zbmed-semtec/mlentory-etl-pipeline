@@ -199,3 +199,5 @@ cython_debug/
 .cursorrules
 
 tests/integration/pipeline/outputs/
+
+code/extractors/examples/outputs/
