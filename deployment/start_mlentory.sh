@@ -10,6 +10,20 @@ if [ "$EUID" -ne 0 ]; then
   exit 1
 fi
 
+# Load environment variables from .env file if it exists
+ENV_FILE="$(dirname "$0")/.env"
+if [ -f "$ENV_FILE" ]; then
+  echo "Loading environment variables from .env file"
+  # Export all variables from .env file
+  export $(grep -v '^#' "$ENV_FILE" | xargs)
+else
+  echo "Warning: .env file not found at $ENV_FILE"
+  echo "Create a .env file with your environment variables (e.g., HF_TOKEN=your_token)"
+fi
+
+
+echo "HF_TOKEN is set and will be passed to containers"
+
 # Determine if GPU is available
 if command -v nvidia-smi &> /dev/null; then
   PROFILE="gpu"
@@ -52,9 +66,9 @@ fi
 echo "Stopping any running containers..."
 docker-compose --profile $PROFILE down
 
-# Start containers
+# Start containers with environment variables explicitly passed
 echo "Starting containers with profile: $PROFILE"
-docker-compose --profile $PROFILE up -d
+docker-compose --profile $PROFILE --env-file="$ENV_FILE" up -d
 
 echo "MLentory environment started successfully!"
 echo ""
