@@ -1,3 +1,4 @@
+import json
 import pandas as pd
 import torch
 from typing import Any, Dict, List, Set, Union, Optional
@@ -176,7 +177,8 @@ class ModelCardToSchemaParser:
         """
         
         # Map known fields directly
-        HF_df.loc[:, "schema.org:author"] = HF_df.loc[:, "author"]
+        # HF_df.loc[:, "schema.org:author"] = HF_df.loc[:, "author"]
+        HF_df.loc[:, "fair4ml:sharedBy"] = HF_df.loc[:, "author"]
         HF_df.loc[:, "schema.org:dateCreated"] = HF_df.loc[:, "createdAt"].apply(lambda x: str(x))
         HF_df.loc[:, "schema.org:dateModified"] = HF_df.loc[:, "last_modified"].apply(lambda x: str(x))
         HF_df.loc[:, "schema.org:releaseNotes"] = HF_df.loc[:, "card"]
@@ -211,7 +213,8 @@ class ModelCardToSchemaParser:
         # Add extraction metadata to each field
         properties = [
             "schema.org:identifier", 
-            "schema.org:author", 
+            # "schema.org:author",
+            "fair4ml:sharedBy", 
             "schema.org:dateCreated", 
             "schema.org:dateModified",
             "schema.org:releaseNotes",
@@ -374,73 +377,55 @@ class ModelCardToSchemaParser:
                 
                 question = f"What is the {readable_prop} of this model? ({description})"
                 
-                context_queries[prop] = question
+                context_queries[question] = prop
         
         
-        # Pre-process all contexts at once
-        contexts = []
-        for _, row in tqdm(
-            HF_df.iterrows(), total=len(HF_df), desc="Pre-processing contexts"
-        ):
+        for index, row in tqdm(HF_df.iterrows(), total=len(HF_df), desc="Processing text"):
             context = row["card"]
-            if not context or context.strip() == "":
-                contexts.append(None)
-                print(f"Skipping row {_} because context is empty")
-                continue
+            
+            questions = list(context_queries.keys())
+            
+            all_matchings = self.matching_engine.find_relevant_sections(
+                questions=questions, context=context, top_k=2
+            )
+            
+            created_sections = {"sections": [section.to_json() for section in self.matching_engine.last_created_sections], 
+                                "context": self.matching_engine.last_context,
+                                "model_id": row["modelId"]}
+            # save created sections to file
+            file_path = os.path.join(f"./extractors/examples/outputs/created_sections_for_{index}.json")
 
-            contexts.append(context)
-        
-        
-        # Process in batches
-        batch_size = 16
-        for batch_start in tqdm(
-            range(0, len(contexts), batch_size), desc="Processing text batches"
-        ):
-            batch_end = min(batch_start + batch_size, len(contexts))
-            batch_contexts = contexts[batch_start:batch_end]
+            # Process the sections to convert string newlines to actual newlines
+            if "sections" in created_sections:
+                for i, section in enumerate(created_sections["sections"]):
+                    if isinstance(section, str):
+                        # Parse string sections
+                        section_dict = json.loads(section)
+                        created_sections["sections"][i] = section_dict
+                    
+                    if isinstance(section, dict) and "content" in section:
+                        # Replace literal "\n" with actual newlines
+                        section["content"] = section["content"].replace("\\n", "\n")
+
+            # Also fix context if present
+            if "context" in created_sections:
+                created_sections["context"] = created_sections["context"].replace("\\n", "\n")
+
+            # Write with proper formatting
+            with open(file_path, "w", encoding="utf-8") as f:
+                json.dump(created_sections, f, indent=4, ensure_ascii=False)
             
-            # Process batch of contexts
-            batch_results = []
-            for context in batch_contexts:
-                if context is None:
-                    # Create empty results for all queries
-                    empty_results = [(None, 0.0)] * len(contexts)
-                    batch_results.append(empty_results)
-                else:
-                    # Find relevant sections for all queries at once
-                    relevant_sections = self.matching_engine.find_relevant_sections(
-                        questions=list(context_queries.values()), context=context, top_k=1
-                    )
-                    batch_results.append(relevant_sections)
             
-            # Update DataFrame with batch results
-            for i, relevant_sections in enumerate(batch_results):
-                df_idx = batch_start + i
-                
-                # Process each query
-                for q_idx, prop in enumerate(context_queries.keys()):
-                    if relevant_sections[q_idx][0] is None:
-                        # Handle empty/None context
-                        print(f"Skipping row {df_idx} because context is empty")
-                        continue
-                    else:
-                        section, score = relevant_sections[q_idx][0]
-                        # Only use results with reasonable confidence
-                        if score > 0.01:
-                            HF_df.at[df_idx, prop] = [
-                                {
-                                    "data": section.content.strip(),
-                                    "extraction_method": f"Semantic Matching with {self.matching_engine.model_name}",
-                                    "confidence": score,
-                                    "extraction_time": datetime.now().strftime(
-                                        "%Y-%m-%d_%H-%M-%S"
-                                    ),
-                                }
-                            ]
-            
-            # Clear some memory
-            if hasattr(torch.cuda, "empty_cache"):
-                torch.cuda.empty_cache()
+            for q_idx, matchings_per_question in enumerate(all_matchings):
+                prop = context_queries[questions[q_idx]]
+                results = []
+                for section, score in matchings_per_question:
+                    results.append(self.add_default_extraction_info(
+                        data=section.content,
+                        extraction_method=f"Semantic Matching with {self.matching_engine.model_name}",
+                        confidence=score
+                    ))
+                HF_df.at[index, prop] = results
         
         return HF_df
     
