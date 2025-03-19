@@ -25,6 +25,11 @@ def main():
     task_tags_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "inputs", "tags_task.tsv")
     other_tags_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "inputs", "tags_other.tsv")
     output_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "outputs")
+    
+
+    if not os.path.exists(output_dir):
+        os.makedirs(output_dir)
+    
     # Define tag lists
     tags_language = [val[0] for val in pd.read_csv(language_tags_path, sep="\t").values.tolist()]
     tags_libraries = [val[0] for val in pd.read_csv(libraries_tags_path, sep="\t").values.tolist()]
@@ -33,7 +38,8 @@ def main():
 
     # Initialize the parser with schema file path
     parser = ModelCardToSchemaParser(
-        matching_model="sentence-transformers/all-MiniLM-L6-v2",
+        # matching_model="sentence-transformers/all-MiniLM-L6-v2",
+        matching_model="Alibaba-NLP/gte-Qwen2-1.5B-instruct",
         tags_language=tags_language,
         tags_libraries=tags_libraries,
         tags_task=tags_task,
@@ -53,13 +59,7 @@ def main():
     print("Processing model metadata...")
     processed_df = parser.process_dataframe(hf_df)
     
-    # Print detailed information about the processed DataFrame
-    # parser.print_detailed_dataframe(processed_df)
-    
     # Save the results
-    if not os.path.exists(output_dir):
-        os.makedirs(output_dir)
-        
     timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
     output_path = os.path.join(output_dir, f"{timestamp}_FAIR4ML_Schema_Models.json")
     

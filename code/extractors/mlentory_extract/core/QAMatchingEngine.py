@@ -1,21 +1,13 @@
 import os
 import torch
 import re
-from typing import List, Dict, Tuple
+from typing import List, Dict, Tuple, Optional
 from dataclasses import dataclass
 from transformers import AutoTokenizer, AutoModel
 from tqdm import tqdm
 import numpy as np
 
-
-@dataclass
-class Section:
-    """Represents a section of text with its title and content"""
-
-    title: str
-    content: str
-    start_idx: int
-    end_idx: int
+from .MarkdownParser import MarkdownParser, Section
 
 
 class QAMatchingEngine:
@@ -55,74 +47,12 @@ class QAMatchingEngine:
 
         # Set model to eval mode
         self.model.eval()
-
-    def _extract_sections(self, text: str) -> List[Section]:
-        """
-        Extract sections from text based on markdown-style headers, maintaining header hierarchy.
-
-        Args:
-            text (str): The text to segment
-
-        Returns:
-            List[Section]: List of extracted sections with hierarchical titles and content
-        """
-        # Split text into lines
-        lines = text.split("\n")
-        sections = []
-        current_title = ""
-        current_content = []
-        start_idx = 0
-        # Keep track of header hierarchy
-        header_stack = []
-
-        for i, line in enumerate(lines):
-            # Check for markdown headers (# Title, ## Subtitle, etc)
-            header_match = re.match(r"^(#{1,6})\s+(.+)$", line.strip())
-
-            if header_match or i == len(lines) - 1:
-                # Save previous section if exists and has content
-                if current_title and current_content:
-                    # Remove empty lines and check if there's actual content
-                    filtered_content = [l for l in current_content if l.strip()]
-                    if filtered_content:
-                        sections.append(
-                            Section(
-                                title=current_title,
-                                content=current_title
-                                + ":\n"
-                                + "\n".join(filtered_content),
-                                start_idx=start_idx,
-                                end_idx=i,
-                            )
-                        )
-
-                if header_match:
-                    level = len(header_match.group(1))  # Number of # symbols
-                    title = header_match.group(2)
-
-                    # Update header stack based on level
-                    while header_stack and header_stack[0][0] >= level:
-                        header_stack.pop(0)
-                    header_stack.insert(0, (level, title))
-
-                    # Construct hierarchical title from stack (reversed to get correct order)
-                    current_title = " > ".join(
-                        title for _, title in reversed(header_stack)
-                    )
-                    current_content = []
-                    start_idx = i
-                else:
-                    current_content.append(line)
-            else:
-                current_content.append(line)
-
-        # If no sections found with content, create one section with entire text
-        if not sections and text.strip():
-            sections = [
-                Section(title="", content=text, start_idx=0, end_idx=len(lines))
-            ]
-
-        return sections
+        
+        self.last_context = None
+        self.last_created_sections = []
+        
+        # Initialize markdown parser
+        self.markdown_parser = MarkdownParser()
 
     @torch.no_grad()
     def _get_embeddings(self, texts: List[str]) -> torch.Tensor:
@@ -227,7 +157,7 @@ class QAMatchingEngine:
         return torch.mm(query_embedding.unsqueeze(0), section_embeddings.t()).squeeze(0)
 
     def find_relevant_sections(
-        self, questions: List[str], context: str, top_k: int = 2
+        self, questions: List[str], context: str, top_k: int = 2, max_section_length: int = 500
     ) -> List[List[Tuple[Section, float]]]:
         """
         Find the most relevant sections for each question.
@@ -236,12 +166,18 @@ class QAMatchingEngine:
             questions (List[str]): List of questions
             context (str): Text context to search in
             top_k (int): Number of top sections to return per question
+            max_section_length (int): Maximum length for fine-grained sections
 
         Returns:
             List[List[Tuple[Section, float]]]: For each question, list of (section, score) tuples
         """
-        # Extract sections
-        sections = self._extract_sections(context)
+        # Extract sections using the markdown parser
+        sections = self.markdown_parser.extract_hierarchical_sections(
+            context, max_section_length
+        )
+        self.last_created_sections = sections
+        self.last_context = context
+        
         if not sections:
             return [
                 [(Section("", context, 0, len(context.split("\n"))), 1.0)]
@@ -293,3 +229,5 @@ class QAMatchingEngine:
         )
 
         return combined_context
+
+
