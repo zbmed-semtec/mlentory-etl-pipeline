@@ -4,7 +4,7 @@ from datetime import datetime
 import pandas as pd
 import os
 
-from mlentory_extract.core.ModelCardQAParser import ModelCardQAParser
+from mlentory_extract.core.ModelCardToSchemaParser import ModelCardToSchemaParser
 from mlentory_extract.hf_extract.HFDatasetManager import HFDatasetManager
 
 
@@ -52,7 +52,7 @@ class HFExtractor:
             dataset_manager (Optional[HFDatasetManager], optional): Dataset manager instance.
                 Defaults to None.
         """
-        self.parser = ModelCardQAParser(
+        self.parser = ModelCardToSchemaParser(
             qa_model=qa_model,
             questions=questions,
             tags_language=tags_language,
