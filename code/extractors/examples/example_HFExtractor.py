@@ -45,6 +45,7 @@ def main():
         "What task does the model perform?",
         "What dataset was the model trained on?",
     ]
+    default_card = "This is the model card of a 🤗 transformers model that has been pushed on the Hub. This model card has been automatically generated."
 
     # Initialize the extractor
     extractor = HFExtractor(
@@ -54,6 +55,7 @@ def main():
         tags_libraries=tags_libraries,
         tags_other=tags_other,
         tags_task=tags_task,
+        default_card=default_card
     )
 
     # Download and process models using FAIR4ML schema

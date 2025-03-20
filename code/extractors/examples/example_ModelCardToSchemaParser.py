@@ -23,6 +23,7 @@ def main():
     language_tags_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "inputs", "tags_language.tsv")
     libraries_tags_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "inputs", "tags_libraries.tsv")
     task_tags_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "inputs", "tags_task.tsv")
+    default_card_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "inputs", "default_hf_card.txt")
     other_tags_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "inputs", "tags_other.tsv")
     output_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "outputs")
     
@@ -35,6 +36,7 @@ def main():
     tags_libraries = [val[0] for val in pd.read_csv(libraries_tags_path, sep="\t").values.tolist()]
     tags_task = [val[0] for val in pd.read_csv(task_tags_path, sep="\t").values.tolist()]
     tags_other = [val[0] for val in pd.read_csv(other_tags_path, sep="\t").values.tolist()]
+    default_card = open(default_card_path, "r").read()
 
     # Initialize the parser with schema file path
     parser = ModelCardToSchemaParser(
@@ -48,7 +50,7 @@ def main():
     )
 
     # Initialize the dataset manager
-    dataset_manager = HFDatasetManager()
+    dataset_manager = HFDatasetManager(default_card=default_card)
 
     # Get model metadata (limit to 5 models for this example)
     print("Downloading model metadata...")
