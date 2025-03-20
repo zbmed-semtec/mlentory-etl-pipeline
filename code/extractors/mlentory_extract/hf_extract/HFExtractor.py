@@ -32,13 +32,14 @@ class HFExtractor:
         tags_other: List[str] = None,
         tags_task: List[str] = None,
         dataset_manager: Optional[HFDatasetManager] = None,
+        default_card: Optional[str] = None,
     ):
         """
         Initialize the HuggingFace extractor.
 
         Args:
             qa_model (str, optional): The model to use for text extraction.
-                Defaults to "Intel/dynamic_tinybert".
+                Defaults to "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2".
             questions (List[str], optional): List of questions for extraction.
                 Defaults to None.
             tags_language (List[str], optional): List of language tags.
@@ -51,6 +52,8 @@ class HFExtractor:
                 Defaults to None.
             dataset_manager (Optional[HFDatasetManager], optional): Dataset manager instance.
                 Defaults to None.
+            default_card (Optional[str], optional): Default HF card content.
+                Defaults to None (uses the standard path).
         """
         self.parser = ModelCardToSchemaParser(
             qa_model=qa_model,
@@ -60,7 +63,7 @@ class HFExtractor:
             tags_other=tags_other,
             tags_task=tags_task,
         )
-        self.dataset_manager = dataset_manager or HFDatasetManager()
+        self.dataset_manager = dataset_manager or HFDatasetManager(default_card=default_card)
 
     def download_models(
         self,

@@ -23,6 +23,7 @@ class HFDatasetManager:
     def __init__(
         self,
         api_token: Optional[str] = None,
+        default_card: Optional[str] = None,
     ):
         """
         Initialize the HuggingFace Dataset Manager.
@@ -30,6 +31,8 @@ class HFDatasetManager:
         Args:
             api_token (Optional[str]): HuggingFace API token for authenticated requests.
                 Defaults to None.
+            default_card (Optional[str]): Default HF card content.
+                Defaults to None (uses the standard path).
 
         Raises:
             ValueError: If the model_cards_dataset is invalid or inaccessible
@@ -40,6 +43,9 @@ class HFDatasetManager:
             self.api = HfApi(token=api_token)
         else:
             self.api = HfApi()
+            
+        # Set default card path
+        self.default_card = default_card
 
     def get_model_metadata_dataset(
         self, update_recent: bool = True, limit: int = 5, threads: int = 4
@@ -68,23 +74,16 @@ class HFDatasetManager:
                 # revision="0b3e7a79eae8a5dd28080f06065a988ca1fbf050",
             )["train"].to_pandas()
             
-            # Discard all models with a card with a length less than 1000
-            dataset = dataset[dataset["card"].str.len() > 200]
             
-            # Discard all models with no pipeline_tag
-            dataset = dataset[dataset["pipeline_tag"].notna()]
-            
-            # Discard models with no modeltags 
-            dataset = dataset[dataset["tags"].notna()]
-
-            # trim the dataset to the limit
-            dataset = dataset[: min(limit, len(dataset))]
 
             if not update_recent:
                 return dataset
 
             # Get the most recent modification date from the dataset
             latest_modification = dataset["last_modified"].max()
+            
+            # Discard models with not enough information
+            dataset = self.filter_models(dataset)
 
             recent_models = self.get_recent_models_metadata(
                 limit, latest_modification, threads
@@ -98,7 +97,11 @@ class HFDatasetManager:
 
                 # Sort by last_modified
                 dataset = dataset.sort_values("last_modified", ascending=False)
+            
 
+            # trim the dataset to the limit
+            dataset = dataset[: min(limit, len(dataset))]
+            
             return dataset
 
         except Exception as e:
@@ -133,8 +136,8 @@ class HFDatasetManager:
                 else:
                     card = ModelCard.load(model.modelId)
             except Exception as e:
-                print()
                 print(f"Error loading model card for {model.id}: {e}")
+                return None
 
             model_info = {
                 "modelId": model.id,
@@ -148,8 +151,11 @@ class HFDatasetManager:
                 "createdAt": model.created_at,
                 "card": card.content if card else "",
             }
-
-            return model_info
+            
+            if self.has_model_enough_information(model_info):
+                return model_info
+            else:
+                return None
 
         model_data = []
         with ThreadPoolExecutor(max_workers=threads) as executor:
@@ -158,7 +164,7 @@ class HFDatasetManager:
             }
             for future in as_completed(future_to_model):
                 result = future.result()
-                if result is not None and result["card"] is not None and len(result["card"]) > 1000:
+                if result is not None:
                     model_data.append(result)
 
         return pd.DataFrame(model_data)
@@ -267,3 +273,88 @@ class HFDatasetManager:
             ].to_pandas()
         except Exception as e:
             raise Exception(f"Error loading arxiv metadata dataset: {str(e)}")
+
+    def filter_models(self, dataset: pd.DataFrame) -> pd.DataFrame:
+        """
+        Filter out models with default card content.
+
+        This method checks model cards against the default HuggingFace model card template
+        and removes entries that are essentially unchanged from the default template.
+
+        Args:
+            dataset (pd.DataFrame): The input dataset containing model card information.
+
+        Returns:
+            pd.DataFrame: A DataFrame with models that do not have default card content.
+
+        Raises:
+            FileNotFoundError: If the default card file is not found.
+        """
+        # Filter the dataset
+        filtered_dataset = dataset[dataset.apply(self.has_model_enough_information, axis=1)]
+        
+        # Log how many models were filtered out
+        removed_count = len(dataset) - len(filtered_dataset)
+        if removed_count > 0:
+            print(f"Filtered out {removed_count} models with default card content.")
+        
+        return filtered_dataset
+
+    def has_model_enough_information(self, model_info: Dict):
+        """
+        Check if a model has enough information to be considered for extraction.
+
+        Args:
+            model_info (Dict): A dictionary containing model information.
+
+        Returns:
+            bool: True if the model has enough information, False otherwise.
+        """
+        
+        # Discard all models with no pipeline_tag
+        if type(model_info["pipeline_tag"]) == str:
+            if model_info["pipeline_tag"] == "" or model_info["pipeline_tag"] == None:
+                return False
+        else:
+            if model_info["pipeline_tag"] == None or model_info["pipeline_tag"].isna():
+                return False
+            
+        # Discard models with no modeltags 
+        if len(model_info["tags"]) == 0:
+            return False
+        
+            
+        # Discard all models with a card with a length less than 200
+        if len(model_info["card"]) < 200:
+            return False
+        
+        # Define key phrases that indicate a default card
+        default_indicators = [
+            "<!-- Provide a quick summary of what the model is/does. -->",
+            "This is the model card of a 🤗 transformers model that has been pushed on the Hub. This model card has been automatically generated.",
+            "[More Information Needed]",
+            "<!-- Address questions around how the model is intended to be used, including the foreseeable users of the model and those affected by the model. -->",
+            "<!-- This relates heavily to the Technical Specifications. Content here should link to that section when it is relevant to the training procedure. -->",
+            "<!-- This section is meant to convey recommendations with respect to the bias, risk, and technical limitations. -->",
+            "<!-- Provide the basic links for the model. -->",
+            "## Model Card Contact"
+        ]
+        
+        # Create a function to check if a card is default
+        def is_default_card(card_text):
+                
+            # Check if at least 4 key phrases are present (this indicates a mostly default card)
+            indicator_count = sum(1 for indicator in default_indicators if indicator in card_text)
+            
+            # Count number of "[More Information Needed]" occurrences
+            more_info_needed_count = card_text.count("[More Information Needed]")
+            
+            # If the card contains many "[More Information Needed]" phrases or most default indicators,
+            # consider it a default card
+            return more_info_needed_count >= 38 and indicator_count >= 7
+        
+        # Discard models with the default card
+        if is_default_card(model_info["card"]):
+            return False
+        
+        return True
