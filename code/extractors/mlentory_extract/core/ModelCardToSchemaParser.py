@@ -212,8 +212,7 @@ class ModelCardToSchemaParser:
         
         # Add extraction metadata to each field
         properties = [
-            "schema.org:identifier", 
-            # "schema.org:author",
+            "schema.org:identifier",
             "fair4ml:sharedBy", 
             "schema.org:dateCreated", 
             "schema.org:dateModified",
@@ -251,6 +250,7 @@ class ModelCardToSchemaParser:
         for index, row in tqdm(HF_df.iterrows(), total=len(HF_df), desc="Parsing tags"):
             # Initialize lists for collecting tag-based information
             ml_tasks = []
+            base_models = set()
             datasets = []
             arxiv_ids = []
             licenses = []
@@ -283,6 +283,11 @@ class ModelCardToSchemaParser:
                     license_name = tag.replace("license:", "")
                     licenses.append(license_name)
                 
+                # Extract base models (fair4ml:baseModel)
+                if "base_model:" in tag:
+                    base_model = tag.split(":")[-1]
+                    base_models.add(base_model)
+                
                 # Extract languages (inLanguage)
                 if tag_lower in self.tags_language:
                     languages.append(tag)
@@ -306,6 +311,7 @@ class ModelCardToSchemaParser:
             HF_df.at[index, "fair4ml:trainedOn"] = datasets
             HF_df.at[index, "fair4ml:evaluatedOn"] = datasets
             HF_df.at[index, "fair4ml:testedOn"] = datasets
+            HF_df.at[index, "fair4ml:baseModel"] = list(base_models)
             
             HF_df.at[index, "schema.org:license"] = licenses
             
@@ -320,9 +326,10 @@ class ModelCardToSchemaParser:
             "fair4ml:trainedOn",
             "fair4ml:evaluatedOn",
             "fair4ml:testedOn",
+            "fair4ml:baseModel",
             "schema.org:license",
             "schema.org:inLanguage",
-            "schema.org:keywords"
+            "schema.org:keywords",
         ]
         
         self.processed_properties.extend(properties)
@@ -352,6 +359,60 @@ class ModelCardToSchemaParser:
             pd.DataFrame: DataFrame with extracted information from text fields
         """
         # Generate queries for each schema property based on their descriptions
+        schema_property_questions = self.create_schema_property_questions()
+        questions = list(schema_property_questions.keys())
+        
+        
+        for index, row in tqdm(HF_df.iterrows(), total=len(HF_df), desc="Processing text"):
+            context = row["card"]
+            
+            all_matchings = self.matching_engine.find_relevant_sections(
+                questions=questions, context=context, top_k=2
+            )
+            
+            created_sections = {"sections": [section.to_json() for section in self.matching_engine.last_created_sections], 
+                                "context": self.matching_engine.last_context,
+                                "model_id": row["modelId"]}
+            # save created sections to file
+            file_path = os.path.join(f"./extractors/examples/outputs/created_sections_for_{index}.json")
+
+            # Process the sections to convert string newlines to actual newlines
+            if "sections" in created_sections:
+                for i, section in enumerate(created_sections["sections"]):
+                    if isinstance(section, str):
+                        # Parse string sections
+                        section_dict = json.loads(section)
+                        created_sections["sections"][i] = section_dict
+                    
+                    if isinstance(section, dict) and "content" in section:
+                        # Replace literal "\n" with actual newlines
+                        section["content"] = section["content"].replace("\\n", "\n")
+
+            # Write with proper formatting
+            with open(file_path, "w", encoding="utf-8") as f:
+                json.dump(created_sections, f, indent=4, ensure_ascii=False)
+            
+            
+            for q_idx, matchings_per_question in enumerate(all_matchings):
+                prop = schema_property_questions[questions[q_idx]]
+                results = []
+                for section, score in matchings_per_question:
+                    results.append(self.add_default_extraction_info(
+                        data=section.content,
+                        extraction_method=f"Semantic Matching with {self.matching_engine.model_name}",
+                        confidence=score
+                    ))
+                HF_df.at[index, prop] = results
+        
+        return HF_df
+    
+    def create_schema_property_questions(self) -> Dict[str, str]:
+        """
+        Generate a dictionary of questions for each schema property based on their descriptions.
+        
+        Returns:
+            Dict[str, str]: Dictionary of questions for each schema property
+        """
         context_queries = {}
         
         # Generate a question for each property based on its description
@@ -378,56 +439,10 @@ class ModelCardToSchemaParser:
                 question = f"What is the {readable_prop} of this model? ({description})"
                 
                 context_queries[question] = prop
-        
-        
-        for index, row in tqdm(HF_df.iterrows(), total=len(HF_df), desc="Processing text"):
-            context = row["card"]
-            
-            questions = list(context_queries.keys())
-            
-            all_matchings = self.matching_engine.find_relevant_sections(
-                questions=questions, context=context, top_k=2
-            )
-            
-            created_sections = {"sections": [section.to_json() for section in self.matching_engine.last_created_sections], 
-                                "context": self.matching_engine.last_context,
-                                "model_id": row["modelId"]}
-            # save created sections to file
-            file_path = os.path.join(f"./extractors/examples/outputs/created_sections_for_{index}.json")
-
-            # Process the sections to convert string newlines to actual newlines
-            if "sections" in created_sections:
-                for i, section in enumerate(created_sections["sections"]):
-                    if isinstance(section, str):
-                        # Parse string sections
-                        section_dict = json.loads(section)
-                        created_sections["sections"][i] = section_dict
-                    
-                    if isinstance(section, dict) and "content" in section:
-                        # Replace literal "\n" with actual newlines
-                        section["content"] = section["content"].replace("\\n", "\n")
-
-            # Also fix context if present
-            if "context" in created_sections:
-                created_sections["context"] = created_sections["context"].replace("\\n", "\n")
-
-            # Write with proper formatting
-            with open(file_path, "w", encoding="utf-8") as f:
-                json.dump(created_sections, f, indent=4, ensure_ascii=False)
-            
-            
-            for q_idx, matchings_per_question in enumerate(all_matchings):
-                prop = context_queries[questions[q_idx]]
-                results = []
-                for section, score in matchings_per_question:
-                    results.append(self.add_default_extraction_info(
-                        data=section.content,
-                        extraction_method=f"Semantic Matching with {self.matching_engine.model_name}",
-                        confidence=score
-                    ))
-                HF_df.at[index, prop] = results
-        
-        return HF_df
+                
+        return context_queries
+    
+    
     
     def process_dataframe(self, HF_df: pd.DataFrame, clean_columns: bool = True) -> pd.DataFrame:
         """
