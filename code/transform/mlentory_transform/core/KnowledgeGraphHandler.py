@@ -203,6 +203,7 @@ class KnowledgeGraphHandler:
                     predicate = self.get_predicate_uri(column)
                     values = row[column]
 
+                    # Check if the values are a list
                     for value_info in values:
                         rdf_objects = self.generate_objects_for_FAIR4ML_schema(
                             column, value_info["data"], platform
@@ -253,10 +254,12 @@ class KnowledgeGraphHandler:
             values = [values]
 
         # Find the range where the predicate contains the Property value
+        # print("START, PREDICATE:", predicate)
         predicate_info = self.FAIR4ML_schema_data.loc[
             self.FAIR4ML_schema_data["Property"].apply(lambda x: x in predicate)
         ]
-
+        # print("PREDICATE_INFO: \n", predicate_info)
+        # print("RANGE: \n", predicate_info["Real_Range"].values[0])
         range_value = predicate_info["Real_Range"].values[0]
 
         objects = []
@@ -282,9 +285,15 @@ class KnowledgeGraphHandler:
                 objects.append(Literal(value, datatype=XSD.string))
 
             elif "Date" in range_value or "DateTime" in range_value:
-                dt = datetime.fromisoformat(value.replace("Z", "+00:00"))
-                formatted_dt = dt.isoformat()
-                objects.append(Literal(formatted_dt, datatype=XSD.dateTime))
+                try:
+                    # Try to parse the value as a datetime
+                    dt = datetime.fromisoformat(value.replace("Z", "+00:00"))
+                    formatted_dt = dt.isoformat()
+                    objects.append(Literal(formatted_dt, datatype=XSD.dateTime))
+                except ValueError:
+                    # If parsing fails, treat it as a regular string
+                    print(f"Warning: Could not parse '{value}' as a date for property '{predicate}'. Treating as string.")
+                    objects.append(Literal(value, datatype=XSD.string))
 
             elif "Dataset" in range_value:
                 #Check if the value can be encoded in a URI
