@@ -6,7 +6,7 @@ services:
   scheduler:
     container_name: airflow_scheduler
     profiles:
-      - gpu
+      # - gpu
       - no_gpu
       - airflow_test
     image: apache/airflow:2.10.1  # Use the latest stable Airflow image
@@ -39,7 +39,7 @@ services:
   webserver:
     container_name: airflow_webserver
     profiles:
-      - gpu
+      # - gpu
       - no_gpu
       - airflow_test
     image: apache/airflow:2.10.1
@@ -69,7 +69,7 @@ services:
   ### Airflow SQL database
   airflow_postgres:
     profiles:
-      - gpu
+      # - gpu
       - no_gpu
       - airflow_test
     image: postgres:13-alpine
@@ -234,6 +234,28 @@ services:
       - ../data/postgres_data:/var/lib/postgresql/data
     networks:
       - mlentory_network
+
+  ### Database visualization tool
+  pgadmin:
+    profiles:
+      - gpu
+      - no_gpu
+    container_name: pgadmin
+    image: dpage/pgadmin4:latest
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@admin.com
+      PGADMIN_DEFAULT_PASSWORD: admin
+      PGADMIN_CONFIG_SERVER_MODE: 'False'
+    ports:
+      - "5050:80"
+    volumes:
+      - ../data/pgadmin_data:/var/lib/pgadmin
+    depends_on:
+      - postgres
+      # - airflow_postgres
+    networks:
+      - mlentory_network
+    restart: always
 
   ### RDF database
   virtuoso:

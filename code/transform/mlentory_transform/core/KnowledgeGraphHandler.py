@@ -4,6 +4,9 @@ import pandas as pd
 from rdflib import Graph, Literal, Namespace, URIRef, BNode
 from rdflib.namespace import RDF, RDFS, XSD
 from datetime import datetime
+import hashlib
+import json
+from ..utils.enums import SchemasURL, EntityType, ExtractionMethod
 
 
 class KnowledgeGraphHandler:
@@ -42,7 +45,7 @@ class KnowledgeGraphHandler:
     def __init__(
         self,
         base_namespace: str = "http://example.org/",
-        M4ML_schema: pd.DataFrame = None,
+        FAIR4ML_schema_data: pd.DataFrame = None,
     ) -> None:
         """
         Initialize the KnowledgeGraphHandler.
@@ -50,14 +53,14 @@ class KnowledgeGraphHandler:
         Args:
             base_namespace (str): The base URI namespace for the knowledge graph entities.
                 Default: "http://example.org/"
-            M4ML_schema (pd.DataFrame): DataFrame containing the M4ML schema with columns
+            FAIR4ML_schema_data (pd.DataFrame): DataFrame containing the FAIR4ML schema with columns
                 'Source', 'Property', and 'Range'.
 
         Raises:
-            ValueError: If the base_namespace is not a valid URI string or if M4ML_schema
+            ValueError: If the base_namespace is not a valid URI string or if FAIR4ML_schema_data
                 has an invalid format.
         """
-        self.M4ML_schema = M4ML_schema
+        self.FAIR4ML_schema_data = FAIR4ML_schema_data
 
         # Initialize base namespace and graph
         self.base_namespace = Namespace(base_namespace)
@@ -71,10 +74,10 @@ class KnowledgeGraphHandler:
         # Define and bind all required namespaces
         self.namespaces = {
             "base": self.base_namespace,
-            "schema": Namespace("http://schema.org/"),
-            "fair4ml": Namespace("http://w3id.org/fair4ml/"),
-            "codemeta": Namespace("https://w3id.org/codemeta/"),
-            "cr": Namespace("https://w3id.org/croissant/"),
+            "schema": Namespace(SchemasURL.SCHEMA.value),
+            "fair4ml": Namespace(SchemasURL.FAIR4ML.value),
+            "codemeta": Namespace(SchemasURL.CODEMETA.value),
+            "cr": Namespace(SchemasURL.CROISSANT.value),
             "rdf": RDF,
             "rdfs": RDFS,
             "xsd": XSD,
@@ -122,10 +125,13 @@ class KnowledgeGraphHandler:
                 data=item_json_ld, format="json-ld", base=URIRef(self.base_namespace)
             )
 
+            self.delete_unwanted_nodes(temp_graph)
             self.replace_blank_nodes_with_type(temp_graph, row, platform)
-            # self.replace_blank_nodes_with_no_type(temp_graph,row,platform)
-            # self.replace_default_nodes(temp_graph, row, platform)
             self.delete_remaining_blank_nodes(temp_graph)
+            # self.replace_blank_nodes_with_no_type(temp_graph,row,platform)
+            # self.delete_remaining_blank_nodes(temp_graph)
+            # self.replace_default_nodes(temp_graph, row, platform)
+            
 
             # Go through the triples and add them
             for triple in temp_graph:
@@ -147,14 +153,14 @@ class KnowledgeGraphHandler:
 
         return self.graph, self.metadata_graph
 
-    def dataframe_to_graph_M4ML_schema(
+    def dataframe_to_graph_FAIR4ML_schema(
         self,
         df: pd.DataFrame,
         identifier_column: Optional[str] = None,
         platform: str = None,
     ) -> Graph:
         """
-        Function to convert a DataFrame to a Knowledge Graph using the M4ML schema.
+        Function to convert a DataFrame to a Knowledge Graph using the FAIR4ML schema.
 
         Args:
             df (pd.DataFrame): The DataFrame to convert to a Knowledge Graph.
@@ -167,7 +173,7 @@ class KnowledgeGraphHandler:
         """
 
         if df.empty:
-            raise ValueError("Cannot convert empty DataFrame to graph")
+            return self.graph, self.metadata_graph
 
         if identifier_column and identifier_column not in df.columns:
             raise ValueError(
@@ -178,24 +184,28 @@ class KnowledgeGraphHandler:
             entity_id = (
                 row[identifier_column][0]["data"] if identifier_column else str(idx)
             )
-            entity_uri = self.base_namespace[f"{platform}_Model_{entity_id}"]
+            
+            id_hash = self.generate_entity_hash(platform, "Model", entity_id)
+            entity_uri = self.base_namespace[id_hash]
+            
 
             # Add entity type with metadata
             self.add_triple_with_metadata(
                 entity_uri,
                 RDF.type,
-                self.base_namespace[f"{platform}_Model"],
+                self.namespaces["fair4ml"]["ML_Model"],
                 {"extraction_method": "System", "confidence": 1.0},
             )
 
-            # Add properties
+            # Go through the properties of the model
             for column in df.columns:
                 if column != identifier_column:
                     predicate = self.get_predicate_uri(column)
                     values = row[column]
 
+                    # Check if the values are a list
                     for value_info in values:
-                        rdf_objects = self.generate_objects_for_M4ML_schema(
+                        rdf_objects = self.generate_objects_for_FAIR4ML_schema(
                             column, value_info["data"], platform
                         )
                         for rdf_object in rdf_objects:
@@ -214,7 +224,7 @@ class KnowledgeGraphHandler:
 
         return self.graph, self.metadata_graph
 
-    def generate_objects_for_M4ML_schema(
+    def generate_objects_for_FAIR4ML_schema(
         self, predicate: str, values: List[Dict], platform: str
     ) -> List[Literal]:
         """
@@ -233,7 +243,7 @@ class KnowledgeGraphHandler:
         Example:
             >>> predicate = "schema.org:dateCreated"
             >>> values = [{'data': 'user/model_1', 'extraction_method': 'Parsed_from_HF_dataset', 'confidence': 1.0, 'extraction_time': '2025-01-24_07-43-32'}]
-            >>> objects = self.generate_objects_for_M4ML_schema(predicate, values,"HF")
+            >>> objects = self.generate_objects_for_FAIR4ML_schema(predicate, values,"HF")
             >>> print(objects)
             [Literal('2023-01-01', datatype=XSD.date)]
         """
@@ -244,10 +254,12 @@ class KnowledgeGraphHandler:
             values = [values]
 
         # Find the range where the predicate contains the Property value
-        predicate_info = self.M4ML_schema.loc[
-            self.M4ML_schema["Property"].apply(lambda x: x in predicate)
+        # print("START, PREDICATE:", predicate)
+        predicate_info = self.FAIR4ML_schema_data.loc[
+            self.FAIR4ML_schema_data["Property"].apply(lambda x: x in predicate)
         ]
-
+        # print("PREDICATE_INFO: \n", predicate_info)
+        # print("RANGE: \n", predicate_info["Real_Range"].values[0])
         range_value = predicate_info["Real_Range"].values[0]
 
         objects = []
@@ -273,15 +285,72 @@ class KnowledgeGraphHandler:
                 objects.append(Literal(value, datatype=XSD.string))
 
             elif "Date" in range_value or "DateTime" in range_value:
-                dt = datetime.fromisoformat(value.replace("Z", "+00:00"))
-                formatted_dt = dt.isoformat()
-                objects.append(Literal(formatted_dt, datatype=XSD.dateTime))
+                try:
+                    # Try to parse the value as a datetime
+                    dt = datetime.fromisoformat(value.replace("Z", "+00:00"))
+                    formatted_dt = dt.isoformat()
+                    objects.append(Literal(formatted_dt, datatype=XSD.dateTime))
+                except ValueError:
+                    # If parsing fails, treat it as a regular string
+                    print(f"Warning: Could not parse '{value}' as a date for property '{predicate}'. Treating as string.")
+                    objects.append(Literal(value, datatype=XSD.string))
 
             elif "Dataset" in range_value:
-                objects.append(Literal(value, datatype=XSD.string))
+                #Check if the value can be encoded in a URI
+                try:
+                    id_hash = self.generate_entity_hash(platform, "Dataset", value)
+                    dataset_uri = self.base_namespace[id_hash]
+                    self.add_triple_with_metadata(
+                        dataset_uri, 
+                        RDF.type, 
+                        self.namespaces["fair4ml"]["Dataset"], 
+                        {"extraction_method": "System", "confidence": 1.0})
+                    if( len(value) < 100):
+                        self.add_triple_with_metadata(
+                            dataset_uri, 
+                            self.namespaces["schema"]["name"], 
+                            Literal(value, datatype=XSD.string), 
+                            {"extraction_method": "System", "confidence": 1.0})
+                        self.add_triple_with_metadata(
+                            dataset_uri, 
+                            self.namespaces["schema"]["url"], 
+                            Literal("https://huggingface.co/"+value, datatype=XSD.string), 
+                            {"extraction_method": "System", "confidence": 1.0})
+                    else:
+                        self.add_triple_with_metadata(
+                            dataset_uri, 
+                            self.namespaces["schema"]["description"], 
+                            Literal(value, datatype=XSD.string), 
+                            {"extraction_method": "System", "confidence": 1.0})
+                        self.add_triple_with_metadata(
+                            dataset_uri, 
+                            self.namespaces["schema"]["name"], 
+                            Literal("Extracted model info: "+value[:50]+"...", datatype=XSD.string), 
+                            {"extraction_method": "System", "confidence": 1.0})
+                    
+                    objects.append(dataset_uri)
+                except:
+                    objects.append(Literal(value, datatype=XSD.string))
 
             elif "ScholarlyArticle" in range_value:
-                objects.append(self.base_namespace[f"{platform}_Article_{value}"])
+                id_hash = self.generate_entity_hash(platform, "ScholarlyArticle", value)
+                scholarly_article_uri = self.base_namespace[id_hash]
+                self.add_triple_with_metadata(
+                    scholarly_article_uri, 
+                    RDF.type, 
+                    self.namespaces["schema"]["ScholarlyArticle"], 
+                    {"extraction_method": "System", "confidence": 1.0})
+                self.add_triple_with_metadata(
+                    scholarly_article_uri, 
+                    self.namespaces["schema"]["url"], 
+                    Literal("https://arxiv.org/abs/"+value, datatype=XSD.string), 
+                    {"extraction_method": "System", "confidence": 1.0})
+                self.add_triple_with_metadata(
+                    scholarly_article_uri, 
+                    self.namespaces["schema"]["name"], 
+                    Literal(value, datatype=XSD.string), 
+                    {"extraction_method": "System", "confidence": 1.0})
+                objects.append(scholarly_article_uri)
 
             elif "Boolean" in range_value:
                 objects.append(Literal(bool(value), datatype=XSD.boolean))
@@ -289,8 +358,47 @@ class KnowledgeGraphHandler:
             elif "URL" in range_value:
                 objects.append(URIRef(value))
 
-            elif "Person" in range_value or "Organization" in range_value:
-                objects.append(Literal(value, datatype=XSD.string))
+            elif "Person" in range_value:
+                id_hash = self.generate_entity_hash(platform, "Person", value)
+                person_uri = self.base_namespace[id_hash]
+                
+                self.add_triple_with_metadata(
+                    person_uri, 
+                    RDF.type, 
+                    self.namespaces["schema"]["Person"], 
+                    {"extraction_method": "System", "confidence": 1.0})
+                self.add_triple_with_metadata(
+                    person_uri, 
+                    self.namespaces["schema"]["name"], 
+                    Literal(value, datatype=XSD.string), 
+                    {"extraction_method": "System", "confidence": 1.0})
+                self.add_triple_with_metadata(
+                    person_uri, 
+                    self.namespaces["schema"]["url"], 
+                    Literal("https://huggingface.co/"+value, datatype=XSD.string), 
+                    {"extraction_method": "System", "confidence": 1.0})
+                objects.append(person_uri)
+                
+            elif "Organization" in range_value:
+                id_hash = self.generate_entity_hash(platform, "Organization", value)
+                organization_uri = self.base_namespace[id_hash]
+                self.add_triple_with_metadata(
+                    organization_uri, 
+                    RDF.type, 
+                    self.namespaces["schema"]["Organization"], 
+                    {"extraction_method": "System", "confidence": 1.0})
+                self.add_triple_with_metadata(
+                    organization_uri, 
+                    self.namespaces["schema"]["name"], 
+                    Literal(value, datatype=XSD.string), 
+                    {"extraction_method": "System", "confidence": 1.0})
+                self.add_triple_with_metadata(
+                    organization_uri, 
+                    self.namespaces["schema"]["url"], 
+                    Literal("https://huggingface.co/"+value, datatype=XSD.string), 
+                    {"extraction_method": "System", "confidence": 1.0})
+                objects.append(organization_uri)
+                
 
         return objects
 
@@ -347,6 +455,10 @@ class KnowledgeGraphHandler:
             metadata (Dict[str, any]): Dictionary containing metadata about the triple
             extraction_time (Optional[str]): Timestamp of when the triple was extracted
         """
+        #Check if the triple already exists
+        if (subject, predicate, object_) in self.graph:
+            return
+
         # Add the main triple to the knowledge graph
         self.graph.add((subject, predicate, object_))
 
@@ -572,10 +684,11 @@ class KnowledgeGraphHandler:
         # Find all Field nodes using SPARQL query
         field_types = [
             URIRef("http://mlcommons.org/croissant/Field"),
-            URIRef("http://mlcommons.org/croissant/FileSet"),
-            URIRef("http://mlcommons.org/croissant/File"),
-            URIRef("http://mlcommons.org/croissant/FileObject"),
-            URIRef("http://mlcommons.org/croissant/FileObjectSet"),
+            # We will ignore the following types for now, they don't add meningfull information
+            # URIRef("http://mlcommons.org/croissant/FileSet"),
+            # URIRef("http://mlcommons.org/croissant/File"),
+            # URIRef("http://mlcommons.org/croissant/FileObject"),
+            # URIRef("http://mlcommons.org/croissant/FileObjectSet"),
             URIRef("http://mlcommons.org/croissant/RecordSet"),
         ]
 
@@ -584,12 +697,18 @@ class KnowledgeGraphHandler:
             for field_node in temp_graph.subjects(RDF.type, field_type):
                 if isinstance(field_node, URIRef):
                     # Extract the original ID path component
-                    original_path = str(field_node).split("/")[-1]
+                    original_type = str(field_type).split("/")[-1]
+                    field_node_id = str(field_node).split("mlentory_graph/")[-1]+"/"+row["datasetId"]
+                    
+                    # print("----------------------------")
+                    # print("Platform:", platform)                    
+                    # print("Original type:", original_type)
+                    # print("Field node ID:", field_node_id)
+                    # print("----------------------------")
 
                     # Create new ID with dataset prefix
-                    dataset_id = row["datasetId"].replace("/", "_")
-                    new_id = f"{dataset_id}/{original_path}"
-                    new_uri = URIRef(f"{self.base_namespace}{new_id}")
+                    hash = self.generate_entity_hash(platform, original_type, field_node_id)
+                    new_uri = self.base_namespace[hash]
 
                     # Replace all occurrences in the graph
                     self.replace_node(
@@ -598,6 +717,39 @@ class KnowledgeGraphHandler:
                         graph=temp_graph,
                         node_type=field_type,
                     )
+                    # Add a name property to not forget the name of the field
+                    temp_graph.add((new_uri, self.namespaces["schema"]["name"], Literal(str(field_node).split("mlentory_graph/")[-1], datatype=XSD.string)))
+
+    def generate_entity_hash(self, platform: str, entity_type: str, entity_id: str) -> str:
+        """
+        Generate a consistent hash from entity properties.
+
+        Args:
+            platform (str): The platform identifier (e.g., 'HF')
+            entity_type (str): The type of entity (e.g., 'Dataset', 'Person')
+            entity_id (str): The unique identifier for the entity
+
+        Returns:
+            str: A SHA-256 hash of the concatenated properties
+
+        Example:
+            >>> hash = kg_handler.generate_entity_hash('HF', 'Dataset', 'dataset1')
+            >>> print(hash)
+            '8a1c0c50e3e4f0b8a9d5c9e8b7a6f5d4c3b2a1'
+        """
+        # Create a sorted dictionary of properties to ensure consistent hashing
+        properties = {
+            "platform": platform,
+            "type": entity_type,
+            "id": entity_id
+        }
+        
+        # Convert to JSON string to ensure consistent serialization
+        properties_str = json.dumps(properties, sort_keys=True)
+        
+        # Generate SHA-256 hash
+        hash_obj = hashlib.sha256(properties_str.encode())
+        return hash_obj.hexdigest()
 
     def replace_node(
         self,
@@ -642,9 +794,11 @@ class KnowledgeGraphHandler:
 
         if new_uri is None and isinstance(new_id, str):
             if not new_id.startswith("http"):
-                new_uri = self.base_namespace[
-                    f"{platform}_{type.split('/')[-1]}_{new_id.replace(' ', '_')}"
-                ]
+                new_id = new_id.replace(' ', '_')
+                entity_type = type.split('/')[-1]
+                # Generate hash for the entity
+                entity_hash = self.generate_entity_hash(platform, entity_type, new_id)
+                new_uri = self.base_namespace[entity_hash]
             else:
                 new_uri = URIRef(new_id.replace(" ", "_"))
 
@@ -663,25 +817,66 @@ class KnowledgeGraphHandler:
             graph.remove((s, p, o))
             graph.add((s, p, new_uri))
 
-    def delete_remaining_blank_nodes(self, graph: Graph):
+    def delete_remaining_blank_nodes(self, graph: Graph) -> None:
         """
         Delete all triples related to a blank node
 
         Args:
             graph (Graph): The RDF graph to delete blank nodes from
         """
+        # Collect triples to remove
+        triples_to_remove = [
+            triple for triple in graph
+            if isinstance(triple[0], BNode) or isinstance(triple[1], BNode) or isinstance(triple[2], BNode)
+        ]
+        
+        # Remove collected triples
+        for triple in triples_to_remove:
+            graph.remove(triple)
 
-        for triple in graph:
-            s, p, o = triple
-            if isinstance(s, BNode) or isinstance(o, BNode) or isinstance(p, BNode):
-                graph.remove(triple)
+    def delete_unwanted_nodes(self, graph: Graph) -> None:
+        """
+        Delete all triples related to unwanted entity types (FileSet, File, FileObject, FileObjectSet).
+
+        This method removes all triples where either the subject or object is an entity of the
+        specified unwanted types from the Croissant schema.
+
+        Args:
+            graph (Graph): The RDF graph to delete nodes from
+
+        Example:
+            >>> kg_handler.delete_unwanted_nodes(graph)
+        """
+        unwanted_types = [
+            URIRef("http://mlcommons.org/croissant/FileSet"),
+            URIRef("http://mlcommons.org/croissant/File"),
+            URIRef("http://mlcommons.org/croissant/FileObject"),
+            URIRef("http://mlcommons.org/croissant/FileObjectSet"),
+            URIRef("http://mlcommons.org/croissant/RecordSet"),
+            URIRef("http://mlcommons.org/croissant/Field"),
+        ]
+
+        # First, find all nodes of unwanted types
+        unwanted_nodes = set()
+        for type_uri in unwanted_types:
+            unwanted_nodes.update(graph.subjects(RDF.type, type_uri))
+
+        # Collect all triples that contain unwanted nodes
+        triples_to_remove = [
+            triple for triple in graph
+            if (triple[0] in unwanted_nodes) or (triple[2] in unwanted_nodes)
+        ]
+
+        # Remove collected triples
+        for triple in triples_to_remove:
+            graph.remove(triple)
 
     def reset_graphs(self) -> None:
         """
         Reset the internal graphs while preserving namespace and schema configurations.
 
         This method clears both the main graph and metadata graph while maintaining
-        the initialized namespaces and M4ML schema.
+        the initialized namespaces and FAIR4ML schema.
 
         Example:
             >>> kg_handler.reset_graphs()
@@ -694,3 +889,5 @@ class KnowledgeGraphHandler:
         for prefix, namespace in self.namespaces.items():
             self.graph.bind(prefix, namespace)
             self.metadata_graph.bind(prefix, namespace)
+
+    

@@ -4,7 +4,7 @@ from datetime import datetime
 import pandas as pd
 import os
 
-from mlentory_extract.core.ModelCardQAParser import ModelCardQAParser
+from mlentory_extract.core.ModelCardToSchemaParser import ModelCardToSchemaParser
 from mlentory_extract.hf_extract.HFDatasetManager import HFDatasetManager
 
 
@@ -25,20 +25,16 @@ class HFExtractor:
 
     def __init__(
         self,
-        qa_model: str = "Intel/dynamic_tinybert",
-        questions: List[str] = None,
-        tags_language: List[str] = None,
-        tags_libraries: List[str] = None,
-        tags_other: List[str] = None,
-        tags_task: List[str] = None,
+        parser: Optional[ModelCardToSchemaParser] = None,
         dataset_manager: Optional[HFDatasetManager] = None,
+        default_card: Optional[str] = None,
     ):
         """
         Initialize the HuggingFace extractor.
 
         Args:
             qa_model (str, optional): The model to use for text extraction.
-                Defaults to "Intel/dynamic_tinybert".
+                Defaults to "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2".
             questions (List[str], optional): List of questions for extraction.
                 Defaults to None.
             tags_language (List[str], optional): List of language tags.
@@ -51,16 +47,11 @@ class HFExtractor:
                 Defaults to None.
             dataset_manager (Optional[HFDatasetManager], optional): Dataset manager instance.
                 Defaults to None.
+            default_card (Optional[str], optional): Default HF card content.
+                Defaults to None (uses the standard path).
         """
-        self.parser = ModelCardQAParser(
-            qa_model=qa_model,
-            questions=questions,
-            tags_language=tags_language,
-            tags_libraries=tags_libraries,
-            tags_other=tags_other,
-            tags_task=tags_task,
-        )
-        self.dataset_manager = dataset_manager or HFDatasetManager()
+        self.parser = parser or ModelCardToSchemaParser()
+        self.dataset_manager = dataset_manager or HFDatasetManager(default_card=default_card)
 
     def download_models(
         self,
@@ -103,40 +94,10 @@ class HFExtractor:
         original_HF_df = self.dataset_manager.get_model_metadata_dataset(
             update_recent=update_recent, limit=num_models, threads=threads
         )
-        # Slice dataframe if num_models specified
-        HF_df = original_HF_df
-
-        # Create new columns for each question
-        new_columns = {
-            f"q_id_{idx}": [None for _ in range(len(HF_df))]
-            for idx in range(len(self.parser.questions))
-        }
-        HF_df = HF_df.assign(**new_columns)
-
+        
         # Parse fields
-        HF_df = self.parser.parse_fields_from_tags_HF(HF_df=HF_df)
-        HF_df = self.parser.parse_known_fields_HF(HF_df=HF_df)
-        HF_df = self.parser.parse_fields_from_txt_HF_matching(HF_df=HF_df)
-
-        # Clean up columns
-        HF_df = HF_df.drop(
-            columns=[
-                "modelId",
-                "author",
-                "last_modified",
-                "downloads",
-                "likes",
-                "pipeline_tag",
-                "tags",
-                "library_name",
-                "createdAt",
-                "card",
-            ]
-        )
-
-        # Improve column naming
-        HF_df.columns = HF_df.columns.map(self._augment_column_name)
-
+        HF_df = self.parser.process_dataframe(original_HF_df)
+        
         # Save results
         if not os.path.exists(output_dir):
             os.makedirs(output_dir)

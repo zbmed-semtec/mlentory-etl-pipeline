@@ -1,0 +1,47 @@
+Source	Property	Range	Description
+FAIR4ML	fair4ml:ethicalLegalSocial	Text	Considerations with regards to ethical legal and social aspects.
+FAIR4ML	fair4ml:evaluatedOn	Dataset, croissant:Dataset	Dataset used for evaluating the model. 
+FAIR4ML	fair4ml:fineTunedFrom	fair4ml:MLModel	Relationship to point to the source model used for fine tuning (if this model was finetuned from another one).
+FAIR4ML	fair4ml:hasCO2eEmissions	Text	Amount of CO2 equivalent emissions produced by training the model. The unit should be included in the field.
+FAIR4ML	fair4ml:intendedUse	Text or DefinedTerm or URL	Purpose and intended use stated to enable users to make a decision as to the suitability of this creative work for their intended use.
+FAIR4ML	fair4ml:mlTask	Text or DefinedTerm	The ML task that the model is designed to perform.
+FAIR4ML	fair4ml:modelCategory	Text or DefinedTerm	Category of the model.
+FAIR4ML	fair4ml:modelRisks	Text	Potential risks associated with the model.
+FAIR4ML	fair4ml:sharedBy	Person or Organization	Person or Organization that shared the model.
+FAIR4ML	fair4ml:testedOn	Dataset, croissant:Dataset	Dataset used for testing the model.
+FAIR4ML	fair4ml:trainedOn	Dataset, croissant:Dataset	Dataset used for training the model.
+FAIR4ML	fair4ml:usageInstructions	Text	Instructions for using the model.
+FAIR4ML	fair4ml:validatedOn	Dataset, croissant:Dataset	Dataset used for validating the model.
+codemeta	codemeta:buildInstructions	URL	Link to installation instructions/documentation.
+codemeta	codemeta:developmentStatus	Text	Description of development status, e.g. Active, inactive, suspended. See repostatus.org
+codemeta	codemeta:issueTracker	URL	Link to software bug reporting or issue tracking system.
+codemeta	codemeta:readme	URL	Link to software Readme file.
+codemeta	codemeta:referencePublication	ScholarlyArticle	An academic publication related to the software.
+schema.org	schema.org:distribution	MediaObject	A media object that encodes this creative work.
+schema.org	schema.org:memoryRequirements	Text or URL	Minimum memory requirements.
+schema.org	schema.org:operatingSystem	Text	Operating systems supported (Windows 7, OSX 10.6, Android 1.6).
+schema.org	schema.org:processorRequirements	Text	Processor architecture required to run the application (e.g. IA64).
+schema.org	schema.org:releaseNotes	Text or URL	Description of what changed in this version.
+schema.org	schema.org:softwareHelp	CreativeWork	Software application help.
+schema.org	schema.org:softwareRequirements	Text or URL	Required software dependencies.
+schema.org	schema.org:storageRequirements	Text or URL	Storage requirements (free space required).
+schema.org	schema.org:archivedAt	URL or WebPage	Indicates a page or other link involved in archival of a CreativeWork.
+schema.org	schema.org:author	Organization or Person	The author of this content. Please note that author is special in that HTML 5 provides a special mechanism for indicating authorship via the rel tag.
+schema.org	schema.org:citation	CreativeWork or Text	A citation or reference to another creative work, such as another publication, web page, scholarly article, etc.
+schema.org	schema.org:conditionsOfAccess	Text	Conditions that affect the availability of, or method(s) of access to, an item.
+schema.org	schema.org:contributor	Organization or Person	A secondary contributor to the CreativeWork.
+schema.org	schema.org:copyrightHolder	Organization or Person	The party holding the legal copyright to the CreativeWork.
+schema.org	schema.org:dateCreated	Date or DateTime	The date on which the CreativeWork was created.
+schema.org	schema.org:dateModified	Date or DateTime	The date on which the CreativeWork was most recently modified.
+schema.org	schema.org:datePublished	Date or DateTime	Date of first broadcast/publication.
+schema.org	schema.org:discussionUrl	URL	A link to the page containing the comments of the CreativeWork.
+schema.org	schema.org:funding	Grant	A Grant that directly or indirectly provided funding or sponsorship for this item.
+schema.org	schema.org:inLanguage	Language or Text	The language of the content.
+schema.org	schema.org:keywords	DefinedTerm or Text or URL	Keywords or tags used to describe this content.
+schema.org	schema.org:license	CreativeWork or URL	A license document that applies to this content, typically indicated by URL.
+schema.org	schema.org:maintainer	Organization or Person	Individual responsible for maintaining the item.
+schema.org	schema.org:version	Text	The version of the CreativeWork embodied by a specified resource.
+schema.org	schema.org:description	Text or TextObject	A description of the item.
+schema.org	schema.org:identifier	PropertyValue or Text or URL	The identifier property represents any kind of identifier for any kind of Thing, such as ISBNs, GTIN codes, UUIDs etc.
+schema.org	schema.org:name	Text	The name of the item.
+schema.org	schema.org:url	URL	URL of the item.

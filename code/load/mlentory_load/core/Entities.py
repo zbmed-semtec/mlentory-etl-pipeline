@@ -27,8 +27,10 @@ class Model(Document):
         ),
     )
     releaseNotes = Text()
+    license = Keyword()
     mlTask = Keyword(multi=True)
-    author = Text(multi=True)
+    sharedBy = Text(multi=True)
+    relatedDatasets = Text(multi=True)
 
     # citation = Text()
     # version = Text()

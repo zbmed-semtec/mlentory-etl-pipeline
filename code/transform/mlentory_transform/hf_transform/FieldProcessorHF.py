@@ -5,6 +5,7 @@ import pandas as pd
 import json
 import ast
 from datetime import datetime
+from ..utils.enums import ExtractionMethod
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -21,7 +22,7 @@ class FieldProcessorHF:
     - Support batch processing of model data
 
     Attributes:
-        M4ML_schema (pd.DataFrame): Target schema for the transformed data
+        FAIR4ML_schema (pd.DataFrame): Target schema for the transformed data
         transformations (pd.DataFrame): Mapping of source to target fields with transformation rules
         transformation_functions (dict): Available transformation functions
         current_row (pd.Series): Currently processed row of data
@@ -35,7 +36,7 @@ class FieldProcessorHF:
             new_schema (pd.DataFrame): The target schema to transform data into
             transformations (pd.DataFrame): The transformation rules to apply
         """
-        self.M4ML_schema = new_schema
+        self.FAIR4ML_schema = new_schema
         self.transformations = transformations
         # Map of available transformation functions
         self.transformation_functions = {
@@ -117,11 +118,11 @@ class FieldProcessorHF:
         Returns:
             str: Complete HuggingFace model link
         """
-
+        # print("Checking building links: ",self.find_value_in_HF("q_id_0"),"\n")
+        # print("Building links: ", self.find_value_in_HF("q_id_0"))
         model_name = self.find_value_in_HF("q_id_0")[0]["data"]
         link = "https://huggingface.co/" + model_name + tail_info
-        # print("Link: ",link)
-        return [self.add_default_extraction_info(link, "Built in transform stage", 1.0)]
+        return [self.add_default_extraction_info(link, ExtractionMethod.BUILT_IN_TRANSFORM.value, 1.0)]
 
     def process_softwareRequirements(self) -> List:
         """
@@ -130,19 +131,15 @@ class FieldProcessorHF:
         Returns:
             List: List of software requirements with extraction metadata
         """
-
         q17_values = self.find_value_in_HF("q_id_17")
-
         values = [q17_values[0]]
-
         values.append(
             self.add_default_extraction_info(
                 data="Python",
-                extraction_method="Added in transform stage",
+                extraction_method=ExtractionMethod.BUILT_IN_TRANSFORM.value,
                 confidence=1.0,
             )
         )
-
         return values
 
     def process_trainedOn(self) -> List:
@@ -179,7 +176,7 @@ class FieldProcessorHF:
         return [
             self.add_default_extraction_info(
                 data="Not extracted",
-                extraction_method="None",
+                extraction_method=ExtractionMethod.NOT_EXTRACTED.value,
                 confidence=1.0,
             )
         ]
@@ -192,7 +189,7 @@ class FieldProcessorHF:
 
         Args:
             data (str): The extracted information
-            extraction_method (str): Method used for extraction
+            extraction_method (string): Method used for extraction
             confidence (float): Confidence score of the extraction
 
         Returns:

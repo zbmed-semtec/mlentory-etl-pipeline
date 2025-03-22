@@ -1,5 +1,9 @@
 # MLentory Extraction/Transformation/Loader (ETL) Pipeline
 
+[![CircleCI](https://dl.circleci.com/status-badge/img/gh/zbmed-semtec/mlentory/tree/main.svg?style=shield)](https://dl.circleci.com/status-badge/redirect/gh/zbmed-semtec/mlentory/tree/main)
+[![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
+[![codecov](https://codecov.io/gh/zbmed-semtec/mlentory/graph/badge.svg)](https://codecov.io/gh/zbmed-semtec/mlentory)
+
 MLentory is centered around information on  ML models, how to harmonize that data, and how to make it available and searchable on an FDO (FAIR Digital Object) registry.
 
 ## Purpose
@@ -80,12 +84,15 @@ The project structure is the following:
 │   ├── hf_etl
 │   ├── scheduler
 │   ├── docker-compose.yml
+│   ├── start_mlentory.sh
+│   ├── db_connect.py
 │   └── requirements.txt
 ├── data
 │   ├── configuration
 │   ├── datasets
 │   ├── elasticsearch_data
 │   ├── postgres_data
+│   ├── pgadmin_data
 │   └── virtuoso_data
 ├── docs
 │   ├── Analysis_graphs

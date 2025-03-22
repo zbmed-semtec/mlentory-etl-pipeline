@@ -13,7 +13,7 @@ def sample_schema() -> pd.DataFrame:
     Returns:
         pd.DataFrame: Sample schema with required columns
     """
-    schema_data = pd.read_csv("tests/unit/hf/transform/M4ML_schema.tsv", sep="\t")
+    schema_data = pd.read_csv("tests/unit/hf/transform/FAIR4ML_schema.tsv", sep="\t")
     return schema_data
 
 

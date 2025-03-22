@@ -203,3 +203,4 @@ cython_debug/
 
 tests/integration/pipeline/outputs/
 
+code/extractors/examples/outputs/
