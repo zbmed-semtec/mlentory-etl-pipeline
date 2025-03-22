@@ -36,6 +36,7 @@ class ModelCardToSchemaParser:
     
     def __init__(
         self,
+        qa_model: str = "sentence-transformers/all-MiniLM-L6-v2",
         matching_model: str = "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2",
         tags_language: List[str] = None,
         tags_libraries: List[str] = None,
@@ -47,6 +48,7 @@ class ModelCardToSchemaParser:
         Initialize the Model Card to Schema Parser
         
         Args:
+            qa_model (str): Model to use for question-answering
             matching_model (str): Model to use for semantic matching
             tags_language (List[str], optional): List of language tags. Defaults to None.
             tags_libraries (List[str], optional): List of library tags. Defaults to None.
@@ -134,6 +136,9 @@ class ModelCardToSchemaParser:
         Returns:
             dict: Dictionary containing extraction metadata
         """
+        # if type(data) != list:
+        #     data = [data]
+            
         return {
             "data": data,
             "extraction_method": extraction_method,
@@ -179,8 +184,18 @@ class ModelCardToSchemaParser:
         # Map known fields directly
         # HF_df.loc[:, "schema.org:author"] = HF_df.loc[:, "author"]
         HF_df.loc[:, "fair4ml:sharedBy"] = HF_df.loc[:, "author"]
-        HF_df.loc[:, "schema.org:dateCreated"] = HF_df.loc[:, "createdAt"].apply(lambda x: str(x))
-        HF_df.loc[:, "schema.org:dateModified"] = HF_df.loc[:, "last_modified"].apply(lambda x: str(x))
+        
+        # Format dates properly to ensure ISO format
+        HF_df.loc[:, "schema.org:dateCreated"] = HF_df.loc[:, "createdAt"].apply(
+            lambda x: x.isoformat() if hasattr(x, 'isoformat') else str(x)
+        )
+        HF_df.loc[:, "schema.org:datePublished"] = HF_df.loc[:, "createdAt"].apply(
+            lambda x: x.isoformat() if hasattr(x, 'isoformat') else str(x)
+        )
+        HF_df.loc[:, "schema.org:dateModified"] = HF_df.loc[:, "last_modified"].apply(
+            lambda x: x.isoformat() if hasattr(x, 'isoformat') else str(x)
+        )
+        
         HF_df.loc[:, "schema.org:releaseNotes"] = HF_df.loc[:, "card"]
         HF_df.loc[:, "schema.org:description"] = HF_df.loc[:, "card"]
         HF_df.loc[:, "schema.org:name"] = HF_df.loc[:, "modelId"].apply(lambda x: x.split("/")[-1] if "/" in x else x)
@@ -198,7 +213,10 @@ class ModelCardToSchemaParser:
         HF_df.loc[:, "codemeta:issueTracker"] = HF_df.loc[:, "modelId"].apply(
             lambda x: f"https://huggingface.co/{x}/discussions" if x else None
         )
-        HF_df.loc[:, "schema.org:readme"] = HF_df.loc[:, "modelId"].apply(
+        HF_df.loc[:, "schema.org:archivedAt"] = HF_df.loc[:, "modelId"].apply(
+            lambda x: f"https://huggingface.co/{x}" if x else None
+        )
+        HF_df.loc[:, "codemeta:readme"] = HF_df.loc[:, "modelId"].apply(
             lambda x: f"https://huggingface.co/{x}/blob/main/README.md" if x else None
         )
         
@@ -216,12 +234,16 @@ class ModelCardToSchemaParser:
             "fair4ml:sharedBy", 
             "schema.org:dateCreated", 
             "schema.org:dateModified",
+            "schema.org:datePublished",
             "schema.org:releaseNotes",
             "schema.org:description",
             "schema.org:name", 
             "schema.org:url",
+            "schema.org:discussionUrl",
+            "codemeta:readme",
             "codemeta:issueTracker",
-            "schema:memoryRequirements"
+            "schema.org:archivedAt",
+            "schema.org:memoryRequirements"
         ]
         
         self.processed_properties.extend(properties)
@@ -311,7 +333,7 @@ class ModelCardToSchemaParser:
             HF_df.at[index, "fair4ml:trainedOn"] = datasets
             HF_df.at[index, "fair4ml:evaluatedOn"] = datasets
             HF_df.at[index, "fair4ml:testedOn"] = datasets
-            HF_df.at[index, "fair4ml:baseModel"] = list(base_models)
+            HF_df.at[index, "fair4ml:fineTunedFrom"] = list(base_models)
             
             HF_df.at[index, "schema.org:license"] = licenses
             
@@ -326,7 +348,7 @@ class ModelCardToSchemaParser:
             "fair4ml:trainedOn",
             "fair4ml:evaluatedOn",
             "fair4ml:testedOn",
-            "fair4ml:baseModel",
+            "fair4ml:fineTunedFrom",
             "schema.org:license",
             "schema.org:inLanguage",
             "schema.org:keywords",
@@ -361,48 +383,48 @@ class ModelCardToSchemaParser:
         # Generate queries for each schema property based on their descriptions
         schema_property_questions = self.create_schema_property_questions()
         questions = list(schema_property_questions.keys())
+    
         
-        
-        for index, row in tqdm(HF_df.iterrows(), total=len(HF_df), desc="Processing text"):
+        # Pre-process all contexts at once
+        contexts = []
+        for _, row in tqdm(
+            HF_df.iterrows(), total=len(HF_df), desc="Pre-processing contexts"
+        ):
             context = row["card"]
+            contexts.append(context)
+        
+        batch_size = 8
+        for batch_start in tqdm(
+            range(0, len(contexts), batch_size), desc="Processing batches"
+        ):
+            batch_end = min(batch_start + batch_size, len(contexts))
+            batch_contexts = contexts[batch_start:batch_end]
             
-            all_matchings = self.matching_engine.find_relevant_sections(
-                questions=questions, context=context, top_k=2
-            )
+            # Process batch of contexts
+            batch_results = []
+            for context in batch_contexts:
+                relevant_sections = self.matching_engine.find_relevant_sections(
+                    questions=questions, context=context, top_k=1
+                )
+                batch_results.append(relevant_sections)
             
-            created_sections = {"sections": [section.to_json() for section in self.matching_engine.last_created_sections], 
-                                "context": self.matching_engine.last_context,
-                                "model_id": row["modelId"]}
-            # save created sections to file
-            file_path = os.path.join(f"./extractors/examples/outputs/created_sections_for_{index}.json")
-
-            # Process the sections to convert string newlines to actual newlines
-            if "sections" in created_sections:
-                for i, section in enumerate(created_sections["sections"]):
-                    if isinstance(section, str):
-                        # Parse string sections
-                        section_dict = json.loads(section)
-                        created_sections["sections"][i] = section_dict
-                    
-                    if isinstance(section, dict) and "content" in section:
-                        # Replace literal "\n" with actual newlines
-                        section["content"] = section["content"].replace("\\n", "\n")
-
-            # Write with proper formatting
-            with open(file_path, "w", encoding="utf-8") as f:
-                json.dump(created_sections, f, indent=4, ensure_ascii=False)
+            # Update DataFrame with batch results
+            for i, relevant_sections in enumerate(batch_results):
+                for q_idx, matchings_per_question in enumerate(relevant_sections):
+                    prop = schema_property_questions[questions[q_idx]]
+                    results = []
+                    for section, score in matchings_per_question:
+                        results.append(self.add_default_extraction_info(
+                            data=section.content,
+                            extraction_method=f"Semantic Matching with {self.matching_engine.model_name}",
+                            confidence=score
+                        ))
+                    # print("INDEX:", batch_start + i, prop)
+                    HF_df.loc[HF_df.index[batch_start + i], prop] = results
             
-            
-            for q_idx, matchings_per_question in enumerate(all_matchings):
-                prop = schema_property_questions[questions[q_idx]]
-                results = []
-                for section, score in matchings_per_question:
-                    results.append(self.add_default_extraction_info(
-                        data=section.content,
-                        extraction_method=f"Semantic Matching with {self.matching_engine.model_name}",
-                        confidence=score
-                    ))
-                HF_df.at[index, prop] = results
+            # Clear some memory
+            if hasattr(torch.cuda, "empty_cache"):
+                torch.cuda.empty_cache()
         
         return HF_df
     
