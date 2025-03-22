@@ -72,12 +72,12 @@ class MlentoryTransform:
         # Reset the knowledge graph handler before processing new data
         self.kg_handler.reset_graphs()
 
-        transformed_df = self.transform_hf.transform_models(extracted_df)
+        # transformed_df = self.transform_hf.transform_models(extracted_df)
 
         # Transform the dataframe to a knowledge graph
         knowledge_graph, metadata_graph = (
             self.kg_handler.dataframe_to_graph_FAIR4ML_schema(
-                df=transformed_df, 
+                df=extracted_df, 
                 identifier_column="schema.org:name", 
                 platform=Platform.HUGGING_FACE.value
             )
