@@ -13,6 +13,7 @@ import argparse
 
 from mlentory_extract.hf_extract import HFDatasetManager
 from mlentory_extract.hf_extract import HFExtractor
+from mlentory_extract.core import ModelCardToSchemaParser
 from mlentory_load.core import LoadProcessor, GraphHandlerForKG
 from mlentory_load.dbHandler import RDFHandler, SQLHandler, IndexHandler
 from mlentory_transform.hf_transform import TransformHF
@@ -61,18 +62,26 @@ def initialize_extractor(config_path: str) -> HFExtractor:
     tags_libraries = load_tsv_file_to_list(f"{config_path}/extract/tags_libraries.tsv")
     tags_other = load_tsv_file_to_list(f"{config_path}/extract/tags_other.tsv")
     tags_task = load_tsv_file_to_list(f"{config_path}/extract/tags_task.tsv")
+    
 
     dataset_manager = HFDatasetManager(api_token=os.getenv("HF_TOKEN"))
-
-    return HFExtractor(
-        qa_model="sentence-transformers/all-MiniLM-L6-v2",
+    
+    parser = ModelCardToSchemaParser(
+        # qa_model="sentence-transformers/all-MiniLM-L6-v2",
         # qa_model="BAAI/bge-m3",
-        dataset_manager=dataset_manager,
-        questions=questions,
+        qa_model="Alibaba-NLP/gte-Qwen2-1.5B-instruct",
+        # matching_model="Alibaba-NLP/gte-Qwen2-1.5B-instruct",
+        matching_model="sentence-transformers/all-MiniLM-L6-v2",
+        schema_file=f"{config_path}/transform/FAIR4ML_schema.tsv",
         tags_language=tags_language,
         tags_libraries=tags_libraries,
         tags_other=tags_other,
         tags_task=tags_task,
+    )
+    
+    return HFExtractor(
+        dataset_manager=dataset_manager,
+        parser=parser
     )
 
 
@@ -187,10 +196,10 @@ def parse_args() -> argparse.Namespace:
         help="Download models from this date (format: YYYY-MM-DD)",
     )
     parser.add_argument(
-        "--num-models", "-nm", type=int, default=200, help="Number of models to download"
+        "--num-models", "-nm", type=int, default=20, help="Number of models to download"
     )
     parser.add_argument(
-        "--num-datasets", "-nd", type=int, default=200, help="Number of datasets to download"
+        "--num-datasets", "-nd", type=int, default=20, help="Number of datasets to download"
     )
     parser.add_argument(
         "--output-dir",
@@ -235,7 +244,7 @@ def main():
             update_recent=False,
             threads=10,
         )
-        
+    
         # # Load extracted data from csv
         # extracted_models_df = pd.read_csv(args.output_dir+"/models/2025-02-16_13-59-25_Processed_HF_kg.json")
         # extracted_datasets_df = pd.read_csv(args.output_dir+"/datasets/2025-02-16_16-07-57_Extracted_Models_HF_df.json")
