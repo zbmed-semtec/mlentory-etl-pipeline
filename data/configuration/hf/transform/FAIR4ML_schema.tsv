@@ -17,14 +17,14 @@ codemeta	codemeta:developmentStatus	Text	Description of development status, e.g.
 codemeta	codemeta:issueTracker	URL	Link to software bug reporting or issue tracking system.
 codemeta	codemeta:readme	URL	Link to software Readme file.
 codemeta	codemeta:referencePublication	ScholarlyArticle	An academic publication related to the software.
-schema.org	schema:distribution	MediaObject	A media object that encodes this creative work.
+schema.org	schema.org:distribution	MediaObject	A media object that encodes this creative work.
 schema.org	schema.org:memoryRequirements	Text or URL	Minimum memory requirements.
 schema.org	schema.org:operatingSystem	Text	Operating systems supported (Windows 7, OSX 10.6, Android 1.6).
 schema.org	schema.org:processorRequirements	Text	Processor architecture required to run the application (e.g. IA64).
 schema.org	schema.org:releaseNotes	Text or URL	Description of what changed in this version.
 schema.org	schema.org:softwareHelp	CreativeWork	Software application help.
 schema.org	schema.org:softwareRequirements	Text or URL	Required software dependencies.
-schema.org	storageRequirements	Text or URL	Storage requirements (free space required).
+schema.org	schema.org:storageRequirements	Text or URL	Storage requirements (free space required).
 schema.org	schema.org:archivedAt	URL or WebPage	Indicates a page or other link involved in archival of a CreativeWork.
 schema.org	schema.org:author	Organization or Person	The author of this content. Please note that author is special in that HTML 5 provides a special mechanism for indicating authorship via the rel tag.
 schema.org	schema.org:citation	CreativeWork or Text	A citation or reference to another creative work, such as another publication, web page, scholarly article, etc.
