@@ -74,22 +74,14 @@ class HFDatasetManager:
                 # revision="0b3e7a79eae8a5dd28080f06065a988ca1fbf050",
             )["train"].to_pandas()
             
-            
 
-            if not update_recent:
-                return dataset
-
-            # Get the most recent modification date from the dataset
-            latest_modification = dataset["last_modified"].max()
-            
-            # Discard models with not enough information
-            dataset = self.filter_models(dataset)
-
-            recent_models = self.get_recent_models_metadata(
-                limit, latest_modification, threads
-            )
-
-            if len(recent_models) > 0:
+            if update_recent:
+                # Get the most recent modification date from the dataset
+                latest_modification = dataset["last_modified"].max()
+                
+                recent_models = self.get_recent_models_metadata(
+                    limit, latest_modification, threads
+                )
 
                 # Concatenate with original dataset and remove duplicates
                 dataset = pd.concat([dataset, recent_models], ignore_index=True)
@@ -98,6 +90,9 @@ class HFDatasetManager:
                 # Sort by last_modified
                 dataset = dataset.sort_values("last_modified", ascending=False)
             
+            # print("GOT HERREEEEE")
+            # Discard models with not enough information
+            dataset = self.filter_models(dataset)
 
             # trim the dataset to the limit
             dataset = dataset[: min(limit, len(dataset))]
