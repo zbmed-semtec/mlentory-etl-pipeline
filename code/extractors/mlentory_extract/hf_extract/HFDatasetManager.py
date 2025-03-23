@@ -255,6 +255,79 @@ class HFDatasetManager:
         else:
             return {}
 
+    def get_specific_datasets_metadata(
+        self, 
+        dataset_names: List[str], 
+        threads: int = 4
+    ) -> pd.DataFrame:
+        """
+        Retrieve metadata for specific HuggingFace datasets by name in the croissant format.
+        
+        This method processes a list of dataset names, retrieving their metadata from HuggingFace.
+        It differs from get_datasets_metadata as it targets specific datasets rather than
+        a number of recent ones.
+
+        Args:
+            dataset_names (List[str]): List of dataset names/IDs to process.
+            threads (int, optional): Number of threads to use for downloading.
+                Defaults to 4.
+
+        Returns:
+            pd.DataFrame: DataFrame containing dataset metadata for the requested datasets
+                
+        Raises:
+            ValueError: If the dataset_names parameter is empty
+            
+        Example:
+            >>> manager = HFDatasetManager()
+            >>> # Get metadata for specific datasets
+            >>> dataset_df = manager.get_specific_datasets_metadata(
+            ...     dataset_names=["squad", "glue", "mnist"]
+            ... )
+            >>> # Check the dataset IDs in the result
+            >>> dataset_df["datasetId"].tolist()
+            ['squad', 'glue', 'mnist']
+        """
+        if not dataset_names:
+            raise ValueError("dataset_names list cannot be empty")
+            
+        dataset_data = []
+        futures = []
+        
+        def process_dataset(dataset_id: str):
+            try:
+                croissant_metadata = self.get_croissant_metadata(dataset_id)
+                if croissant_metadata == {}:
+                    print(f"Warning: No croissant metadata found for dataset '{dataset_id}'")
+                    return None
+                    
+                return {
+                    "datasetId": dataset_id,
+                    "croissant_metadata": croissant_metadata,
+                    "extraction_metadata": {
+                        "extraction_method": "Downloaded_from_HF_Croissant_endpoint",
+                        "confidence": 1.0,
+                        "extraction_time": datetime.now().strftime("%Y-%m-%d_%H-%M-%S"),
+                    },
+                }
+            except Exception as e:
+                print(f"Error processing dataset '{dataset_id}': {str(e)}")
+                return None
+        
+        with ThreadPoolExecutor(max_workers=threads) as executor:
+            # Submit all tasks
+            for dataset_id in dataset_names:
+                future = executor.submit(process_dataset, dataset_id)
+                futures.append(future)
+            
+            # Process results as they complete
+            for future in as_completed(futures):
+                result = future.result()
+                if result is not None:
+                    dataset_data.append(result)
+        
+        return pd.DataFrame(dataset_data)
+
     def get_arxiv_metadata_dataset(self) -> pd.DataFrame:
         """
         Retrieve the HuggingFace dataset containing arxiv metadata.
