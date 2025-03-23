@@ -226,24 +226,39 @@ def main():
         # Initialize extractor
         extractor = initialize_extractor(config_path)
 
-        # Extract data (limited sample)
         extracted_models_df = extractor.download_models(
             num_models=args.num_models,
             from_date=datetime(2023, 1, 1),
             output_dir=args.output_dir+"/models",
-            save_result_in_json=True,
+            save_result_in_json=False,
             save_raw_data=False,
             update_recent=False,
             threads=4,
         )
+        
+        related_entities = extractor.get_models_related_entities(extracted_models_df)
 
-        extracted_datasets_df = extractor.download_datasets(
-            num_datasets=args.num_datasets,
-            output_dir=args.output_dir+"/datasets",
-            save_result_in_json=True,
-            update_recent=False,
-            threads=10,
-        )
+        # Download datasets based on command-line arguments
+        if len(related_entities["datasets"]) > 0:
+            # Use download_specific_datasets if dataset names are provided
+            extracted_datasets_df = extractor.download_specific_datasets(
+                dataset_names=related_entities["datasets"],
+                output_dir=args.output_dir+"/datasets",
+                save_result_in_json=True,
+                threads=10,
+            )
+            for dataset in related_entities["datasets"]:
+                print("dataset: ", dataset)
+            print(f"Downloaded {len(extracted_datasets_df)}")
+        else:
+            # Use the original method if no dataset names are provided
+            extracted_datasets_df = extractor.download_datasets(
+                num_datasets=args.num_datasets,
+                output_dir=args.output_dir+"/datasets",
+                save_result_in_json=True,
+                update_recent=False,
+                threads=10,
+            )
     
         # # Load extracted data from csv
         # extracted_models_df = pd.read_csv(args.output_dir+"/models/2025-02-16_13-59-25_Processed_HF_kg.json")
