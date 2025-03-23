@@ -555,12 +555,19 @@ class ModelCardToSchemaParser:
                 
         for index in tqdm(df.index, desc=description):
             for prop in properties:
-                if prop in df.columns and df.at[index, prop] is not None:
-                    df.at[index, prop] = [
-                        self.add_default_extraction_info(
-                            df.at[index, prop], extraction_method, confidence
-                        )
-                    ]
+                if prop in df.columns:
+                    if df.at[index, prop] is None or df.at[index, prop] == []:
+                        df.at[index, prop] = [
+                            self.add_default_extraction_info(
+                                "Information not found", extraction_method, confidence
+                            )
+                        ]
+                    else:
+                        df.at[index, prop] = [
+                            self.add_default_extraction_info(
+                                df.at[index, prop], extraction_method, confidence
+                            )
+                        ]
         
         return df
     
