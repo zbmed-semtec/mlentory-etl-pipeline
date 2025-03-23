@@ -3,6 +3,7 @@ from datasets import load_dataset
 from datetime import datetime
 import pandas as pd
 import os
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 from mlentory_extract.core.ModelCardToSchemaParser import ModelCardToSchemaParser
 from mlentory_extract.hf_extract.HFDatasetManager import HFDatasetManager
@@ -118,6 +119,49 @@ class HFExtractor:
 
         return HF_df
 
+    def get_models_related_entities(self, HF_models_df: pd.DataFrame) -> Dict[str, List[str]]:
+        """
+        Get the related entities for all models in the dataframe.
+
+        Args:
+            HF_models_df (pd.DataFrame): The dataframe containing the models.
+
+        Returns:
+            Dict[str, List[str]]: A dictionary containing the related entities for each model.
+        """
+        
+        related_entities = {}
+        related_entities_names = {"terms": "fair4ml:mlTask", 
+                                  "datasets": "fair4ml:trainedOn",
+                                  "base_models": "fair4ml:fineTunedFrom",
+                                  "licenses": "schema.org:license",
+                                  "keywords": "schema.org:keywords",
+                                  "articles": "codemeta:referencePublication"}
+        
+        for name in related_entities_names.keys():
+            related_entities[name] = set()
+        
+        
+        # Get all unique values for each column
+        for index, row in HF_models_df.iterrows():
+            for name in related_entities_names.keys():
+                for list_item in row[related_entities_names[name]]:
+                    if isinstance(list_item, dict) and "data" in list_item:
+                        if isinstance(list_item["data"], list):
+                            # Add each element from the list
+                            related_entities[name].update(list_item["data"])
+                        else:
+                            # Add single item
+                            related_entities[name].add(list_item["data"])
+
+        # Convert sets to lists
+        for name in related_entities_names.keys():
+            related_entities[name] = list(related_entities[name])
+        
+        return related_entities
+        
+        
+    
     def download_datasets(
         self,
         num_datasets: int = 10,
@@ -159,6 +203,68 @@ class HFExtractor:
             )
             result_df.to_json(path_or_buf=processed_path, orient="records", indent=4)
 
+        return result_df
+        
+    def download_specific_datasets(
+        self,
+        dataset_names: List[str],
+        output_dir: str = "./outputs",
+        save_result_in_json: bool = False,
+        threads: int = 4,
+    ) -> pd.DataFrame:
+        """
+        Download metadata for specific HuggingFace datasets by name in the croissant format.
+        
+        This method processes a list of dataset names, retrieving their metadata from HuggingFace.
+        It differs from download_datasets as it targets specific datasets rather than
+        a number of recent ones.
+
+        Args:
+            dataset_names (List[str]): List of dataset names/IDs to process.
+            output_dir (str, optional): Directory to save output files.
+                Defaults to "./outputs".
+            save_result_in_json (bool, optional): Whether to save results as JSON.
+                Defaults to True.
+            threads (int, optional): Number of threads to use for downloading.
+                Defaults to 4.
+
+        Returns:
+            pd.DataFrame: Processed DataFrame containing extracted information for the
+                requested datasets
+                
+        Raises:
+            ValueError: If the dataset_names parameter is empty
+            
+        Example:
+            >>> extractor = HFExtractor()
+            >>> # Download metadata for specific datasets
+            >>> dataset_df = extractor.download_specific_datasets(
+            ...     dataset_names=["squad", "glue", "mnist"],
+            ...     output_dir="./outputs/datasets",
+            ...     save_result_in_json=True
+            ... )
+            >>> # Check the dataset IDs in the result
+            >>> dataset_df["datasetId"].tolist()
+            ['squad', 'glue', 'mnist']
+        """
+        # Get dataset metadata using HFDatasetManager's method
+        result_df = self.dataset_manager.get_specific_datasets_metadata(
+            dataset_names=dataset_names,
+            threads=threads
+        )
+        
+        # Save results if requested
+        if save_result_in_json and not result_df.empty:
+            # Create output directory if it doesn't exist
+            if not os.path.exists(output_dir):
+                os.makedirs(output_dir)
+                
+            timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+            processed_path = os.path.join(
+                output_dir, f"{timestamp}_Extracted_Specific_Datasets_HF_df.json"
+            )
+            result_df.to_json(path_or_buf=processed_path, orient="records", indent=4)
+        
         return result_df
 
     def print_detailed_dataframe(self, HF_df: pd.DataFrame):
