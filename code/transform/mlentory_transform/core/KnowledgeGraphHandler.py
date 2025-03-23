@@ -185,7 +185,7 @@ class KnowledgeGraphHandler:
                 row[identifier_column][0]["data"] if identifier_column else str(idx)
             )
             
-            id_hash = self.generate_entity_hash(platform, "Model", entity_id)
+            id_hash = self.generate_entity_hash(platform, "MLModel", entity_id)
             entity_uri = self.base_namespace[id_hash]
             
 
@@ -395,11 +395,29 @@ class KnowledgeGraphHandler:
                 self.add_triple_with_metadata(
                     organization_uri, 
                     self.namespaces["schema"]["url"], 
-                    Literal("https://huggingface.co/"+value, datatype=XSD.string), 
+                    URIRef("https://huggingface.co/"+value), 
                     {"extraction_method": "System", "confidence": 1.0})
                 objects.append(organization_uri)
                 
-
+            elif "fair4ml:MLModel" in range_value:
+                id_hash = self.generate_entity_hash(platform, "MLModel", value)
+                ml_model_uri = self.base_namespace[id_hash]
+                self.add_triple_with_metadata(
+                    ml_model_uri, 
+                    RDF.type, 
+                    self.namespaces["fair4ml"]["MLModel"], 
+                    {"extraction_method": "System", "confidence": 1.0})
+                self.add_triple_with_metadata(
+                    ml_model_uri, 
+                    self.namespaces["schema"]["name"], 
+                    Literal(value, datatype=XSD.string), 
+                    {"extraction_method": "System", "confidence": 1.0})
+                self.add_triple_with_metadata(
+                    ml_model_uri, 
+                    self.namespaces["schema"]["url"], 
+                    URIRef("https://huggingface.co/"+value), 
+                    {"extraction_method": "System", "confidence": 1.0})
+                objects.append(ml_model_uri)
         return objects
 
     def get_predicate_uri(self, predicate: str) -> URIRef:

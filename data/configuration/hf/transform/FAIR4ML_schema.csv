@@ -3,7 +3,7 @@ FAIR4ML,fair4ml:sharedBy,Person or Organization,Person or Organization
 FAIR4ML,fair4ml:evaluatedOn,Dataset or croissant:Dataset,Dataset or croissant:Dataset
 FAIR4ML,fair4ml:testedOn,Dataset or croissant:Dataset,Dataset or croissant:Dataset
 FAIR4ML,fair4ml:trainedOn,Dataset or croissant:Dataset,Dataset or croissant:Dataset 
-FAIR4ML,fair4ml:fineTunedFrom,fair4ml:MLModel,Text or fair4ml:MLModel
+FAIR4ML,fair4ml:fineTunedFrom,fair4ml:MLModel,fair4ml:MLModel
 FAIR4ML,fair4ml:legal,Text,Text
 FAIR4ML,fair4ml:ethicalLegalSocial,Text,Text
 FAIR4ML,fair4ml:hasCO2eEmissions,Text,Text
