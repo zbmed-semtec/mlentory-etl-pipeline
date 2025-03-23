@@ -251,3 +251,81 @@ class TestHFExtractor:
         )
         assert isinstance(first_cell["confidence"], float)
         assert isinstance(first_cell["extraction_time"], str)
+
+    def test_download_specific_datasets(
+        self, extractor_empty: HFExtractor, monkeypatch, tmp_path
+    ) -> None:
+        """
+        Test downloading specific datasets by name.
+
+        Args:
+            extractor_empty (HFExtractor): The HFExtractor fixture
+            monkeypatch: pytest monkeypatch fixture
+            tmp_path: pytest temporary directory fixture
+        """
+        # Mock sample dataset entries
+        sample_data = {
+            "dataset1": {
+                "name": "Dataset 1",
+                "description": "Test dataset 1",
+            },
+            "dataset2": {
+                "name": "Dataset 2",
+                "description": "Test dataset 2",
+            },
+        }
+        
+        # Create a mock DataFrame to return
+        mock_df = pd.DataFrame([
+            {
+                "datasetId": "dataset1",
+                "croissant_metadata": sample_data["dataset1"],
+                "extraction_metadata": {
+                    "extraction_method": "Downloaded_from_HF_Croissant_endpoint",
+                    "confidence": 1.0,
+                    "extraction_time": "2024-01-01_12-00-00",
+                }
+            },
+            {
+                "datasetId": "dataset2",
+                "croissant_metadata": sample_data["dataset2"],
+                "extraction_metadata": {
+                    "extraction_method": "Downloaded_from_HF_Croissant_endpoint",
+                    "confidence": 1.0,
+                    "extraction_time": "2024-01-01_12-00-00",
+                }
+            }
+        ])
+        
+        # Mock the get_specific_datasets_metadata method
+        monkeypatch.setattr(
+            "mlentory_extract.hf_extract.HFDatasetManager.get_specific_datasets_metadata",
+            lambda self, dataset_names, threads=4: mock_df
+        )
+        
+        output_dir = tmp_path / "outputs"
+        os.makedirs(output_dir, exist_ok=True)
+        
+        # Test with valid dataset names
+        dataset_names = ["dataset1", "dataset2", "nonexistent_dataset"]
+        result_df = extractor_empty.download_specific_datasets(
+            dataset_names=dataset_names,
+            output_dir=str(output_dir),
+            save_result_in_json=True,
+        )
+        
+        # Check dataframe structure and content
+        assert isinstance(result_df, pd.DataFrame)
+        assert len(result_df) == 2  # Only two valid datasets should be processed
+        assert "datasetId" in result_df.columns
+        assert "croissant_metadata" in result_df.columns
+        assert "extraction_metadata" in result_df.columns
+        
+        # Check that dataset IDs are correctly recorded
+        dataset_ids = result_df["datasetId"].tolist()
+        assert "dataset1" in dataset_ids
+        assert "dataset2" in dataset_ids
+        
+        # Verify output file was created
+        files = list(output_dir.glob("*"))
+        assert any(f.name.endswith("Extracted_Specific_Datasets_HF_df.json") for f in files)
