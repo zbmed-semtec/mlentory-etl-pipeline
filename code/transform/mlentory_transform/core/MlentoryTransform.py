@@ -150,6 +150,42 @@ class MlentoryTransform:
 
         return knowledge_graph, metadata_graph
 
+    def transform_HF_arxiv(
+        self,
+        extracted_df: pd.DataFrame,
+        save_output_in_json: bool = False,
+        output_dir: str = None,
+    ) -> Tuple[rdflib.Graph, rdflib.Graph]:
+        """
+        Transform the extracted data into a knowledge graph.
+        """
+        # Reset the knowledge graph handler before processing new data
+        self.kg_handler.reset_graphs()
+
+        # Transform the dataframe to a knowledge graph
+        knowledge_graph, metadata_graph = (
+            self.kg_handler.dataframe_to_graph_arXiv_schema(
+                df=extracted_df, 
+                identifier_column="arxiv_id", 
+                platform=Platform.HUGGING_FACE.value
+            )
+        )
+        
+        self.current_sources[f"{Platform.HUGGING_FACE.value}_arxiv"] = knowledge_graph
+        self.current_sources[f"{Platform.HUGGING_FACE.value}_arxiv_metadata"] = metadata_graph
+        
+        if save_output_in_json:
+            current_date = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+            kg_output_path = os.path.join(
+                output_dir, f"{current_date}_Processed_HF_arxiv_kg.json"
+            )
+            metadata_output_path = os.path.join(
+                output_dir, f"{current_date}_Processed_HF_arxiv_kg_metadata.json"
+            )
+            knowledge_graph.serialize(destination=kg_output_path, format="json-ld")
+        
+        return knowledge_graph, metadata_graph
+    
     def unify_graphs(
         self,
         graphs: List[rdflib.Graph],
