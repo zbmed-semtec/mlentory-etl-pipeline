@@ -333,11 +333,14 @@ class ModelCardToSchemaParser:
             HF_df.at[index, "fair4ml:trainedOn"] = datasets
             HF_df.at[index, "fair4ml:evaluatedOn"] = datasets
             HF_df.at[index, "fair4ml:testedOn"] = datasets
+            
             HF_df.at[index, "fair4ml:fineTunedFrom"] = list(base_models)
             
             HF_df.at[index, "schema.org:license"] = licenses
             
             HF_df.at[index, "schema.org:inLanguage"] = languages
+            
+            HF_df.at[index, "codemeta:referencePublication"] = arxiv_ids
             
             all_keywords = keywords + libraries
             HF_df.at[index, "schema.org:keywords"] = all_keywords
@@ -352,6 +355,7 @@ class ModelCardToSchemaParser:
             "schema.org:license",
             "schema.org:inLanguage",
             "schema.org:keywords",
+            "codemeta:referencePublication",
         ]
         
         self.processed_properties.extend(properties)
@@ -551,12 +555,19 @@ class ModelCardToSchemaParser:
                 
         for index in tqdm(df.index, desc=description):
             for prop in properties:
-                if prop in df.columns and df.at[index, prop] is not None:
-                    df.at[index, prop] = [
-                        self.add_default_extraction_info(
-                            df.at[index, prop], extraction_method, confidence
-                        )
-                    ]
+                if prop in df.columns:
+                    if df.at[index, prop] is None or df.at[index, prop] == []:
+                        df.at[index, prop] = [
+                            self.add_default_extraction_info(
+                                "Information not found", extraction_method, confidence
+                            )
+                        ]
+                    else:
+                        df.at[index, prop] = [
+                            self.add_default_extraction_info(
+                                df.at[index, prop], extraction_method, confidence
+                            )
+                        ]
         
         return df
     

@@ -185,7 +185,7 @@ class KnowledgeGraphHandler:
                 row[identifier_column][0]["data"] if identifier_column else str(idx)
             )
             
-            id_hash = self.generate_entity_hash(platform, "Model", entity_id)
+            id_hash = self.generate_entity_hash(platform, "MLModel", entity_id)
             entity_uri = self.base_namespace[id_hash]
             
 
@@ -278,7 +278,9 @@ class KnowledgeGraphHandler:
                     value == ""
                     or value == "None"
                     or value == "No context to answer the question"
+                    or value == "Information not found"
                 ):
+                    objects.append(Literal("Information not found", datatype=XSD.string))
                     continue
 
             if "Text" in range_value or "String" in range_value:
@@ -333,6 +335,8 @@ class KnowledgeGraphHandler:
                     objects.append(Literal(value, datatype=XSD.string))
 
             elif "ScholarlyArticle" in range_value:
+                value = value.split("/")[-1].strip()
+                # print(f"ScholarlyArticle VALUE: {value}")
                 id_hash = self.generate_entity_hash(platform, "ScholarlyArticle", value)
                 scholarly_article_uri = self.base_namespace[id_hash]
                 self.add_triple_with_metadata(
@@ -344,11 +348,6 @@ class KnowledgeGraphHandler:
                     scholarly_article_uri, 
                     self.namespaces["schema"]["url"], 
                     Literal("https://arxiv.org/abs/"+value, datatype=XSD.string), 
-                    {"extraction_method": "System", "confidence": 1.0})
-                self.add_triple_with_metadata(
-                    scholarly_article_uri, 
-                    self.namespaces["schema"]["name"], 
-                    Literal(value, datatype=XSD.string), 
                     {"extraction_method": "System", "confidence": 1.0})
                 objects.append(scholarly_article_uri)
 
@@ -395,13 +394,118 @@ class KnowledgeGraphHandler:
                 self.add_triple_with_metadata(
                     organization_uri, 
                     self.namespaces["schema"]["url"], 
-                    Literal("https://huggingface.co/"+value, datatype=XSD.string), 
+                    URIRef("https://huggingface.co/"+value), 
                     {"extraction_method": "System", "confidence": 1.0})
                 objects.append(organization_uri)
                 
-
+            elif "fair4ml:MLModel" in range_value:
+                id_hash = self.generate_entity_hash(platform, "MLModel", value)
+                ml_model_uri = self.base_namespace[id_hash]
+                self.add_triple_with_metadata(
+                    ml_model_uri, 
+                    RDF.type, 
+                    self.namespaces["fair4ml"]["MLModel"], 
+                    {"extraction_method": "System", "confidence": 1.0})
+                self.add_triple_with_metadata(
+                    ml_model_uri, 
+                    self.namespaces["schema"]["name"], 
+                    Literal(value, datatype=XSD.string), 
+                    {"extraction_method": "System", "confidence": 1.0})
+                self.add_triple_with_metadata(
+                    ml_model_uri, 
+                    self.namespaces["schema"]["url"], 
+                    URIRef("https://huggingface.co/"+value), 
+                    {"extraction_method": "System", "confidence": 1.0})
+                objects.append(ml_model_uri)
         return objects
 
+    def dataframe_to_graph_arXiv_schema(
+        self,
+        df: pd.DataFrame,
+        identifier_column: Optional[str] = None,
+        platform: str = None,
+    ) -> Graph:
+        """
+        Function to convert a DataFrame to a Knowledge Graph using the arXiv schema.
+        """
+        if df.empty:
+            return self.graph, self.metadata_graph
+
+        if identifier_column and identifier_column not in df.columns:
+            raise ValueError(
+                f"Identifier column '{identifier_column}' not found in DataFrame"
+            )
+
+        for idx, row in df.iterrows():
+            entity_id = row[identifier_column].split("v")[0].strip()
+            # print(f"arXiv ENTITY_ID: {entity_id}")
+            id_hash = self.generate_entity_hash(platform, "ScholarlyArticle", entity_id)
+            scholarly_article_uri = self.base_namespace[id_hash]
+
+            # Add entity type with metadata
+            self.add_triple_with_metadata(
+                scholarly_article_uri,
+                RDF.type,
+                self.namespaces["schema"]["ScholarlyArticle"],
+                row["extraction_metadata"])
+            
+            if row["title"] is not None:
+                self.add_triple_with_metadata(
+                    scholarly_article_uri,
+                    self.namespaces["schema"]["name"],
+                    Literal(row["title"], datatype=XSD.string),
+                    row["extraction_metadata"])
+            
+            
+            self.add_triple_with_metadata(
+                scholarly_article_uri,
+                self.namespaces["schema"]["url"],
+                Literal("https://arxiv.org/abs/"+entity_id, datatype=XSD.string),
+                row["extraction_metadata"])
+            
+            if row["summary"] is not None:
+                self.add_triple_with_metadata(
+                    scholarly_article_uri,
+                    self.namespaces["schema"]["abstract"],
+                    Literal(row["summary"], datatype=XSD.string),
+                    row["extraction_metadata"])
+            
+            if row["doi"] is not None:
+                self.add_triple_with_metadata(
+                    scholarly_article_uri,
+                    self.namespaces["schema"]["sameAs"],
+                    URIRef(row["doi"]),
+                    row["extraction_metadata"])
+            
+            if row["published"] is not None:
+                self.add_triple_with_metadata(
+                    scholarly_article_uri,
+                    self.namespaces["schema"]["datePublished"],
+                    Literal(row["published"], datatype=XSD.date),
+                    row["extraction_metadata"])
+            
+            if row["categories"] is not None:
+                for category in row["categories"]:
+                    self.add_triple_with_metadata(
+                        scholarly_article_uri,
+                        self.namespaces["schema"]["keywords"],
+                        Literal(category, datatype=XSD.string),
+                        row["extraction_metadata"])
+            
+            if row["authors"] is not None:
+                for author in row["authors"]:
+                    self.add_triple_with_metadata(
+                        scholarly_article_uri,
+                        self.namespaces["schema"]["author"],
+                        Literal(author, datatype=XSD.string),
+                        row["extraction_metadata"])
+            
+            
+        return self.graph, self.metadata_graph
+
+            
+                
+    
     def get_predicate_uri(self, predicate: str) -> URIRef:
         """
         Convert a predicate string to its corresponding URIRef with proper namespace.

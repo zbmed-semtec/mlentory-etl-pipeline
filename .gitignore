@@ -200,6 +200,7 @@ cython_debug/
 
 # Cursor rules
 .cursorrules
+.cursor
 
 tests/integration/pipeline/outputs/
 
