@@ -91,11 +91,14 @@ class HFExtractor:
             if len(related_entities["base_models"]) > 0:
                 # Use download_specific_datasets if base model names are provided
                 extracted_base_models_df = self.download_specific_models(
-                    model_names=related_entities["base_models"],
+                    model_ids=related_entities["base_models"],
                     output_dir=output_dir+"/base_models",
+                    save_result_in_json=False,
+                    threads=threads,
                 )
                 #merge base models with models
                 models_df = pd.concat([models_df, extracted_base_models_df], ignore_index=True)
+                models_df = models_df.drop_duplicates(subset=["modelId"], keep="last")
                 print(f"Downloaded {len(extracted_base_models_df)} base models")
             else:
                 print("No base models found to download")
@@ -199,6 +202,29 @@ class HFExtractor:
             HF_df.to_json(path_or_buf=processed_path, orient="records", indent=4)
 
         return HF_df
+    
+    def download_specific_models(
+        self,
+        model_ids: List[str],
+        output_dir: str = "./outputs",
+        save_result_in_json: bool = False,
+        threads: int = 4,
+    ) -> pd.DataFrame:
+        """
+        Download specific models from HuggingFace.
+        """
+        result_df = self.dataset_manager.get_specific_models_metadata(
+            model_ids=model_ids, threads=threads
+        )
+        
+        if save_result_in_json:
+            timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+            processed_path = os.path.join(
+                output_dir, f"{timestamp}_Extracted_Specific_Models_HF_df.json"
+            )
+            result_df.to_json(path_or_buf=processed_path, orient="records", indent=4)
+        
+        return result_df
 
     def get_models_related_entities(self, HF_models_df: pd.DataFrame) -> Dict[str, List[str]]:
         """
