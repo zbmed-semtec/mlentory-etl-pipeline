@@ -54,6 +54,87 @@ class HFExtractor:
         self.parser = parser or ModelCardToSchemaParser()
         self.dataset_manager = dataset_manager or HFDatasetManager(default_card=default_card)
 
+    def download_models_with_related_entities(
+        self,
+        num_models: int = 10,
+        update_recent: bool = True,
+        related_entities_to_download: List[str] = ["datasets", "base_models", "licenses", "keywords", "articles"],
+        output_dir: str = "./outputs",
+        save_initial_data: bool = False,
+        save_result_in_json: bool = False,
+        from_date: str = None,
+        threads: int = 4,
+    ) -> pd.DataFrame:
+        """
+        Download models with all related entities specified.
+        """
+        extracted_entities = {}
+        
+        # Download models
+        models_df = self.download_models(
+            num_models=num_models,
+            update_recent=update_recent,
+            output_dir=output_dir,
+            save_raw_data=save_initial_data,
+            save_result_in_json=save_result_in_json,
+            from_date=from_date,
+            threads=threads
+        )
+        
+        extracted_entities["models"] = models_df
+        
+        # Get related entities
+        related_entities = self.get_models_related_entities(models_df)
+        
+        if "base_models" in related_entities_to_download:
+            # Download base models
+            if len(related_entities["base_models"]) > 0:
+                # Use download_specific_datasets if base model names are provided
+                extracted_base_models_df = self.download_specific_models(
+                    model_names=related_entities["base_models"],
+                    output_dir=output_dir+"/base_models",
+                )
+                #merge base models with models
+                models_df = pd.concat([models_df, extracted_base_models_df], ignore_index=True)
+                print(f"Downloaded {len(extracted_base_models_df)} base models")
+            else:
+                print("No base models found to download")
+        
+        if "datasets" in related_entities_to_download:
+            # Download datasets
+            if len(related_entities["datasets"]) > 0:
+                # Use download_specific_datasets if dataset names are provided
+                extracted_datasets_df = self.download_specific_datasets(
+                    dataset_names=related_entities["datasets"],
+                    output_dir=output_dir+"/datasets",
+                    save_result_in_json=False,
+                    threads=threads,
+                )
+                print(f"Downloaded {len(extracted_datasets_df)} datasets")
+                extracted_entities["datasets"] = extracted_datasets_df
+            else:
+                print("No datasets found to download")
+        
+        
+        if "articles" in related_entities_to_download:
+            # Download arxiv articles
+            if len(related_entities["articles"]) > 0:
+                # Use download_specific_arxiv_metadata if arxiv ids are provided
+                extracted_arxiv_df = self.download_specific_arxiv_metadata(
+                    arxiv_ids=related_entities["articles"],
+                    output_dir=output_dir+"/articles",
+                    save_result_in_json=False,
+                    threads=threads,
+                )
+                print(f"Downloaded {len(extracted_arxiv_df)} arxiv articles")
+                extracted_entities["articles"] = extracted_arxiv_df
+            else:
+                print("No arxiv articles found to download")
+        
+        
+        return extracted_entities
+    
+    
     def download_models(
         self,
         num_models: int = 10,
@@ -267,6 +348,28 @@ class HFExtractor:
         
         return result_df
 
+    def download_specific_arxiv_metadata(
+        self,
+        arxiv_ids: List[str],
+        output_dir: str = "./outputs",
+        save_result_in_json: bool = False,
+        threads: int = 4,   
+    ) -> pd.DataFrame:
+        """
+        Download metadata for specific arxiv ids.
+        """
+        result_df = self.dataset_manager.get_specific_arxiv_metadata_dataset(
+            arxiv_ids=arxiv_ids
+        )
+        
+        if save_result_in_json:
+            timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+            processed_path = os.path.join(
+                output_dir, f"{timestamp}_Extracted_Specific_Arxiv_Metadata_HF_df.json"
+            )
+            result_df.to_json(path_or_buf=processed_path, orient="records", indent=4)
+        
+        return result_df
     def print_detailed_dataframe(self, HF_df: pd.DataFrame):
 
         print("\n**DATAFRAME**")

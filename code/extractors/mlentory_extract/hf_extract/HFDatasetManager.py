@@ -5,6 +5,7 @@ from huggingface_hub import HfApi, ModelCard
 from datetime import datetime
 import requests
 import itertools
+import arxiv
 import os
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
@@ -298,7 +299,7 @@ class HFDatasetManager:
             try:
                 croissant_metadata = self.get_croissant_metadata(dataset_id)
                 if croissant_metadata == {}:
-                    print(f"Warning: No croissant metadata found for dataset '{dataset_id}'")
+                    print(f"Warning: No croissant metadata found or access restricted for dataset '{dataset_id}'")
                     return None
                     
                 return {
@@ -328,19 +329,136 @@ class HFDatasetManager:
         
         return pd.DataFrame(dataset_data)
 
-    def get_arxiv_metadata_dataset(self) -> pd.DataFrame:
+    def get_specific_arxiv_metadata_dataset(
+        self,
+        arxiv_ids: List[str],
+    ) -> pd.DataFrame:
         """
-        Retrieve the HuggingFace dataset containing arxiv metadata.
+        Retrieve metadata for specific arXiv IDs using the arXiv API.
+
+        This method takes a list of arXiv IDs and retrieves metadata for each paper,
+        including title, authors, abstract, categories, and other information.
+
+        Args:
+            arxiv_ids (List[str]): List of arXiv IDs to retrieve metadata for
 
         Returns:
-            pd.DataFrame: DataFrame containing arxiv metadata
+            pd.DataFrame: DataFrame containing arXiv metadata for the requested papers
+
+        Raises:
+            ValueError: If the arxiv_ids parameter is empty or invalid
+            ImportError: If the arxiv package is not installed
+
+        Example:
+            >>> manager = HFDatasetManager()
+            >>> arxiv_df = manager.get_specific_arxiv_metadata_dataset(
+            ...     arxiv_ids=["2106.09685", "1706.03762"]
+            ... )
+            >>> print(arxiv_df.columns)
+            ['arxiv_id', 'title', 'published', 'updated', 'summary', 'authors', ...]
         """
-        try:
-            return load_dataset("librarian-bots/arxiv-metadata-snapshot")[
-                "train"
-            ].to_pandas()
-        except Exception as e:
-            raise Exception(f"Error loading arxiv metadata dataset: {str(e)}")
+        temp_arxiv_ids = []
+        
+        for arxiv_id in arxiv_ids:
+            if "." in arxiv_id:
+                arxiv_id = arxiv_id.split("/")[-1]
+                temp_arxiv_ids.append(arxiv_id.split("v")[0] if "v" in arxiv_id else arxiv_id)
+        
+        arxiv_ids = temp_arxiv_ids
+        
+        # Use the arXiv API to search for the specific IDs
+        client = arxiv.Client()
+        
+        search = arxiv.Search(
+            id_list=arxiv_ids,
+        )
+        
+        results = list(client.results(search))
+        
+        arxiv_data = []
+
+        # Process arXiv papers sequentially
+        for paper in results:
+            try:
+                # Extract all available authors with affiliations
+                arxiv_id = str(paper).split("/")[-1].strip()
+                
+                authors_data = []
+                if hasattr(paper, "authors") and paper.authors:
+                    for author in paper.authors:
+                        author_name = author.name if hasattr(author, "name") else str(author)
+                        affiliation = None
+                        # The arXiv API through this package doesn't directly provide affiliations
+                        # This would require additional processing if needed
+                        authors_data.append({"name": author_name, "affiliation": affiliation})
+                
+                # Extract categories
+                categories = []
+                if hasattr(paper, "categories") and paper.categories:
+                    categories = paper.categories
+                
+                # Process links
+                links = []
+                if hasattr(paper, "links") and paper.links:
+                    for link in paper.links:
+                        if isinstance(link, dict) and "href" in link:
+                            links.append(link["href"])
+                        elif hasattr(link, "href"):
+                            links.append(link.href)
+                        else:
+                            links.append(str(link))
+                
+                # Extract DOI if available
+                doi = paper.doi if hasattr(paper, "doi") and paper.doi else None
+                
+                # Extract journal reference if available
+                journal_ref = paper.journal_ref if hasattr(paper, "journal_ref") and paper.journal_ref else None
+                
+                # Extract comment if available
+                comment = paper.comment if hasattr(paper, "comment") and paper.comment else None
+                
+                # Determine primary category
+                primary_category = categories[0] if categories else None
+                
+                # Parse dates
+                published = paper.published.strftime("%Y-%m-%d") if paper.published else None
+                updated = paper.updated.strftime("%Y-%m-%d") if paper.updated else None
+                
+                # Build the paper metadata dictionary
+                paper_metadata = {
+                    "arxiv_id": arxiv_id,
+                    "title": paper.title,
+                    "published": published,
+                    "updated": updated,
+                    "summary": paper.summary,
+                    "authors": authors_data,
+                    "categories": categories,
+                    "primary_category": primary_category,
+                    "comment": comment,
+                    "journal_ref": journal_ref,
+                    "doi": doi,
+                    #Ask about this urls
+                    "links": links,
+                    "pdf_url": paper.pdf_url if hasattr(paper, "pdf_url") else None,
+                    "extraction_metadata": {
+                        "extraction_method": "arXiv_API",
+                        "confidence": 1.0,
+                        "extraction_time": datetime.now().strftime("%Y-%m-%d_%H-%M-%S"),
+                    },
+                }
+                
+                arxiv_data.append(paper_metadata)
+                
+            except Exception as e:
+                print(f"Error processing arXiv paper '{arxiv_id}': {str(e)}")
+                import traceback
+                print(f"Full stack trace: {traceback.format_exc()}")
+        
+        if not arxiv_data:
+            print("No arXiv papers could be successfully retrieved")
+            return pd.DataFrame()
+            
+        return pd.DataFrame(arxiv_data)
 
     def filter_models(self, dataset: pd.DataFrame) -> pd.DataFrame:
         """
