@@ -244,7 +244,7 @@ def main():
             save_result_in_json=False,
             save_initial_data=False,
             update_recent=False,
-            related_entities_to_download=["datasets", "articles"],
+            related_entities_to_download=["datasets", "articles", "base_models"],
             threads=4,
         )
     
