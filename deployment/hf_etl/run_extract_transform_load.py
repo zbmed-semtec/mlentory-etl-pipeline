@@ -71,7 +71,7 @@ def initialize_extractor(config_path: str) -> HFExtractor:
         # qa_model="BAAI/bge-m3",
         qa_model="Alibaba-NLP/gte-Qwen2-1.5B-instruct",
         # matching_model="Alibaba-NLP/gte-Qwen2-1.5B-instruct",
-        matching_model="sentence-transformers/all-MiniLM-L6-v2",
+        matching_model="Alibaba-NLP/gte-Qwen2-1.5B-instruct",
         schema_file=f"{config_path}/transform/FAIR4ML_schema.tsv",
         tags_language=tags_language,
         tags_libraries=tags_libraries,
@@ -168,6 +168,16 @@ def initialize_load_processor(kg_files_directory: str) -> LoadProcessor:
         kg_files_directory=kg_files_directory,
     )
 
+def intialize_folder_structure(output_dir: str) -> None:
+    """
+    Initializes the folder structure.
+    """
+    os.makedirs(output_dir, exist_ok=True)
+    os.makedirs(output_dir+"/models", exist_ok=True)
+    os.makedirs(output_dir+"/datasets", exist_ok=True)
+    os.makedirs(output_dir+"/articles", exist_ok=True)
+    os.makedirs(output_dir+"/kg", exist_ok=True)
+    os.makedirs(output_dir+"/extraction_metadata", exist_ok=True)
 
 def parse_args() -> argparse.Namespace:
     """
@@ -216,6 +226,7 @@ def main():
     # Setup configuration data
     config_path = "./configuration/hf"  # Path to configuration folder
     kg_files_directory = "./../kg_files"  # Path to kg files directory
+    intialize_folder_structure(args.output_dir)
     
     use_dummy_data = False
     kg_integrated = Graph()  
@@ -226,67 +237,50 @@ def main():
         # Initialize extractor
         extractor = initialize_extractor(config_path)
 
-        extracted_models_df = extractor.download_models(
+        extracted_entities = extractor.download_models_with_related_entities(
             num_models=args.num_models,
             from_date=datetime(2023, 1, 1),
             output_dir=args.output_dir+"/models",
             save_result_in_json=False,
-            save_raw_data=False,
+            save_initial_data=False,
             update_recent=False,
+            related_entities_to_download=["datasets", "articles"],
             threads=4,
         )
-        
-        related_entities = extractor.get_models_related_entities(extracted_models_df)
-
-        # Download datasets based on command-line arguments
-        if len(related_entities["datasets"]) > 0:
-            # Use download_specific_datasets if dataset names are provided
-            extracted_datasets_df = extractor.download_specific_datasets(
-                dataset_names=related_entities["datasets"],
-                output_dir=args.output_dir+"/datasets",
-                save_result_in_json=True,
-                threads=10,
-            )
-            for dataset in related_entities["datasets"]:
-                print("dataset: ", dataset)
-            print(f"Downloaded {len(extracted_datasets_df)}")
-        else:
-            # Use the original method if no dataset names are provided
-            extracted_datasets_df = extractor.download_datasets(
-                num_datasets=args.num_datasets,
-                output_dir=args.output_dir+"/datasets",
-                save_result_in_json=True,
-                update_recent=False,
-                threads=10,
-            )
     
         # # Load extracted data from csv
         # extracted_models_df = pd.read_csv(args.output_dir+"/models/2025-02-16_13-59-25_Processed_HF_kg.json")
         # extracted_datasets_df = pd.read_csv(args.output_dir+"/datasets/2025-02-16_16-07-57_Extracted_Models_HF_df.json")
-
+        
         # Initialize transformer
         transformer = initialize_transform_hf(config_path)
 
         models_kg, models_extraction_metadata = transformer.transform_HF_models(
-            extracted_df=extracted_models_df,
+            extracted_df=extracted_entities["models"],
             save_output_in_json=False,
             output_dir=args.output_dir+"/models",
         )
 
         datasets_kg, datasets_extraction_metadata = transformer.transform_HF_datasets(
-            extracted_df=extracted_datasets_df,
+            extracted_df=extracted_entities["datasets"],
             save_output_in_json=False,
             output_dir=args.output_dir+"/datasets",
         )
 
+        arxiv_kg, arxiv_extraction_metadata = transformer.transform_HF_arxiv(
+            extracted_df=extracted_entities["articles"],
+            save_output_in_json=True,
+            output_dir=args.output_dir+"/articles",
+        )
+
         kg_integrated = transformer.unify_graphs(
-            [models_kg, datasets_kg],
+            [models_kg, datasets_kg, arxiv_kg],
             save_output_in_json=True,
             output_dir=args.output_dir + "/kg",
         )
 
         extraction_metadata_integrated = transformer.unify_graphs(
-            [models_extraction_metadata, datasets_extraction_metadata],
+            [models_extraction_metadata, datasets_extraction_metadata, arxiv_extraction_metadata],
             save_output_in_json=True,
             output_dir=args.output_dir + "/extraction_metadata",
             # disambiguate_extraction_metadata=True,
