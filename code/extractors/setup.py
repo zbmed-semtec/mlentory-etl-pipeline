@@ -11,7 +11,8 @@ setup(
         "torch",
         "huggingface-hub",
         "tqdm",
-        "openml", 
+        "openml",
+        "arxiv"
     ],
     python_requires=">=3.8.10",
     author="Nelson Q, Suhasini V",
