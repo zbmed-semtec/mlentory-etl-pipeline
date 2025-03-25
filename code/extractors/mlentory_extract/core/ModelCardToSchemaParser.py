@@ -39,9 +39,9 @@ class ModelCardToSchemaParser:
         qa_model: str = "sentence-transformers/all-MiniLM-L6-v2",
         matching_model: str = "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2",
         tags_language: List[str] = None,
-        tags_libraries: List[str] = None,
-        tags_other: List[str] = None,
-        tags_task: List[str] = None,
+        tags_libraries: pd.DataFrame = None,
+        tags_other: pd.DataFrame = None,
+        tags_task: pd.DataFrame = None,
         schema_file: str = "data/configuration/hf/transform/FAIR4ML_schema.tsv",
     ) -> None:
         """
@@ -70,12 +70,17 @@ class ModelCardToSchemaParser:
         except ModuleNotFoundError:
             # If torch is not available, assume no GPU
             self.device = None
+            print("\nNOT USING GPU\n")
             
         # Store configuration data
         self.tags_language = set(tag.lower() for tag in tags_language) if tags_language else set()
-        self.tags_libraries = set(tag.lower() for tag in tags_libraries) if tags_libraries else set()
-        self.tags_other = set(tag.lower() for tag in tags_other) if tags_other else set()
-        self.tags_task = set(tag.lower() for tag in tags_task) if tags_task else set()
+        self.tags_libraries_names = set(tag.lower() for tag in tags_libraries["tag_name"].values.tolist())
+        self.tags_other_names = set(tag.lower() for tag in tags_other["tag_name"].values.tolist())
+        self.tags_task_names = set(tag.lower() for tag in tags_task["tag_name"].values.tolist())
+        
+        self.tags_libraries_df = tags_libraries
+        self.tags_other_df = tags_other
+        self.tags_task_df = tags_task
         
         # Initializing HF API
         self.hf_api = HfApi()
@@ -287,7 +292,7 @@ class ModelCardToSchemaParser:
                 
                 # Extract ML tasks (fair4ml:mlTask)
                 tag_for_task = tag.replace("-", " ").lower()
-                if tag_for_task in self.tags_task:
+                if tag_for_task in self.tags_task_names:
                     ml_tasks.append(tag_for_task)
                 
                 # Extract datasets (fair4ml:trainedOn, fair4ml:evaluatedOn)
@@ -315,7 +320,7 @@ class ModelCardToSchemaParser:
                     languages.append(tag)
                 
                 # Extract libraries (keywords)
-                if tag_lower in self.tags_libraries:
+                if tag_lower in self.tags_libraries_names:
                     libraries.append(tag_lower)
                 
                 # Collect all tags as keywords

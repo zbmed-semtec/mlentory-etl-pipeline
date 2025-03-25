@@ -26,6 +26,9 @@ from mlentory_transform.core.MlentoryTransform import (
 def load_tsv_file_to_list(path: str) -> List[str]:
     return [val[0] for val in pd.read_csv(path, sep="\t").values.tolist()]
 
+def load_tsv_file_to_df(path: str) -> pd.DataFrame:
+    return pd.read_csv(path, sep="\t")
+
 
 def setup_logging() -> logging.Logger:
     """
@@ -57,13 +60,12 @@ def initialize_extractor(config_path: str) -> HFExtractor:
     Returns:
         HFExtractor: The extractor instance.
     """
-    questions = load_tsv_file_to_list(f"{config_path}/extract/questions.tsv")
     tags_language = load_tsv_file_to_list(f"{config_path}/extract/tags_language.tsv")
-    tags_libraries = load_tsv_file_to_list(f"{config_path}/extract/tags_libraries.tsv")
-    tags_other = load_tsv_file_to_list(f"{config_path}/extract/tags_other.tsv")
-    tags_task = load_tsv_file_to_list(f"{config_path}/extract/tags_task.tsv")
     
-
+    tags_libraries = load_tsv_file_to_df(f"{config_path}/extract/tags_libraries.tsv")
+    tags_other = load_tsv_file_to_df(f"{config_path}/extract/tags_other.tsv")
+    tags_task = load_tsv_file_to_df(f"{config_path}/extract/tags_task.tsv")
+    
     dataset_manager = HFDatasetManager(api_token=os.getenv("HF_TOKEN"))
     
     parser = ModelCardToSchemaParser(
@@ -168,10 +170,12 @@ def initialize_load_processor(kg_files_directory: str) -> LoadProcessor:
         kg_files_directory=kg_files_directory,
     )
 
-def intialize_folder_structure(output_dir: str) -> None:
+def intialize_folder_structure(output_dir: str, clean_folders: bool = False) -> None:
     """
     Initializes the folder structure.
     """
+    if clean_folders:
+        shutil.rmtree(output_dir, ignore_errors=True)
     os.makedirs(output_dir, exist_ok=True)
     os.makedirs(output_dir+"/models", exist_ok=True)
     os.makedirs(output_dir+"/datasets", exist_ok=True)
@@ -226,7 +230,7 @@ def main():
     # Setup configuration data
     config_path = "./configuration/hf"  # Path to configuration folder
     kg_files_directory = "./../kg_files"  # Path to kg files directory
-    intialize_folder_structure(args.output_dir)
+    intialize_folder_structure(args.output_dir,clean_folders=True)
     
     use_dummy_data = False
     kg_integrated = Graph()  
@@ -255,35 +259,11 @@ def main():
         # Initialize transformer
         transformer = initialize_transform_hf(config_path)
 
-        models_kg, models_extraction_metadata = transformer.transform_HF_models(
-            extracted_df=extracted_entities["models"],
-            save_output_in_json=False,
-            output_dir=args.output_dir+"/models",
-        )
-
-        datasets_kg, datasets_extraction_metadata = transformer.transform_HF_datasets(
-            extracted_df=extracted_entities["datasets"],
-            save_output_in_json=False,
-            output_dir=args.output_dir+"/datasets",
-        )
-
-        arxiv_kg, arxiv_extraction_metadata = transformer.transform_HF_arxiv(
-            extracted_df=extracted_entities["articles"],
-            save_output_in_json=True,
-            output_dir=args.output_dir+"/articles",
-        )
-
-        kg_integrated = transformer.unify_graphs(
-            [models_kg, datasets_kg, arxiv_kg],
-            save_output_in_json=True,
-            output_dir=args.output_dir + "/kg",
-        )
-
-        extraction_metadata_integrated = transformer.unify_graphs(
-            [models_extraction_metadata, datasets_extraction_metadata, arxiv_extraction_metadata],
-            save_output_in_json=True,
-            output_dir=args.output_dir + "/extraction_metadata",
-            # disambiguate_extraction_metadata=True,
+        kg_integrated, extraction_metadata_integrated = transformer.transform_HF_models_with_related_entities(
+            extracted_entities=extracted_entities,
+            save_output=True,
+            kg_output_dir=args.output_dir+"/kg",
+            extraction_metadata_output_dir=args.output_dir+"/extraction_metadata",
         )
     else:
         # load kg with rdflib   
@@ -294,14 +274,9 @@ def main():
     loader = initialize_load_processor(kg_files_directory)
 
     # loader.clean_DBs()
-    
-    # Wait for 5 seconds
-    # time.sleep(5)
 
     # Load data
     loader.update_dbs_with_kg(kg_integrated, extraction_metadata_integrated)
-    
-    # loader.print_DB_states()
 
 
 if __name__ == "__main__":

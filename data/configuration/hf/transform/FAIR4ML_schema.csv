@@ -8,7 +8,7 @@ FAIR4ML,fair4ml:legal,Text,Text
 FAIR4ML,fair4ml:ethicalLegalSocial,Text,Text
 FAIR4ML,fair4ml:hasCO2eEmissions,Text,Text
 FAIR4ML,fair4ml:intendedUse,Text or DefinedTerm or URL,Text or DefinedTerm or URL
-FAIR4ML,fair4ml:mlTask,Text or DefinedTerm,Text or DefinedTerm
+FAIR4ML,fair4ml:mlTask,Text or DefinedTerm,DefinedTerm or Text
 FAIR4ML,fair4ml:modelCategory,Text or DefinedTerm,Text or DefinedTerm
 FAIR4ML,fair4ml:modelRisks,Text,Text
 FAIR4ML,fair4ml:usageInstructions,Text,Text
