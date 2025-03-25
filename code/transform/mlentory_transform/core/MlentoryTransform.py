@@ -42,6 +42,48 @@ class MlentoryTransform:
         self.kg_handler = kg_handler
         self.transform_hf = transform_hf
 
+    def transform_HF_models_with_related_entities(
+        self,
+        extracted_entities: Dict[str, pd.DataFrame],
+        save_output: bool = False,
+        kg_output_dir: str = None,
+        extraction_metadata_output_dir: str = None,
+    ) -> Tuple[rdflib.Graph, rdflib.Graph]:
+        """
+        Transform the extracted data into a knowledge graph.
+        """
+        models_kg, models_extraction_metadata = self.transform_HF_models(
+            extracted_df=extracted_entities["models"],
+            save_output_in_json=False,
+            output_dir=kg_output_dir+"/models",
+        )
+
+        datasets_kg, datasets_extraction_metadata = self.transform_HF_datasets(
+            extracted_df=extracted_entities["datasets"],
+            save_output_in_json=False,
+            output_dir=kg_output_dir,
+        )
+
+        arxiv_kg, arxiv_extraction_metadata = self.transform_HF_arxiv(
+            extracted_df=extracted_entities["articles"],
+            save_output_in_json=True,
+            output_dir=kg_output_dir,
+        )
+
+        kg_integrated = self.unify_graphs(
+            [models_kg, datasets_kg, arxiv_kg],
+            save_output_in_json=save_output,
+            output_dir=kg_output_dir,
+        )
+
+        extraction_metadata_integrated = self.unify_graphs(
+            [models_extraction_metadata, datasets_extraction_metadata, arxiv_extraction_metadata],
+            save_output_in_json=save_output,
+            output_dir=extraction_metadata_output_dir,
+        )
+        
+        return kg_integrated, extraction_metadata_integrated
+    
     def transform_HF_models(
         self,
         extracted_df: pd.DataFrame,
