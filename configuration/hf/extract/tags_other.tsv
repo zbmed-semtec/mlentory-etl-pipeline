@@ -1,5 +1,4 @@
 tag_name	description
-tags	General label indicating the model or dataset has been categorized with specific keywords for discoverability.
 Inference Endpoints	Indicates the model supports deployment through HuggingFace's managed inference API service for production environments.
 AutoTrain Compatible	Models that can be fine-tuned using HuggingFace's AutoTrain service without requiring manual code.
 text-generation-inference	Optimized backend for deploying and serving Large Language Models (LLMs) with high performance.
