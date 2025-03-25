@@ -186,14 +186,10 @@ class HFDatasetManager:
         
         def process_model(model_id: str):
             
-            models_to_process = self.api.list_models(model_name=model_id)
+            models_to_process = self.api.list_models(model_name=model_id,limit=3,full=True)
             results = []
-            cnt = 0
             
             for model in models_to_process:
-                cnt += 1
-                if cnt > 3:
-                    break
                 card = None
                 try:
                     if self.token:
@@ -203,6 +199,10 @@ class HFDatasetManager:
                 except Exception as e:
                     print(f"Error loading model card for {model_id}: {e}")
                     continue
+                
+                # model_id = model.id
+                # if model_id is None:
+                #     model_id = 
                 
                 model_info = {
                     "modelId": model.id,

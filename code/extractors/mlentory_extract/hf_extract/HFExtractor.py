@@ -81,8 +81,6 @@ class HFExtractor:
             threads=threads
         )
         
-        extracted_entities["models"] = models_df
-        
         # Get related entities
         related_entities = self.get_models_related_entities(models_df)
         
@@ -92,16 +90,19 @@ class HFExtractor:
                 # Use download_specific_datasets if base model names are provided
                 extracted_base_models_df = self.download_specific_models(
                     model_ids=related_entities["base_models"],
-                    output_dir=output_dir+"/base_models",
+                    output_dir=output_dir,
                     save_result_in_json=False,
                     threads=threads,
                 )
                 #merge base models with models
                 models_df = pd.concat([models_df, extracted_base_models_df], ignore_index=True)
-                models_df = models_df.drop_duplicates(subset=["modelId"], keep="last")
+                models_df = models_df.drop_duplicates(subset=["schema.org:identifier"], keep="last")
                 print(f"Downloaded {len(extracted_base_models_df)} base models")
             else:
                 print("No base models found to download")
+        
+        
+        extracted_entities["models"] = models_df
         
         if "datasets" in related_entities_to_download:
             # Download datasets
@@ -216,6 +217,8 @@ class HFExtractor:
         result_df = self.dataset_manager.get_specific_models_metadata(
             model_ids=model_ids, threads=threads
         )
+        
+        result_df = self.parser.process_dataframe(result_df)
         
         if save_result_in_json:
             timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
