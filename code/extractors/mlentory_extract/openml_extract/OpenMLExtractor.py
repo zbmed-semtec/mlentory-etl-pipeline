@@ -46,18 +46,69 @@ class OpenMLExtractor:
         with open(schema_file, "r") as f:
             return json.load(f)
 
-    def _get_recent_run_ids(self, num_runs: int = 10) -> List[int]:
+    def extract_run_info_with_additional_entities(
+        self, 
+        num_instances: int, 
+        offset: int = 0,
+        threads: int = 4, 
+        output_dir: str = "./outputs",
+        save_result_in_json: bool = False,
+        additional_entities: List[str] = ["dataset"]
+        )-> pd.DataFrame:
+        """
+        Download run info with all adiitional entities specified.
+
+        Args:
+            num_instances (int): Number of instances to fetch.
+            offset (int): Number of instances to skip before fetching.
+            threads (int): Number of threads for parallel processing. Defaults to 4.
+            output_dir (str): Directory to save the output file.
+            save_result_in_json (bool): Whether to save the results in JSON format. Defaults to False.
+            additional_entities
+
+        Returns:
+            pd.DataFrame: DataFrame containing metadata for the runs and aditional entities.
+        """
+        extracted_entities = {}
+        run_metadata_df = self.get_multiple_runs_metadata(num_instances, offset, threads, output_dir, save_result_in_json)
+        extracted_entities["run"] = run_metadata_df
+
+        for entity in additional_entities:
+            if entity is "dataset":
+                dataset_metadata_df = self.get_multiple_datasets_metadata(num_instances, offset, threads, output_dir, save_result_in_json)
+                extracted_entities["dataset"] = dataset_metadata_df
+
+        return extracted_entities
+
+
+    def _get_recent_run_ids(self, num_instances: int = 10, offset: int = 0) -> List[int]:
         """
         Get a list of recent run IDs.
 
         Args:
-            num_runs (int): Number of run IDs to fetch.
+            num_instances (int): Number of run IDs to fetch.
+            offset (int): Number of runs to skip before fetching.
 
         Returns:
             List[int]: List of run IDs.
         """
-        runs = openml.runs.list_runs(size=num_runs, output_format="dataframe")
-        return runs.index.tolist()[:num_runs]
+        runs = openml.runs.list_runs(size=num_instances, offset=offset, output_format="dataframe")
+        return runs["run_id"].tolist()[:num_instances]
+        
+
+    def _get_recent_dataset_ids(self, num_instances: int = 10, offset: int = 0) -> List[int]:
+        """
+        Get a list of recent dataset IDs.
+
+        Args:
+            num_instances (int): Number of dataset IDs to fetch.
+            offset (int): Number of runs to skip before fetching.
+
+        Returns:
+            List[int]: List of dataset IDs.
+        """
+        datasets = openml.datasets.list_datasets(size=num_instances, offset=offset, output_format="dataframe")
+        return datasets["did"].tolist()[:num_instances]
 
     def get_run_metadata(self, run_id: int) -> Dict:
         """
@@ -103,9 +154,33 @@ class OpenMLExtractor:
         except Exception as e:
             print(f"Error fetching metadata for run {run_id}: {str(e)}")
 
+    def get_dataset_metadata(self, dataset_id):
+        """
+        Fetch metadata for a single dataset using the schema.
+
+        Args:
+            dataset_id (int): The ID of the dataset.
+
+        Returns:
+            Optional[Dict]: Metadata for the dataset, or None if an error occurs.
+        """
+        try:
+            dataset = openml.datasets.get_dataset(dataset_id)
+            obj_map = {"dataset": dataset}
+            metadata = {}
+            for key, path in self.schema.get("dataset", {}).items():
+                obj_name, attr = path.split(".")
+                obj = obj_map.get(obj_name)
+                if obj:
+                    metadata[key] = getattr(obj, attr, None)
+            return metadata
+        except Exception as e:
+            print(f"Error fetching metadata for run {dataset_id}: {str(e)}")
+
     def get_multiple_runs_metadata(
         self, 
-        num_runs: int, 
+        num_instances: int, 
+        offset: int = 0,
         threads: int = 4, 
         output_dir: str = "./outputs",
         save_result_in_json: bool = False
@@ -114,7 +189,8 @@ class OpenMLExtractor:
         Fetch metadata for multiple runs using multithreading.
 
         Args:
-            num_runs (int): Number of runs to fetch.
+            num_instances (int): Number of runs to fetch.
+            offset (int): Number of runs to skip before fetching.
             threads (int): Number of threads for parallel processing. Defaults to 4.
             output_dir (str): Directory to save the output file.
             save_result_in_json (bool): Whether to save the results in JSON format. Defaults to False.
@@ -122,8 +198,7 @@ class OpenMLExtractor:
         Returns:
             pd.DataFrame: DataFrame containing metadata for the runs.
         """
-        run_ids = self._get_recent_run_ids(num_runs)
-        print("RUN IDS: ", run_ids)
+        run_ids = self._get_recent_run_ids(num_instances, offset)
         run_metadata = []
 
         with ThreadPoolExecutor(max_workers=threads) as executor:
@@ -134,25 +209,65 @@ class OpenMLExtractor:
                 if result is not None:
                     run_metadata.append(result)
 
-        metadata_df = pd.DataFrame(run_metadata)
+        run_metadata_df = pd.DataFrame(run_metadata)
 
         if save_result_in_json:
-            self.save_results(metadata_df, output_dir)
+            self.save_results(run_metadata_df, output_dir, 'run')
 
-        return metadata_df
+        return run_metadata_df
+    
+    def get_multiple_datasets_metadata(
+        self, 
+        num_instances: int, 
+        offset: int = 0,
+        threads: int = 4, 
+        output_dir: str = "./outputs",
+        save_result_in_json: bool = False
+    ) -> pd.DataFrame:
+        """
+        Fetch metadata for multiple runs using multithreading.
 
-    def save_results(self, df: pd.DataFrame, output_dir: str):
+        Args:
+            num_instances (int): Number of datasets to fetch.
+            offset (int): Number of datasets to skip before fetching.
+            threads (int): Number of threads for parallel processing. Defaults to 4.
+            output_dir (str): Directory to save the output file.
+            save_result_in_json (bool): Whether to save the results in JSON format. Defaults to False.
+
+        Returns:
+            pd.DataFrame: DataFrame containing metadata for the datasets.
+        """
+        dataset_ids = self._get_recent_dataset_ids(num_instances, offset)
+        dataset_metadata = []
+
+        with ThreadPoolExecutor(max_workers=threads) as executor:
+            futures = {executor.submit(self.get_dataset_metadata, dataset_id): dataset_id for dataset_id in dataset_ids}
+
+            for future in as_completed(futures):
+                result = future.result()
+                if result is not None:
+                    dataset_metadata.append(result)
+
+        dataset_metadata_df = pd.DataFrame(dataset_metadata)
+
+        if save_result_in_json:
+            self.save_results(dataset_metadata_df, output_dir, 'dataset')
+
+        return dataset_metadata_df
+
+    def save_results(self, df: pd.DataFrame, output_dir: str, entity: str):
         """
         Save the results to a file.
 
         Args:
             df (pd.DataFrame): DataFrame containing the metadata.
             output_dir (str): Directory to save the output file.
+            entity (str): Entity for which metadata is being saved.
         """
         if not os.path.exists(output_dir):
             os.makedirs(output_dir)
 
         timestamp = pd.Timestamp.now().strftime("%Y-%m-%d_%H-%M-%S")
-        output_path = os.path.join(output_dir, f"openml_runs_metadata_{timestamp}.json")
+        output_path = os.path.join(output_dir, f"openml_{entity}_metadata_{timestamp}.json")
         df.to_json(output_path, orient="records", indent=4)
     

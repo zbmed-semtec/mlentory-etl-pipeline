@@ -146,7 +146,7 @@ services:
     container_name: openml_no_gpu
     build: 
       context: ../
-      dockerfile: deployment/Dockerfile.no_gpu
+      dockerfile: deployment/Dockerfile.openml_no_gpu
       target: no_gpu_openml
     volumes:
       - ../data/configuration/openml:/app/configuration/openml

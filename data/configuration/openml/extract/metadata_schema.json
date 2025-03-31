@@ -10,36 +10,33 @@
     "modelCategory": "run.flow_name",
     "evaluatedOn": "dataset.name",
     "hasEvaluations": "run.evaluations",
-    "author": {
-          "name": "run.uploader_name",
-          "profile": "https://www.openml.org/u/{run.uploader}"
-      }, 
-    "sharedBy": {
-          "name": "run.uploader_name",
-          "profile": "https://www.openml.org/u/{run.uploader}"
-      }, 
-    "maintainer": {
-          "name": "run.uploader_name",
-          "profile": "https://www.openml.org/u/{run.uploader}"
-      }, 
-    "trainedOn": {
-          "dataset name" : "dataset.name", 
-          "dataset page": "dataset.openml_url", 
-          "estimation procedure" : "task.estimation_procedure"
-      },
-    "testedOn": {
-          "dataset name" : "dataset.name", 
-          "dataset page": "dataset.openml_url", 
-          "estimation procedure" : "task.estimation_procedure"
-      },
-    "validatedOn": {
-          "dataset name" : "dataset.name", 
-          "dataset page": "dataset.openml_url", 
-          "estimation procedure" : "task.estimation_procedure"
-      },
+    "uploaderName": "run.uploader_name",
+    "uploaderProfile": "https://www.openml.org/u/{run.uploader}",
+    "datasetName" : "dataset.name", 
+    "datasetPage": "dataset.openml_url", 
+    "estimationProcedure" : "task.estimation_procedure",
     "dateCreated": "flow.upload_date",
     "dateModified": "flow.upload_date",
-    "datePublished = ": "flow.upload_date",
+    "datePublished": "flow.upload_date",
     "inLanguage": "flow.language"
+    },
+    "dataset":{
+      "datasetID": "dataset.id",
+      "datasetName" : "dataset.name", 
+      "datasetPage": "dataset.openml_url",
+      "datasetFormat": "dataset.format",
+      "datasetLicence": "dataset.licence",
+      "datasetCitation": "dataset.citation",
+      "datasetLanguage": "dataset.language",
+      "datasetUploaddate": "dataset.upload_date",
+      "datasetVersion": "dataset.version",
+      "datasetCreator": "dataset.creator",
+      "datasetContributor": "dataset.contributor", 
+      "datasetKeywords": "dataset.tag",
+      "datasetFeatures": "dataset.features",
+      "datasetQualities": "dataset.qualities",
+      "datasetDownloadURL": "dataset.url",
+      "datasetPaperURL": "dataset.paper_url",
+      "datasetDescription": "dataset.description"
     }
   }

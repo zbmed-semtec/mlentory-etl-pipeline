@@ -1,0 +1,11 @@
+FROM python:3.11 AS no_gpu_base
+
+WORKDIR /app
+
+COPY code/extractors /app/extractors
+RUN pip3 install -e /app/extractors
+
+FROM no_gpu_base AS no_gpu_openml
+RUN echo "Building OpenML ETL image without GPU..."
+
+
