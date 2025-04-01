@@ -1,0 +1,21 @@
+target_column|transformation_function|parameters
+fair4ml:evaluatedOn|find_value_in_OpenML|{"property_name": "evaluatedOn"}
+fair4ml:hasEvaluation|find_value_in_OpenML|{"property_name": "hasEvaluation"}
+fair4ml:intendedUse|find_value_in_OpenML|{"property_name": "intendedUse"}
+fair4ml:mlTask|find_value_in_OpenML|{"property_name": "mlTask"}
+fair4ml:modelCategory|find_value_in_OpenML|{"property_name": "modelCategory"}
+fair4ml:sharedBy|construct_profile_object|{"property_names": ["uploaderName", "uploaderId"]}
+fair4ml:testedOn|construct_dataset_object|{"property_names": ["datasetName", "datasetPage", "estimationProcedure"]}
+fair4ml:trainedOn|construct_dataset_object|{"property_names": ["datasetName", "datasetPage", "estimationProcedure"]}
+fair4ml:validatedOn|construct_dataset_object|{"property_names": ["datasetName", "datasetPage", "estimationProcedure"]}
+schema.org:author|construct_profile_object|{"property_names": ["uploaderName", "uploaderId"]}
+schema.org:dateCreated|find_value_in_OpenML|{"property_name": "dateCreated"}
+schema.org:dateModified|find_value_in_OpenML|{"property_name": "dateModified"}
+schema.org:datePublished|find_value_in_OpenML|{"property_name": "datePublished"}
+schema.org:inLanguage|find_value_in_OpenML|{"property_name": "inLanguage"}
+schema.org:keywords|find_value_in_OpenML|{"property_name": "keywords"}
+schema.org:maintainer|construct_profile_object|{"property_names": ["uploaderName", "uploaderId"]}
+schema.org:version|find_value_in_OpenML|{"property_name": "version"}
+schema.org:description|find_value_in_OpenML|{"property_name": "description"}
+schema.org:name|format_id|{"property_name": "name"}
+schema.org:url|find_value_in_OpenML|{"property_name": "url"}

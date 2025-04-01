@@ -1,6 +1,6 @@
 {
   "run": {
-    "name": "Run_{run.id}",
+    "name": "run.id",
     "url": "run.openml_url",
     "version": "flow.version",
     "description": "flow.description",
@@ -9,9 +9,9 @@
     "mlTask": "task.task_type",
     "modelCategory": "run.flow_name",
     "evaluatedOn": "dataset.name",
-    "hasEvaluations": "run.evaluations",
+    "hasEvaluation": "run.evaluations",
     "uploaderName": "run.uploader_name",
-    "uploaderProfile": "https://www.openml.org/u/{run.uploader}",
+    "uploaderId": "run.uploader",
     "datasetName" : "dataset.name", 
     "datasetPage": "dataset.openml_url", 
     "estimationProcedure" : "task.estimation_procedure",
