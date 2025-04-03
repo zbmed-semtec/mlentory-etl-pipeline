@@ -64,11 +64,21 @@ fi
 
 # Stop any running containers
 echo "Stopping any running containers..."
-docker-compose --profile $PROFILE down
+if command -v docker compose &> /dev/null; then
+    docker compose --profile "$PROFILE" down
+else
+    docker-compose --profile "$PROFILE" down
+fi
+# docker compose --profile $PROFILE down
 
 # Start containers with environment variables explicitly passed
 echo "Starting containers with profile: $PROFILE"
-docker-compose --profile $PROFILE --env-file="$ENV_FILE" up -d
+if command -v docker compose &> /dev/null; then
+    docker compose --profile "$PROFILE" --env-file="$ENV_FILE" up -d
+else
+    docker-compose --profile "$PROFILE" --env-file="$ENV_FILE" up -d
+fi
+# docker compose --profile $PROFILE --env-file="$ENV_FILE" up -d
 
 echo "MLentory environment started successfully!"
 echo ""
