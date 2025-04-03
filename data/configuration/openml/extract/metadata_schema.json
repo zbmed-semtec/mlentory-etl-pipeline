@@ -1,26 +1,49 @@
 {
   "run": {
-    "name": "run.id",
+    "name": "Run_{run.id}",
     "url": "run.openml_url",
     "version": "flow.version",
     "description": "flow.description",
-    "intendedUse": "flow.description",
+    "fair4ml:intendedUse": "flow.description",
     "keywords": "run.tags",
-    "mlTask": "task.task_type",
-    "modelCategory": "run.flow_name",
-    "evaluatedOn": "dataset.name",
-    "hasEvaluation": "run.evaluations",
-    "uploaderName": "run.uploader_name",
-    "uploaderId": "run.uploader",
-    "datasetName" : "dataset.name", 
-    "datasetPage": "dataset.openml_url", 
-    "estimationProcedure" : "task.estimation_procedure",
+    "fair4ml:mlTask": "task.task_type",
+    "fair4ml:modelCategory": "run.flow_name",
+    "fair4ml:evaluatedOn": "dataset.name",
+    "fair4ml:hasEvaluation": "run.evaluations",
+    "author": {
+          "name": "run.uploader_name",
+          "profile": "https://www.openml.org/u/{run.uploader}"
+      }, 
+    "fair4ml:sharedBy": {
+          "name": "run.uploader_name",
+          "profile": "https://www.openml.org/u/{run.uploader}"
+      }, 
+    "maintainer": {
+          "name": "run.uploader_name",
+          "profile": "https://www.openml.org/u/{run.uploader}"
+      }, 
+    "fair4ml:trainedOn": {
+          "dataset name" : "dataset.name", 
+          "dataset page": "dataset.openml_url", 
+          "estimation procedure" : "task.estimation_procedure"
+      },
+    "fair4ml:testedOn": {
+          "dataset name" : "dataset.name", 
+          "dataset page": "dataset.openml_url", 
+          "estimation procedure" : "task.estimation_procedure"
+      },
+    "fair4ml:validatedOn": {
+          "dataset name" : "dataset.name", 
+          "dataset page": "dataset.openml_url", 
+          "estimation procedure" : "task.estimation_procedure"
+      },
     "dateCreated": "flow.upload_date",
     "dateModified": "flow.upload_date",
     "datePublished": "flow.upload_date",
     "inLanguage": "flow.language"
     },
-    "dataset":{
+
+  "dataset":{
       "datasetID": "dataset.id",
       "datasetName" : "dataset.name", 
       "datasetPage": "dataset.openml_url",
@@ -38,5 +61,5 @@
       "datasetDownloadURL": "dataset.url",
       "datasetPaperURL": "dataset.paper_url",
       "datasetDescription": "dataset.description"
-    }
-  }
+   }
+ }

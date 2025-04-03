@@ -1,9 +1,9 @@
 import os
 import json
 import openml
-import argparse
 import pandas as pd
-from typing import Dict, List, Optional
+from datetime import datetime
+from typing import Dict, List
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 class OpenMLExtractor:
@@ -45,6 +45,14 @@ class OpenMLExtractor:
 
         with open(schema_file, "r") as f:
             return json.load(f)
+        
+    def _wrap_metadata(self, value):
+        return {
+            "data": value,
+            "extraction_method": "openml_python_package",
+            "confidence": 1,
+            "extraction_time": datetime.utcnow().isoformat()
+        }
 
     def extract_run_info_with_additional_entities(
         self, 
@@ -139,15 +147,15 @@ class OpenMLExtractor:
                             obj = obj_map.get(obj_name)
                             nested_data[sub_key] = getattr(obj, attr, None) if obj else None
 
-                    metadata[key] = nested_data  # Store as a dictionary
+                    metadata[key] = self._wrap_metadata(nested_data)  # Store as a dictionary
                 else:
                     if "{" in path and "}" in path: 
-                        metadata[key] = path.format(run=run)
+                        metadata[key] = self._wrap_metadata(path.format(run=run))
                     else:
                         obj_name, attr = path.split(".")
                         obj = obj_map.get(obj_name)
                         if obj:
-                            metadata[key] = getattr(obj, attr, None)
+                            metadata[key] = self._wrap_metadata(getattr(obj, attr, None))
 
             return metadata
 
@@ -172,7 +180,7 @@ class OpenMLExtractor:
                 obj_name, attr = path.split(".")
                 obj = obj_map.get(obj_name)
                 if obj:
-                    metadata[key] = getattr(obj, attr, None)
+                    metadata[key] = self._wrap_metadata(getattr(obj, attr, None))
             return metadata
         except Exception as e:
             print(f"Error fetching metadata for run {dataset_id}: {str(e)}")
