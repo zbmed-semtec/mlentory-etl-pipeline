@@ -8,7 +8,7 @@ FAIR4ML,fair4ml:legal,Text,Text
 FAIR4ML,fair4ml:ethicalLegalSocial,Text,Text
 FAIR4ML,fair4ml:hasCO2eEmissions,Text,Text
 FAIR4ML,fair4ml:intendedUse,Text or DefinedTerm or URL,Text or DefinedTerm or URL
-FAIR4ML,fair4ml:mlTask,Text or DefinedTerm,DefinedTerm or Text
+FAIR4ML,fair4ml:mlTask,Text or DefinedTerm,DefinedTerm
 FAIR4ML,fair4ml:modelCategory,Text or DefinedTerm,Text or DefinedTerm
 FAIR4ML,fair4ml:modelRisks,Text,Text
 FAIR4ML,fair4ml:usageInstructions,Text,Text
@@ -39,7 +39,7 @@ schema.org,schema.org:discussionUrl,URL,URL
 schema.org,schema.org:funding,Grant,Text
 schema.org,schema.org:inLanguage,Language or Text,Text
 schema.org,schema.org:isAccessibleForFree,Boolean,Text
-schema.org,schema.org:keywords,DefinedTerm or Text or URL,DefinedTerm or Text or URL
+schema.org,schema.org:keywords,DefinedTerm or Text or URL,DefinedTerm
 schema.org,schema.org:license,CreativeWork or URL,Text
 schema.org,schema.org:maintainer,Organization or Person,Text
 schema.org,schema.org:version,Text,Text
