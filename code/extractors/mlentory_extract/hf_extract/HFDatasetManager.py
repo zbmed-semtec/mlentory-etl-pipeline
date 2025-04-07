@@ -24,7 +24,6 @@ class HFDatasetManager:
     def __init__(
         self,
         api_token: Optional[str] = None,
-        default_card: Optional[str] = None,
     ):
         """
         Initialize the HuggingFace Dataset Manager.
@@ -44,9 +43,6 @@ class HFDatasetManager:
             self.api = HfApi(token=api_token)
         else:
             self.api = HfApi()
-            
-        # Set default card path
-        self.default_card = default_card
 
     def get_model_metadata_dataset(
         self, update_recent: bool = True, limit: int = 5, threads: int = 4
