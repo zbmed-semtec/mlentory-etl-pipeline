@@ -1,3 +1,10 @@
+"""
+This module serves as the entry point for different Knowledge Graph Handlers.
+
+It imports the specialized handlers for various schemas (FAIR4ML, Croissant, arXiv, Keywords)
+from their respective modules.
+"""
+
 from typing import List, Optional, Union, Dict, Tuple, Any
 import pprint
 import pandas as pd
@@ -6,7 +13,7 @@ from rdflib.namespace import RDF, RDFS, XSD
 from datetime import datetime
 import hashlib
 import json
-from ..utils.enums import SchemasURL, EntityType, ExtractionMethod
+from ..utils.enums import Platform, SchemasURL, EntityType, ExtractionMethod
 
 
 class KnowledgeGraphHandler:
@@ -19,15 +26,6 @@ class KnowledgeGraphHandler:
     Args:
         base_namespace (str): The base URI namespace for the knowledge graph entities.
             Default: "http://example.org/"
-        predicate_categories (Optional[dict[str, set[str]]]): Dictionary mapping predicate
-            categories to sets of predicates. If None, uses default categories.
-            Expected format: {
-                "date": {"created", "modified"},
-                "float": {"accuracy", "loss"},
-                "string": {"name", "description"},
-                "dataset": {"training_data", "validation_data"},
-                "article": {"paper_reference", "citation"}
-            }
 
     Raises:
         ValueError: If the base_namespace is not a valid URI string or if predicate_categories
@@ -335,8 +333,8 @@ class KnowledgeGraphHandler:
                     objects.append(Literal(value, datatype=XSD.string))
 
             elif "ScholarlyArticle" in range_value:
-                value = value.split("/")[-1].strip()
-                # print(f"ScholarlyArticle VALUE: {value}")
+                value = value.split("/")[-1].split("v")[0].strip()
+                print(f"ScholarlyArticle VALUE: {value}")
                 id_hash = self.generate_entity_hash(platform, "ScholarlyArticle", value)
                 scholarly_article_uri = self.base_namespace[id_hash]
                 self.add_triple_with_metadata(
@@ -397,7 +395,23 @@ class KnowledgeGraphHandler:
                     URIRef("https://huggingface.co/"+value), 
                     {"extraction_method": "System", "confidence": 1.0})
                 objects.append(organization_uri)
-                
+            elif "DefinedTerm" in range_value:
+                if platform == Platform.HUGGING_FACE.value and (":" in value or len(value) <= 2):
+                    objects.append(Literal(value, datatype=XSD.string))
+                else:
+                    id_hash = self.generate_entity_hash(platform, "DefinedTerm", value.lower().strip())
+                    defined_term_uri = self.base_namespace[id_hash]
+                    self.add_triple_with_metadata(
+                        defined_term_uri,
+                        RDF.type,
+                        self.namespaces["schema"]["DefinedTerm"],
+                        {"extraction_method": "System", "confidence": 1.0})
+                    self.add_triple_with_metadata(
+                        defined_term_uri,
+                        self.namespaces["schema"]["name"],
+                        Literal(value, datatype=XSD.string),
+                        {"extraction_method": "System", "confidence": 1.0})
+                    objects.append(defined_term_uri)
             elif "fair4ml:MLModel" in range_value:
                 id_hash = self.generate_entity_hash(platform, "MLModel", value)
                 ml_model_uri = self.base_namespace[id_hash]
@@ -438,7 +452,7 @@ class KnowledgeGraphHandler:
 
         for idx, row in df.iterrows():
             entity_id = row[identifier_column].split("v")[0].strip()
-            # print(f"arXiv ENTITY_ID: {entity_id}")
+            print(f"arXiv ENTITY_ID: {entity_id}")
             id_hash = self.generate_entity_hash(platform, "ScholarlyArticle", entity_id)
             scholarly_article_uri = self.base_namespace[id_hash]
 
@@ -503,9 +517,47 @@ class KnowledgeGraphHandler:
             
         return self.graph, self.metadata_graph
 
+    def dataframe_to_graph_keywords(
+        self,
+        df: pd.DataFrame,
+        identifier_column: Optional[str] = None,
+        platform: str = None,
+    ) -> Graph:
+        if df.empty:
+            return self.graph, self.metadata_graph
+
+        if identifier_column and identifier_column not in df.columns:
+            raise ValueError(
+                f"Identifier column '{identifier_column}' not found in DataFrame"
+            )
+
+        for idx, row in df.iterrows():
+            entity_id = row[identifier_column].strip().lower()
+            id_hash = self.generate_entity_hash(platform, "DefinedTerm", entity_id)
+            defined_term_uri = self.base_namespace[id_hash]
             
+            self.add_triple_with_metadata(
+                defined_term_uri,
+                RDF.type,
+                self.namespaces["schema"]["DefinedTerm"],
+                {"extraction_method": "Collected by MLENTORY team", "confidence": 1.0})
+            
+            if row["tag_name"] is not None:
+                self.add_triple_with_metadata(
+                    defined_term_uri,
+                    self.namespaces["schema"]["name"],
+                    Literal(row["tag_name"], datatype=XSD.string),
+                    {"extraction_method": "Collected by MLENTORY team", "confidence": 1.0})
+            
+            if row["description"] is not None:
+                self.add_triple_with_metadata(
+                    defined_term_uri,
+                    self.namespaces["schema"]["description"],
+                    Literal(row["description"], datatype=XSD.string),
+                    {"extraction_method": "Collected by MLENTORY team", "confidence": 1.0})
                 
-    
+        
+        return self.graph, self.metadata_graph
     def get_predicate_uri(self, predicate: str) -> URIRef:
         """
         Convert a predicate string to its corresponding URIRef with proper namespace.
