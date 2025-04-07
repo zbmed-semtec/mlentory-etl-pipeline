@@ -6,7 +6,7 @@ from tqdm import tqdm
 import os
 from ..hf_transform.TransformHF import TransformHF
 from .KnowledgeGraphHandler import KnowledgeGraphHandler
-from ..utils.enums import Platform, ExtractionMethod
+from ..utils.enums import Platform
 
 
 class MlentoryTransform:
@@ -66,18 +66,27 @@ class MlentoryTransform:
 
         arxiv_kg, arxiv_extraction_metadata = self.transform_HF_arxiv(
             extracted_df=extracted_entities["articles"],
+            save_output_in_json=False,
+            output_dir=kg_output_dir,
+        )
+        
+        keywords_kg, keywords_extraction_metadata = self.transform_HF_keywords(
+            extracted_df=extracted_entities["keywords"],
             save_output_in_json=True,
             output_dir=kg_output_dir,
         )
 
         kg_integrated = self.unify_graphs(
-            [models_kg, datasets_kg, arxiv_kg],
+            [models_kg, datasets_kg, arxiv_kg, keywords_kg],
             save_output_in_json=save_output,
             output_dir=kg_output_dir,
         )
 
         extraction_metadata_integrated = self.unify_graphs(
-            [models_extraction_metadata, datasets_extraction_metadata, arxiv_extraction_metadata],
+            [models_extraction_metadata,
+             datasets_extraction_metadata,
+             arxiv_extraction_metadata,
+             keywords_extraction_metadata],
             save_output_in_json=save_output,
             output_dir=extraction_metadata_output_dir,
         )
@@ -223,6 +232,42 @@ class MlentoryTransform:
             )
             metadata_output_path = os.path.join(
                 output_dir, f"{current_date}_Processed_HF_arxiv_kg_metadata.json"
+            )
+            knowledge_graph.serialize(destination=kg_output_path, format="json-ld")
+        
+        return knowledge_graph, metadata_graph
+    
+    def transform_HF_keywords(
+        self,
+        extracted_df: pd.DataFrame,
+        save_output_in_json: bool = False,
+        output_dir: str = None,
+    ) -> Tuple[rdflib.Graph, rdflib.Graph]:
+        """
+        Transform the extracted data into a knowledge graph.
+        """
+        # Reset the knowledge graph handler before processing new data
+        self.kg_handler.reset_graphs()
+        
+        # Transform the dataframe to a knowledge graph
+        knowledge_graph, metadata_graph = (
+            self.kg_handler.dataframe_to_graph_keywords(
+                df=extracted_df, 
+                identifier_column="tag_name", 
+                platform=Platform.HUGGING_FACE.value
+            )
+        )
+        
+        self.current_sources[f"{Platform.HUGGING_FACE.value}_keywords"] = knowledge_graph
+        self.current_sources[f"{Platform.HUGGING_FACE.value}_keywords_metadata"] = metadata_graph
+        
+        if save_output_in_json:
+            current_date = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+            kg_output_path = os.path.join(
+                output_dir, f"{current_date}_Processed_HF_keywords_kg.json"
+            )
+            metadata_output_path = os.path.join(
+                output_dir, f"{current_date}_Processed_HF_keywords_kg_metadata.json"
             )
             knowledge_graph.serialize(destination=kg_output_path, format="json-ld")
         
