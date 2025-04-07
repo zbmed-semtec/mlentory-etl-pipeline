@@ -27,32 +27,17 @@ class HFExtractor:
     def __init__(
         self,
         parser: Optional[ModelCardToSchemaParser] = None,
-        dataset_manager: Optional[HFDatasetManager] = None,
-        default_card: Optional[str] = None,
+        dataset_manager: Optional[HFDatasetManager] = None
     ):
         """
         Initialize the HuggingFace extractor.
 
         Args:
-            qa_model (str, optional): The model to use for text extraction.
-                Defaults to "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2".
-            questions (List[str], optional): List of questions for extraction.
-                Defaults to None.
-            tags_language (List[str], optional): List of language tags.
-                Defaults to None.
-            tags_libraries (List[str], optional): List of library tags.
-                Defaults to None.
-            tags_other (List[str], optional): List of other tags.
-                Defaults to None.
-            tags_task (List[str], optional): List of task tags.
-                Defaults to None.
+            parser (Optional[ModelCardToSchemaParser], optional): Parser instance for extracting information.
             dataset_manager (Optional[HFDatasetManager], optional): Dataset manager instance.
-                Defaults to None.
-            default_card (Optional[str], optional): Default HF card content.
-                Defaults to None (uses the standard path).
         """
         self.parser = parser or ModelCardToSchemaParser()
-        self.dataset_manager = dataset_manager or HFDatasetManager(default_card=default_card)
+        self.dataset_manager = dataset_manager or HFDatasetManager()
 
     def download_models_with_related_entities(
         self,
@@ -134,6 +119,12 @@ class HFExtractor:
                 extracted_entities["articles"] = extracted_arxiv_df
             else:
                 print("No arxiv articles found to download")
+        
+        if "keywords" in related_entities_to_download:
+            # Download keywords
+            extracted_keywords_df = self.get_keywords()
+            print(f"Processed {len(extracted_keywords_df)} keywords")
+            extracted_entities["keywords"] = extracted_keywords_df
         
         
         return extracted_entities
@@ -241,12 +232,11 @@ class HFExtractor:
         """
         
         related_entities = {}
-        related_entities_names = {"terms": "fair4ml:mlTask", 
-                                  "datasets": "fair4ml:trainedOn",
-                                  "base_models": "fair4ml:fineTunedFrom",
-                                  "licenses": "schema.org:license",
-                                  "keywords": "schema.org:keywords",
-                                  "articles": "codemeta:referencePublication"}
+        related_entities_names = {"datasets": ["fair4ml:trainedOn"],
+                                  "base_models": ["fair4ml:fineTunedFrom"],
+                                  "licenses": ["schema.org:license"],
+                                  "keywords": ["schema.org:keywords","fair4ml:mlTask"],
+                                  "articles": ["codemeta:referencePublication"]}
         
         for name in related_entities_names.keys():
             related_entities[name] = set()
@@ -255,14 +245,15 @@ class HFExtractor:
         # Get all unique values for each column
         for index, row in HF_models_df.iterrows():
             for name in related_entities_names.keys():
-                for list_item in row[related_entities_names[name]]:
-                    if isinstance(list_item, dict) and "data" in list_item:
-                        if isinstance(list_item["data"], list):
-                            # Add each element from the list
-                            related_entities[name].update(list_item["data"])
-                        else:
-                            # Add single item
-                            related_entities[name].add(list_item["data"])
+                for property in related_entities_names[name]:
+                    for list_item in row[property]:
+                        if isinstance(list_item, dict) and "data" in list_item:
+                            if isinstance(list_item["data"], list):
+                                # Add each element from the list
+                                related_entities[name].update(list_item["data"])
+                            else:
+                                # Add single item
+                                related_entities[name].add(list_item["data"])
 
         # Convert sets to lists
         for name in related_entities_names.keys():
@@ -399,6 +390,14 @@ class HFExtractor:
             result_df.to_json(path_or_buf=processed_path, orient="records", indent=4)
         
         return result_df
+
+    def get_keywords(self) -> pd.DataFrame:
+        """
+        Get keywords from HuggingFace.
+        """
+        keywords_df = pd.concat([self.parser.tags_other_df, self.parser.tags_task_df, self.parser.tags_libraries_df])
+        return keywords_df
+    
     def print_detailed_dataframe(self, HF_df: pd.DataFrame):
 
         print("\n**DATAFRAME**")
@@ -421,21 +420,3 @@ class HFExtractor:
             print()
         print("\nDataFrame Info:")
         print(HF_df.info())
-
-    def _augment_column_name(self, name: str) -> str:
-        """
-        Add question text to column names for better readability.
-
-        This method transforms column names like 'q_id_0' to include the actual question text,
-        making the output more human-readable.
-
-        Args:
-            name (str): Original column name
-
-        Returns:
-            str: Augmented column name including the question text if applicable
-        """
-        if "q_id" in name:
-            num_id = int(name.split("_")[2])
-            return name + "_" + self.parser.questions[num_id]
-        return name
