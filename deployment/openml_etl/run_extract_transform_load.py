@@ -28,7 +28,7 @@ def setup_logging() -> logging.Logger:
     now = datetime.datetime.now()
     timestamp = now.strftime("%Y-%m-%d_%H-%M-%S")
     base_log_path = "./openml_etl/execution_logs"
-    os.makedirs(base_log_path, exist_ok=True)
+    os.makedirs(base_log_path, exist_ok=True, mode=0o777)
     logging_filename = f"{base_log_path}/extraction_{timestamp}.log"
 
     logging.basicConfig(
@@ -71,19 +71,15 @@ def initialize_transform_hf(config_path: str) -> MlentoryTransform:
     new_schema = pd.read_csv(
         f"{config_path}/transform/FAIR4ML_schema.csv", sep=",", lineterminator="\n"
     )
-    transformations = pd.read_csv(
-        f"{config_path}/transform/column_transformations.csv",
-        lineterminator="\n",
-        sep="|",
+
+    kg_handler = KnowledgeGraphHandler(
+        FAIR4ML_schema_data=new_schema, 
+        base_namespace="http://mlentory.de/mlentory_graph/"
     )
-    return OpenMLTransformer(new_schema, transformations)
 
-    # kg_handler = KnowledgeGraphHandler(
-    #     FAIR4ML_schema_data=new_schema, 
-    #     base_namespace="http://mlentory.de/mlentory_graph/"
-    # )
+    transformer = MlentoryTransform(kg_handler, None)
 
-    # transformer = MlentoryTransform(kg_handler, transform_df)
+    return transformer
 
 def parse_args() -> argparse.Namespace:
     """
@@ -125,6 +121,9 @@ def main():
     args = parse_args()
     logger = setup_logging()
 
+    if not os.path.exists(args.output_dir):
+        os.makedirs(args.output_dir, mode=0o777) 
+
     # Setup configuration data
     config_path = "./configuration/openml"  # Path to configuration folder
 
@@ -142,19 +141,14 @@ def main():
     
     # Transform
     transformer = initialize_transform_hf(config_path)
-    transformer_df = transformer.transform_runs(
-        extracted_df=extracted_entities['run'], 
-        save_output_in_json=True, 
-        output_dir=args.output_dir
-        )
-    
-    logger.info(f"Shape: {transformer_df.shape}") 
-    logger.info(f"Number of Rows: {transformer_df.shape[0]}")
-    logger.info(f"Number of Columns: {transformer_df.shape[1]}")
-    logger.info("\n--- Column Info ---\n")
-    logger.info(str(transformer_df.info()) + "\n") 
-    logger.info("--- First Few Rows ---\n")
-    logger.info(str(transformer_df.head()) + "\n") 
+
+    print(type(transformer))
+
+    models_kg, models_extraction_metadata = transformer.transform_OpenML_runs(
+        extracted_df=extracted_entities["run"],
+        save_output_in_json=True,
+        output_dir=args.output_dir+"/runs",
+    )
 
 
 if __name__ == "__main__":

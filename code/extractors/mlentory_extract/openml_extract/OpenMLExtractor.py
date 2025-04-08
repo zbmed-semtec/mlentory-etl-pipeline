@@ -47,12 +47,12 @@ class OpenMLExtractor:
             return json.load(f)
         
     def _wrap_metadata(self, value):
-        return {
+        return [{
             "data": value,
             "extraction_method": "openml_python_package",
             "confidence": 1,
             "extraction_time": datetime.utcnow().isoformat()
-        }
+        }]
 
     def extract_run_info_with_additional_entities(
         self, 
@@ -82,7 +82,7 @@ class OpenMLExtractor:
         extracted_entities["run"] = run_metadata_df
 
         for entity in additional_entities:
-            if entity is "dataset":
+            if entity == "dataset":
                 dataset_metadata_df = self.get_multiple_datasets_metadata(num_instances, offset, threads, output_dir, save_result_in_json)
                 extracted_entities["dataset"] = dataset_metadata_df
 

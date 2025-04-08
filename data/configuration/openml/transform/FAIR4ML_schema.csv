@@ -2,7 +2,7 @@ Source,Property,Range,Real_Range
 FAIR4ML,fair4ml:legal,Text,Text
 FAIR4ML,fair4ml:ethicalSocial,Text,Text
 FAIR4ML,fair4ml:evaluatedOn,cr:Dataset,Text
-FAIR4ML,fair4ml:hasEvaluation,fair4ml:MLModelEvaluation,Text
+FAIR4ML,fair4ml:hasEvaluation,fair4ml:MLModelEvaluation,EvalutionObject
 FAIR4ML,fair4ml:fineTunedFrom,fair4ml:MLModel,Text
 FAIR4ML,fair4ml:hasCO2eEmissions,Text,Text
 FAIR4ML,fair4ml:intendedUse,Text or DefinedTerm or URL,Text
@@ -10,11 +10,11 @@ FAIR4ML,fair4ml:mlTask,Text or DefinedTerm,Text
 FAIR4ML,fair4ml:modelCategory,Text or DefinedTerm,Text
 FAIR4ML,fair4ml:modelRisksBiasLimitations,Text,Text
 FAIR4ML,fair4ml:sharedBy,Person or Organization,Person or Organization
-FAIR4ML,fair4ml:testedOn,cr:Dataset,TextObject
-FAIR4ML,fair4ml:trainedOn,cr:Dataset,TextObject
+FAIR4ML,fair4ml:testedOn,cr:Dataset,DatasetObject
+FAIR4ML,fair4ml:trainedOn,cr:Dataset,DatasetObject
 FAIR4ML,fair4ml:usageInstructions,Text,Text
 FAIR4ML,fair4ml:codeSampleSnippet,Text,Text
-FAIR4ML,fair4ml:validatedOn,cr:Dataset,TextObject
+FAIR4ML,fair4ml:validatedOn,cr:Dataset,DatasetObject
 schema.org,codeRepository,URL,URL
 schema.org,distribution,schema:MediaObject,schema:MediaObject
 schema.org,memoryRequirements,Text or URL,Text

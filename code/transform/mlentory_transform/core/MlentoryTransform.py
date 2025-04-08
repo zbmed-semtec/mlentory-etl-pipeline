@@ -42,26 +42,25 @@ class MlentoryTransform:
         self.kg_handler = kg_handler
         self.transform_hf = transform_hf
 
-    def transform_HF_models(
+    def transform_data(
         self,
         extracted_df: pd.DataFrame,
+        platform: str,
+        identifier_column: str,
         save_output_in_json: bool = False,
         output_dir: str = None,
     ) -> Tuple[rdflib.Graph, rdflib.Graph]:
         """
         Transform the extracted data into a knowledge graph.
 
-        This method:
-        1. Processes each row of the input DataFrame
-        2. Applies the specified transformations
-        3. Optionally saves the results to a file
-        4. Returns the transformed knowledge graph and metadata graph
         Args:
-            extracted_df (pd.DataFrame): DataFrame containing extracted model data
+            extracted_df (pd.DataFrame): DataFrame containing extracted data
+            platform (str): Platform name (e.g., Platform.OPEN_ML.value or Platform.HUGGING_FACE.value)
             save_output_in_json (bool, optional): Whether to save the transformed data.
                 Defaults to False.
             output_dir (str, optional): Directory to save the transformed data.
                 Required if save_output_in_json is True.
+            identifier_column (str, optional): Column name to use as identifier.
 
         Returns:
             Tuple[rdflib.Graph, rdflib.Graph]: Transformed knowledge graph and metadata graph
@@ -72,32 +71,55 @@ class MlentoryTransform:
         # Reset the knowledge graph handler before processing new data
         self.kg_handler.reset_graphs()
 
-        # transformed_df = self.transform_hf.transform_models(extracted_df)
+        # Ensure the directory exists if saving output
+        if save_output_in_json:
+            if not output_dir:
+                raise ValueError("output_dir must be provided when save_output_in_json is True")
+            if not os.path.exists(output_dir):
+                os.makedirs(output_dir, mode=0o777)
 
         # Transform the dataframe to a knowledge graph
         knowledge_graph, metadata_graph = (
             self.kg_handler.dataframe_to_graph_FAIR4ML_schema(
-                df=extracted_df, 
-                identifier_column="schema.org:name", 
-                platform=Platform.HUGGING_FACE.value
+                df=extracted_df,
+                identifier_column=identifier_column,
+                platform=platform
             )
         )
 
-        self.current_sources[Platform.HUGGING_FACE.value] = knowledge_graph
-        self.current_sources[f"{Platform.HUGGING_FACE.value}_metadata"] = metadata_graph
+        self.current_sources[platform] = knowledge_graph
+        self.current_sources[f"{platform}_metadata"] = metadata_graph
 
         if save_output_in_json:
             current_date = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
             kg_output_path = os.path.join(
-                output_dir, f"{current_date}_Transformed_HF_kg.json"
+                output_dir, f"{current_date}_Transformed_{platform}_kg.json"
             )
             metadata_output_path = os.path.join(
-                output_dir, f"{current_date}_Transformed_HF_kg_metadata.json"
+                output_dir, f"{current_date}_Transformed_{platform}_kg_metadata.json"
             )
             knowledge_graph.serialize(destination=kg_output_path, format="json-ld")
             metadata_graph.serialize(destination=metadata_output_path, format="json-ld")
 
         return knowledge_graph, metadata_graph
+    
+    def transform_OpenML_runs(self, extracted_df, save_output_in_json=False, output_dir=None):
+        return self.transform_data(
+            extracted_df=extracted_df,
+            platform=Platform.OPEN_ML.value,
+            save_output_in_json=save_output_in_json,
+            output_dir=output_dir,
+            identifier_column="name"
+        )
+
+    def transform_HF_models(self, extracted_df, save_output_in_json=False, output_dir=None):
+        return self.transform_data(
+            extracted_df=extracted_df,
+            platform=Platform.HUGGING_FACE.value,
+            save_output_in_json=save_output_in_json,
+            output_dir=output_dir,
+            identifier_column="schema.org:name"
+        )
 
     def transform_HF_datasets(
         self,
