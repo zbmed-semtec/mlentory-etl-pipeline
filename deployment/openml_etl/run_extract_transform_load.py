@@ -12,7 +12,6 @@ import pandas as pd
 from rdflib import Graph
 
 from mlentory_extract.openml_extract import OpenMLExtractor
-from mlentory_transform.openml_transform.OpenMLTransformer import OpenMLTransformer
 from mlentory_transform.core.MlentoryTransform import (
     MlentoryTransform,
     KnowledgeGraphHandler,
