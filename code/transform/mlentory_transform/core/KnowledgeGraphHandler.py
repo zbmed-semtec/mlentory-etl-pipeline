@@ -177,6 +177,14 @@ class KnowledgeGraphHandler:
             raise ValueError(
                 f"Identifier column '{identifier_column}' not found in DataFrame"
             )
+        
+        # Determine entity type and extraction method based on platform
+        if platform == "open_ml":
+            entity_type = "Run"
+            extraction_method = "openml_python_package"
+        else:
+            entity_type = "ML_Model"
+            extraction_method = "System"
 
         for idx, row in df.iterrows():
             entity_id = (
@@ -185,14 +193,13 @@ class KnowledgeGraphHandler:
             
             id_hash = self.generate_entity_hash(platform, "MLModel", entity_id)
             entity_uri = self.base_namespace[id_hash]
-            
 
             # Add entity type with metadata
             self.add_triple_with_metadata(
                 entity_uri,
                 RDF.type,
-                self.namespaces["fair4ml"]["ML_Model"],
-                {"extraction_method": "System", "confidence": 1.0},
+                self.namespaces["fair4ml"][entity_type],
+                {"extraction_method": extraction_method, "confidence": 1.0},
             )
 
             # Go through the properties of the model
@@ -262,9 +269,18 @@ class KnowledgeGraphHandler:
 
         objects = []
 
+        if platform == "open_ml":
+            entity_type = "Run"
+            extraction_method = "openml_python_package"
+        else:
+            entity_type = "ML_Model"
+            extraction_method = "System"
+
         for value in values:
 
             # print("VALUE\n", value)
+            if isinstance(value, dict):
+                value = value.get('data', value)  # Handle OpenML-style dicts
 
             if predicate_info.empty:
                 # Default case: treat as string if predicate not found in schema
@@ -304,33 +320,57 @@ class KnowledgeGraphHandler:
                         dataset_uri, 
                         RDF.type, 
                         self.namespaces["fair4ml"]["Dataset"], 
-                        {"extraction_method": "System", "confidence": 1.0})
+                        {"extraction_method": extraction_method, "confidence": 1.0})
                     if( len(value) < 100):
                         self.add_triple_with_metadata(
                             dataset_uri, 
                             self.namespaces["schema"]["name"], 
                             Literal(value, datatype=XSD.string), 
-                            {"extraction_method": "System", "confidence": 1.0})
+                            {"extraction_method": extraction_method, "confidence": 1.0})
                         self.add_triple_with_metadata(
                             dataset_uri, 
                             self.namespaces["schema"]["url"], 
                             Literal("https://huggingface.co/"+value, datatype=XSD.string), 
-                            {"extraction_method": "System", "confidence": 1.0})
+                            {"extraction_method": extraction_method, "confidence": 1.0})
                     else:
                         self.add_triple_with_metadata(
                             dataset_uri, 
                             self.namespaces["schema"]["description"], 
                             Literal(value, datatype=XSD.string), 
-                            {"extraction_method": "System", "confidence": 1.0})
+                            {"extraction_method": extraction_method, "confidence": 1.0})
                         self.add_triple_with_metadata(
                             dataset_uri, 
                             self.namespaces["schema"]["name"], 
                             Literal("Extracted model info: "+value[:50]+"...", datatype=XSD.string), 
-                            {"extraction_method": "System", "confidence": 1.0})
+                            {"extraction_method": extraction_method, "confidence": 1.0})
                     
                     objects.append(dataset_uri)
                 except:
                     objects.append(Literal(value, datatype=XSD.string))
+
+            elif "DatasetObject" in range_value: 
+                id_hash = self.generate_entity_hash(platform, "Dataset", value)
+                dataset_uri = self.base_namespace[id_hash]
+
+                self.add_triple_with_metadata(
+                    dataset_uri, 
+                    RDF.type, 
+                    self.namespaces["fair4ml"]["Dataset"], 
+                    {"extraction_method": "openml_python_package", "confidence": 1.0}
+                )
+
+                self.add_triple_with_metadata(
+                    dataset_uri, 
+                    self.namespaces["schema"]["name"], 
+                    Literal(value, datatype=XSD.string), 
+                    {"extraction_method": extraction_method, "confidence": 1.0})
+
+                self.add_triple_with_metadata(
+                    dataset_uri, 
+                    self.namespaces["schema"]["url"], 
+                    Literal(value, datatype=XSD.string), 
+                    {"extraction_method": "openml_python_package", "confidence": 1.0}
+                )
 
             elif "ScholarlyArticle" in range_value:
                 value = value.split("/")[-1].split("v")[0].strip()
@@ -341,12 +381,12 @@ class KnowledgeGraphHandler:
                     scholarly_article_uri, 
                     RDF.type, 
                     self.namespaces["schema"]["ScholarlyArticle"], 
-                    {"extraction_method": "System", "confidence": 1.0})
+                    {"extraction_method": extraction_method, "confidence": 1.0})
                 self.add_triple_with_metadata(
                     scholarly_article_uri, 
                     self.namespaces["schema"]["url"], 
                     Literal("https://arxiv.org/abs/"+value, datatype=XSD.string), 
-                    {"extraction_method": "System", "confidence": 1.0})
+                    {"extraction_method": extraction_method, "confidence": 1.0})
                 objects.append(scholarly_article_uri)
 
             elif "Boolean" in range_value:
@@ -363,17 +403,18 @@ class KnowledgeGraphHandler:
                     person_uri, 
                     RDF.type, 
                     self.namespaces["schema"]["Person"], 
-                    {"extraction_method": "System", "confidence": 1.0})
+                    {"extraction_method": extraction_method, "confidence": 1.0})
                 self.add_triple_with_metadata(
                     person_uri, 
                     self.namespaces["schema"]["name"], 
                     Literal(value, datatype=XSD.string), 
-                    {"extraction_method": "System", "confidence": 1.0})
+                    {"extraction_method": extraction_method, "confidence": 1.0})
+                url_value = f"https://huggingface.co/{value}" if platform == "HF" else value
                 self.add_triple_with_metadata(
                     person_uri, 
                     self.namespaces["schema"]["url"], 
-                    Literal("https://huggingface.co/"+value, datatype=XSD.string), 
-                    {"extraction_method": "System", "confidence": 1.0})
+                    Literal(url_value, datatype=XSD.string) if platform == "HF" else URIRef(url_value), 
+                    {"extraction_method": extraction_method, "confidence": 1.0})
                 objects.append(person_uri)
                 
             elif "Organization" in range_value:
@@ -383,17 +424,18 @@ class KnowledgeGraphHandler:
                     organization_uri, 
                     RDF.type, 
                     self.namespaces["schema"]["Organization"], 
-                    {"extraction_method": "System", "confidence": 1.0})
+                    {"extraction_method": extraction_method, "confidence": 1.0})
                 self.add_triple_with_metadata(
                     organization_uri, 
                     self.namespaces["schema"]["name"], 
                     Literal(value, datatype=XSD.string), 
-                    {"extraction_method": "System", "confidence": 1.0})
+                    {"extraction_method": extraction_method, "confidence": 1.0})
+                url_value = f"https://huggingface.co/{value}" if platform == "hugging_face" else value
                 self.add_triple_with_metadata(
                     organization_uri, 
                     self.namespaces["schema"]["url"], 
-                    URIRef("https://huggingface.co/"+value), 
-                    {"extraction_method": "System", "confidence": 1.0})
+                    URIRef(url_value), 
+                    {"extraction_method": extraction_method, "confidence": 1.0})
                 objects.append(organization_uri)
             elif "DefinedTerm" in range_value:
                 if platform == Platform.HUGGING_FACE.value and (":" in value or len(value) <= 2):
@@ -419,17 +461,17 @@ class KnowledgeGraphHandler:
                     ml_model_uri, 
                     RDF.type, 
                     self.namespaces["fair4ml"]["MLModel"], 
-                    {"extraction_method": "System", "confidence": 1.0})
+                    {"extraction_method": extraction_method, "confidence": 1.0})
                 self.add_triple_with_metadata(
                     ml_model_uri, 
                     self.namespaces["schema"]["name"], 
                     Literal(value, datatype=XSD.string), 
-                    {"extraction_method": "System", "confidence": 1.0})
+                    {"extraction_method": extraction_method, "confidence": 1.0})
                 self.add_triple_with_metadata(
                     ml_model_uri, 
                     self.namespaces["schema"]["url"], 
                     URIRef("https://huggingface.co/"+value), 
-                    {"extraction_method": "System", "confidence": 1.0})
+                    {"extraction_method": extraction_method, "confidence": 1.0})
                 objects.append(ml_model_uri)
         return objects
 

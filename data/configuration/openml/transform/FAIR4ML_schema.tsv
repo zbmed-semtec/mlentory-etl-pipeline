@@ -1,0 +1,53 @@
+Source  Property    Range
+FAIR4ML fair4ml:legal   Text
+FAIR4ML fair4ml:ethicalSocial   Text
+FAIR4ML fair4ml:evaluatedOn cr:Dataset
+FAIR4ML fair4ml:hasEvaluation   fair4ml:MLModelEvaluation
+FAIR4ML fair4ml:fineTunedFrom   fair4ml:MLModel
+FAIR4ML fair4ml:hasCO2eEmissions    Text
+FAIR4ML fair4ml:intendedUse Text or DefinedTerm or URL
+FAIR4ML fair4ml:mlTask  Text or DefinedTerm
+FAIR4ML	fair4ml:modelCategory	Text or DefinedTerm
+FAIR4ML	fair4ml:modelRisksBiasLimitations	Text
+FAIR4ML	fair4ml:sharedBy	Person or Organization
+FAIR4ML	fair4ml:testedOn	cr:Dataset
+FAIR4ML	fair4ml:trainedOn	cr:Dataset
+FAIR4ML	fair4ml:usageInstructions	Text
+FAIR4ML	fair4ml:codeSampleSnippet	Text
+FAIR4ML	fair4ml:validatedOn	cr:Dataset
+schema.org	codeRepository	URL
+schema.org	distribution	schema:MediaObject
+schema.org	memoryRequirements	Text or URL
+schema.org	operatingSystem	Text
+schema.org	processorRequirements	Text
+schema.org	releaseNotes	Text or URL
+schema.org	softwareHelp	CreativeWork
+schema.org	softwareRequirements	Text or URL
+schema.org	storageRequirements	Text or URL
+codemeta	codemeta:buildInstructions	URL
+codemeta	codemeta:developmentStatus	Text
+codemeta	codemeta:issueTracker	URL
+codemeta	codemeta:readme	URL
+codemeta	codemeta:referencePublication	ScholarlyArticle
+schema.org	archivedAt	URL or WebPage
+schema.org	author	Organization or Person
+schema.org	citation	CreativeWork or Text
+schema.org	conditionsOfAccess	Text
+schema.org	contributor	Organization or Person
+schema.org	copyrightHolder	Organization or Person
+schema.org	dateCreated	Date or DateTime
+schema.org	dateModified	Date or DateTime
+schema.org	datePublished	Date or DateTime
+schema.org	discussionUrl	URL
+schema.org	funding	Grant
+schema.org	inLanguage	Language or Text
+schema.org	isAccessibleForFree	Boolean
+schema.org	keywords	DefinedTerm or Text or URL
+schema.org	license	CreativeWork or URL
+schema.org	maintainer	Organization or Person
+schema.org	version	Text
+schema.org	description	Text or TextObject
+schema.org	identifier	PropertyValue or Text or URL
+schema.org	name	Text
+schema.org	url	URL
+  

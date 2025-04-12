@@ -1,0 +1,53 @@
+Source,Property,Range,Real_Range
+FAIR4ML,fair4ml:legal,Text,Text
+FAIR4ML,fair4ml:ethicalSocial,Text,Text
+FAIR4ML,fair4ml:evaluatedOn,cr:Dataset,Text
+FAIR4ML,fair4ml:hasEvaluation,fair4ml:MLModelEvaluation,EvalutionObject
+FAIR4ML,fair4ml:fineTunedFrom,fair4ml:MLModel,Text
+FAIR4ML,fair4ml:hasCO2eEmissions,Text,Text
+FAIR4ML,fair4ml:intendedUse,Text or DefinedTerm or URL,Text
+FAIR4ML,fair4ml:mlTask,Text or DefinedTerm,Text
+FAIR4ML,fair4ml:modelCategory,Text or DefinedTerm,Text
+FAIR4ML,fair4ml:modelRisksBiasLimitations,Text,Text
+FAIR4ML,fair4ml:sharedBy,Person or Organization,Person or Organization
+FAIR4ML,fair4ml:testedOn,cr:Dataset,DatasetObject
+FAIR4ML,fair4ml:trainedOn,cr:Dataset,DatasetObject
+FAIR4ML,fair4ml:usageInstructions,Text,Text
+FAIR4ML,fair4ml:codeSampleSnippet,Text,Text
+FAIR4ML,fair4ml:validatedOn,cr:Dataset,DatasetObject
+schema.org,codeRepository,URL,URL
+schema.org,distribution,schema:MediaObject,schema:MediaObject
+schema.org,memoryRequirements,Text or URL,Text
+schema.org,operatingSystem,Text,Text
+schema.org,processorRequirements,Text,Text
+schema.org,releaseNotes,Text or URL,Text or URL
+schema.org,softwareHelp,CreativeWork,CreativeWork
+schema.org,softwareRequirements,Text or URL,Text or URL
+schema.org,storageRequirements,Text or URL,Text or URL
+codemeta,codemeta:buildInstructions,URL,URL
+codemeta,codemeta:developmentStatus,Text,Text
+codemeta,codemeta:issueTracker,URL,URL
+codemeta,codemeta:readme,URL,URL
+codemeta,codemeta:referencePublication,ScholarlyArticle,ScholarlyArticle
+schema.org,archivedAt,URL or WebPage,URL or WebPage
+schema.org,author,Organization or Person,Organization or Person
+schema.org,citation,CreativeWork or Text,CreativeWork or Text
+schema.org,conditionsOfAccess,Text,Text
+schema.org,contributor,Organization or Person,Organization or Person
+schema.org,copyrightHolder,Organization or Person,Organization or Person
+schema.org,dateCreated,Date or DateTime,Date or DateTime
+schema.org,dateCreated,Date or DateTime,Date or DateTime
+schema.org,dateModified,Date or DateTime,Date or DateTime
+schema.org,datePublished,Date or DateTime,Date or DateTime
+schema.org,discussionUrl,URL,URL
+schema.org,funding,Grant,Grant
+schema.org,inLanguage,Language or Text,Language or Text
+schema.org,isAccessibleForFree,Boolean,Boolean
+schema.org,keywords,DefinedTerm or Text or URL,DefinedTerm
+schema.org,license,CreativeWork or URL,CreativeWork or URL
+schema.org,maintainer,Organization or Person,Organization or Person
+schema.org,version,Text,Text
+schema.org,description,Text or TextObject,Text or TextObject
+schema.org,identifier,PropertyValue or Text or URL,PropertyValue or Text or URL
+schema.org,name,Text,Text
+schema.org,url,URL,URL
