@@ -24,7 +24,6 @@ class HFDatasetManager:
     def __init__(
         self,
         api_token: Optional[str] = None,
-        default_card: Optional[str] = None,
     ):
         """
         Initialize the HuggingFace Dataset Manager.
@@ -44,9 +43,6 @@ class HFDatasetManager:
             self.api = HfApi(token=api_token)
         else:
             self.api = HfApi()
-            
-        # Set default card path
-        self.default_card = default_card
 
     def get_model_metadata_dataset(
         self, update_recent: bool = True, limit: int = 5, threads: int = 4
@@ -164,7 +160,74 @@ class HFDatasetManager:
                     model_data.append(result)
 
         return pd.DataFrame(model_data)
+    
+    def get_specific_models_metadata(
+        self, model_ids: List[str], threads: int = 4
+    ) -> pd.DataFrame:
+        """
+        Retrieve metadata for specific HuggingFace models by ID.
 
+        This method processes a list of model IDs, retrieving their metadata from HuggingFace.
+
+        Args:
+            model_ids (List[str]): List of model IDs to retrieve metadata for
+            threads (int, optional): Number of threads to use for downloading.
+                Defaults to 4.
+
+        Returns:
+            pd.DataFrame: DataFrame containing model metadata for the requested models
+        """
+        model_data = []
+        futures = []
+        
+        def process_model(model_id: str):
+            
+            models_to_process = self.api.list_models(model_name=model_id,limit=3,full=True)
+            results = []
+            
+            for model in models_to_process:
+                card = None
+                try:
+                    if self.token:
+                        card = ModelCard.load(model.modelId, token=self.token)
+                    else:
+                        card = ModelCard.load(model.modelId)
+                except Exception as e:
+                    print(f"Error loading model card for {model_id}: {e}")
+                    continue
+                
+                # model_id = model.id
+                # if model_id is None:
+                #     model_id = 
+                
+                model_info = {
+                    "modelId": model.id,
+                    "author": model.author,
+                    "last_modified": model.last_modified,
+                    "downloads": model.downloads,
+                    "likes": model.likes,
+                    "library_name": model.library_name,
+                    "tags": model.tags,
+                    "pipeline_tag": model.pipeline_tag,
+                    "createdAt": model.created_at,
+                    "card": card.content if card else "",
+                }
+                
+                if self.has_model_enough_information(model_info):
+                    results.append(model_info)
+            return results
+
+        with ThreadPoolExecutor(max_workers=threads) as executor:
+            futures = [executor.submit(process_model, model_id) for model_id in model_ids]
+            for future in as_completed(futures):
+                results = future.result()
+                if len(results) > 0:
+                    model_data.extend(results)
+                
+        model_data = pd.DataFrame(model_data)
+        model_data = model_data.drop_duplicates(subset=["modelId"], keep="last")
+        return model_data
+                
     def get_datasets_metadata(
         self, limit: int, latest_modification: datetime, threads: int = 4
     ) -> pd.DataFrame:
