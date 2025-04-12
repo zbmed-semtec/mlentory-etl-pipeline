@@ -145,7 +145,7 @@ python db_connect.py --format psql
 The ETL process can be triggered through Airflow or manually using the provided Python script:
 
 ```bash
-docker exec hf_gpu python3 /hf_etl/run_extract_transform_load.py
+docker exec hf_gpu python3 /app/hf_etl/run_extract_transform_load.py
 ```
 [options]
 Available options:
