@@ -222,7 +222,7 @@ services:
         - gpu
         - no_gpu
     image: postgres:14.1-alpine
-    container_name: postgres
+    container_name: postgres_db
     environment:
       POSTGRES_USER: user
       POSTGRES_PASSWORD: password
@@ -264,7 +264,7 @@ services:
       - no_gpu
     image: openlink/virtuoso-opensource-7:latest
     hostname: virtuoso
-    container_name: virtuoso
+    container_name: virtuoso_db
     ports:
       - "1111:1111"
       - "8890:8890"
@@ -281,7 +281,7 @@ services:
       - gpu
       - no_gpu
     image: docker.elastic.co/elasticsearch/elasticsearch:7.10.0
-    container_name: elastic
+    container_name: elastic_db
     hostname: elastic
     # privileged: true
     environment:

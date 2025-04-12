@@ -1,9 +1,7 @@
 tag_name	description
-tags	General label indicating the model or dataset has been categorized with specific keywords for discoverability.
 Inference Endpoints	Indicates the model supports deployment through HuggingFace's managed inference API service for production environments.
 AutoTrain Compatible	Models that can be fine-tuned using HuggingFace's AutoTrain service without requiring manual code.
 text-generation-inference	Optimized backend for deploying and serving Large Language Models (LLMs) with high performance.
-text-embedding-inference	Optimized backend for deploying and serving text embedding models with high performance.
 Eval Results	Models with published evaluation metrics, benchmarks, or test results available for review.
 Has a Space	Indicates a HuggingFace Space demo exists for this model allowing interactive testing without setup.
 4-bit precision	Models quantized to 4-bit precision, reducing memory footprint while maintaining reasonable performance.
@@ -12,8 +10,3 @@ Merge	Models created by merging multiple other models, often to combine their st
 Carbon Emissions	Models with documented carbon footprint information related to their training process.
 8-bit precision	Models quantized to 8-bit precision, balancing performance and memory efficiency.
 Mixture of Experts	Architecture where multiple specialized sub-models (experts) are conditionally activated based on input.
-bert	Models based on BERT (Bidirectional Encoder Representations from Transformers), a transformer architecture that learns contextual word embeddings.
-roberta	Models based on RoBERTa (Robustly Optimized BERT Approach), an optimized BERT variant with improved pretraining and performance.
-xlm-roberta	Models based on XLM-RoBERTa, a cross-lingual version of RoBERTa pretrained on text from 100 languages for multilingual understanding.
-llama	Models based on LLaMA (Large Language Model Meta AI), a family of large language models that use a transformer architecture.
-mistral	Models created by Mistral, a French artificial intelligence startup, headquartered in Paris. It specializes in open-weight large language models.

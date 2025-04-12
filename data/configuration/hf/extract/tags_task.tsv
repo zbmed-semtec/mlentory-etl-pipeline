@@ -1,43 +1,43 @@
-0
-Image Text to Text
-Visual Question Answering
-Document Question Answering
-Depth Estimation
-Image Classification
-Object Detection
-Image Segmentation
-Text to Image
-Image toText
-Imageto Video
-Unconditional Image Generation
-Video Classification
-Text to Video
-Zero Shot Image Classification
-Mask Generation
-Zero Shot Object Detection
-Text to 3D
-Image to 3D
-Image Feature Extraction
-Text Classification
-Token Classification
-Table Question Answering
-Question Answering
-Zero Shot Classification
-Translation
-Summarization
-Feature Extraction
-Text Generation
-Text2Text Generation
-Fill Mask
-Sentence Similarity
-Text to Speech
-Text to Audio
-Automatic Speech Recognition
-Audio to Audio
-Audio Classification
-Voice Activity Detection
-Tabular Classification
-Tabular Regression
-Reinforcement Learning
-Robotics
-Graph Machine Learning
+tag_name	description
+Image Text to Text	Converts image content into textual descriptions or captions.
+Visual Question Answering	Answers natural language questions about images.
+Document Question Answering	Extracts answers from documents based on questions.
+Depth Estimation	Predicts the depth of objects in images for 3D scene understanding.
+Image Classification	Categorizes images into predefined classes or labels.
+Object Detection	Identifies and locates objects within images using bounding boxes.
+Image Segmentation	Assigns each pixel in an image to a specific class or object.
+Text to Image	Generates images from textual descriptions or prompts.
+Image toText	Converts visual content from images into textual representations.
+Imageto Video	Transforms static images into video sequences.
+Unconditional Image Generation	Creates images without specific text prompts or conditions.
+Video Classification	Categorizes video content into predefined classes.
+Text to Video	Generates video content based on textual descriptions.
+Zero Shot Image Classification	Classifies images into categories not seen during training.
+Mask Generation	Creates masks for objects or regions in images.
+Zero Shot Object Detection	Detects objects in categories not seen during training.
+Text to 3D	Generates 3D models or scenes from textual descriptions.
+Image to 3D	Converts 2D images into 3D representations or models.
+Image Feature Extraction	Extracts meaningful features from images for downstream tasks.
+Text Classification	Categorizes text documents into predefined classes.
+Token Classification	Labels individual tokens (words) in text with specific categories.
+Table Question Answering	Answers questions based on tabular data.
+Question Answering	Provides answers to questions based on given context.
+Zero Shot Classification	Classifies content into categories not seen during training.
+Translation	Converts text from one language to another.
+Summarization	Creates concise summaries of longer texts.
+Feature Extraction	Extracts meaningful features from input data for downstream tasks.
+Text Generation	Creates natural language text based on initial prompts.
+Text2Text Generation	Transforms input text into a different textual form.
+Fill Mask	Predicts missing words or tokens in masked text.
+Sentence Similarity	Measures how similar two sentences are semantically.
+Text to Speech	Converts written text into spoken audio.
+Text to Audio	Generates audio content from textual descriptions.
+Automatic Speech Recognition	Transcribes spoken language into written text.
+Audio to Audio	Transforms audio signals from one form to another.
+Audio Classification	Categorizes audio clips into predefined classes.
+Voice Activity Detection	Identifies when someone is speaking in an audio stream.
+Tabular Classification	Categorizes rows in tabular data into predefined classes.
+Tabular Regression	Predicts continuous values from tabular data.
+Reinforcement Learning	Trains agents through interaction with environments using rewards.
+Robotics	Applies AI for robot control, perception, and decision-making.
+Graph Machine Learning	Analyzes and learns from graph-structured data.

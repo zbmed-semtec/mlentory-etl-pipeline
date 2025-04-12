@@ -1,48 +1,48 @@
-0
-PyTorch
-TensorFlow
-JAX
-Transformers
-Safetensors
-TensorBoard
-Diffusers
-PEFT
-stable-baselines3
-ONNX
-GGUF
-ml-agents
-sentence-transformers
-Keras
-timm
-sample-factory
-setfit
-Flair
-Adapters
-Transformers.js
-spaCy
-ESPnet
-fastai
-MLX
-Core ML
-NeMo
-Rust
-Joblib
-BERTopic
-TF Lite
-fastText
-OpenCLIP
-speechbrain
-Scikit-learn
-PaddlePaddle
-OpenVINO
-Fairseq
-Graphcore
-Asteroid
-Stanza
-AllenNLP
-SpanMarker
-paddlenlp
-Habana
-pyannote.audio
-pythae
-unity-sentis
+tag_name	description
+PyTorch	Deep learning framework that provides tensor computation with GPU acceleration and automatic differentiation. Popular for research and production ML models.
+TensorFlow	End-to-end open source platform for ML with comprehensive tools and libraries for building and deploying models at scale.
+JAX	High-performance numerical computing library that combines NumPy, automatic differentiation, and GPU/TPU support for ML research.
+Transformers	Library providing pretrained models for NLP and CV tasks, with implementations in PyTorch and TensorFlow.
+Safetensors	Fast and safe serialization format for storing and distributing machine learning model weights.
+TensorBoard	Visualization toolkit for machine learning experiments that helps track metrics, visualize graphs, and explore embeddings.
+Diffusers	State-of-the-art library for diffusion models across multiple modalities like vision and audio.
+PEFT	Parameter-Efficient Fine-Tuning methods that enable efficient adaptation of pre-trained language models.
+stable-baselines3	Set of reliable implementations of reinforcement learning algorithms in PyTorch.
+ONNX	Open Neural Network Exchange format that enables interoperability between different ML frameworks.
+GGUF	A file format for efficiently storing and loading large language models with quantization options.
+ml-agents	Unity plugin that enables games and simulations to serve as environments for training intelligent agents.
+sentence-transformers	Framework for computing dense vector representations of sentences and paragraphs using transformer models.
+Keras	High-level neural networks API, designed for human beings, not machines, focusing on enabling fast experimentation.
+timm	Collection of SOTA computer vision models, layers, utilities, and optimizers for training and inferencing.
+sample-factory	High-throughput asynchronous reinforcement learning framework for training RL agents.
+setfit	Efficient framework for few-shot text classification using Sentence Transformers.
+Flair	Simple framework for state-of-the-art NLP supporting tasks like named entity recognition and part-of-speech tagging.
+Adapters	Library for parameter-efficient transfer learning through adapter modules in transformer models.
+Transformers.js	JavaScript library for running transformer models in browsers and Node.js environments.
+spaCy	Industrial-strength NLP library with pre-trained models and support for 65+ languages.
+ESPnet	End-to-end speech processing toolkit covering ASR, TTS, speech translation, and speech enhancement.
+fastai	Deep learning library that simplifies training neural networks using modern best practices.
+MLX	Array framework for machine learning on Apple silicon, designed for efficiency and ease of use.
+Core ML	Apple's framework for integrating machine learning models into iOS, macOS, watchOS, and tvOS apps.
+NeMo	Toolkit for building, training, and fine-tuning GPU-accelerated conversational AI models.
+Rust	Memory-safe, high-performance language used for building efficient ML systems and infrastructure.
+Joblib	Library for lightweight pipelining in Python, used for saving/loading Python objects and parallelizing loops.
+BERTopic	Topic modeling technique that leverages BERT embeddings and clustering for document topic extraction.
+TF Lite	Lightweight solution for mobile and embedded devices to run optimized TensorFlow models with low latency.
+fastText	Library for efficient text classification and word representation learning.
+OpenCLIP	Open-source implementation of CLIP (Contrastive Language-Image Pre-Training) models.
+speechbrain	All-in-one toolkit for speech technology research, including ASR, speaker recognition, and speech enhancement.
+Scikit-learn	Comprehensive machine learning library for Python featuring various classification, regression, and clustering algorithms.
+PaddlePaddle	Comprehensive deep learning platform developed by Baidu, supporting industrial applications.
+OpenVINO	Toolkit for optimizing and deploying deep learning models across Intel hardware.
+Fairseq	Sequence modeling toolkit for training custom models for translation, summarization, and other text generation tasks.
+Graphcore	Framework for efficiently deploying models on Intelligence Processing Unit (IPU) hardware.
+Asteroid	PyTorch-based audio source separation toolkit for researchers.
+Stanza	Python NLP library for accurate multilingual text analysis, including tokenization, POS tagging, and dependency parsing.
+AllenNLP	Open-source NLP research library built on PyTorch for developing state-of-the-art models.
+SpanMarker	Library for span-based named entity recognition using transformer models.
+paddlenlp	NLP library developed by Baidu based on PaddlePaddle, offering Chinese and multilingual support.
+Habana	Framework for running ML workloads on Habana Gaudi accelerators with performance optimization.
+pyannote.audio	Neural building blocks for speaker diarization in Python, supporting voice activity detection and speaker embedding.
+pythae	Python implementation of state-of-the-art variational autoencoders for generative modeling.
+unity-sentis	Unity package for running neural networks in real-time applications and games.
