@@ -158,7 +158,7 @@ class QAMatchingEngine:
         return torch.mm(query_embedding.unsqueeze(0), section_embeddings.t()).squeeze(0)
 
     def find_relevant_sections(
-        self, questions: List[str], context: str, top_k: int = 2, max_section_length: int = 800
+        self, questions: List[str], context: str, top_k: int = 2, max_section_length: int = 2000
     ) -> List[List[Tuple[Section, float]]]:
         """
         Find the most relevant sections for each question.
