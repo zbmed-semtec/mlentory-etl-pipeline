@@ -99,7 +99,7 @@ class MlentoryTransformWithGraphBuilder:
         output_dir: str = None,
     ) -> Tuple[rdflib.Graph, rdflib.Graph]:
         
-        knowledge_graph, extraction_metadata_graph = self.graph_builder_fair4ml.hf_dataframe_to_graph(extracted_df, identifier_column="datasetId", platform=Platform.HUGGING_FACE.value)
+        knowledge_graph, extraction_metadata_graph = self.graph_builder_croissant.hf_dataframe_to_graph(extracted_df, identifier_column="datasetId", platform=Platform.HUGGING_FACE.value)
         
         if save_output:
             self.save_graph(knowledge_graph, "Transformed_HF_datasets_kg", output_dir)

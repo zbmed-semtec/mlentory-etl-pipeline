@@ -75,6 +75,7 @@ class GraphBuilderFAIR4ML(GraphBuilderBase):
             )
 
         for idx, row in df.iterrows():
+            print("row[identifier_column]!!!!!!!!!!!!!: ", row[identifier_column])
             entity_id = (
                 row[identifier_column][0]["data"] if identifier_column else str(idx)
             )
