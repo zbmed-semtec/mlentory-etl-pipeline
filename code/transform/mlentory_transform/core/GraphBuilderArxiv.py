@@ -55,113 +55,74 @@ class GraphBuilderArxiv(GraphBuilderBase):
         if df.empty:
             return self.graph, self.metadata_graph
 
-        if not identifier_column or identifier_column not in df.columns:
+        if identifier_column and identifier_column not in df.columns:
             raise ValueError(
-                f"Identifier column '{identifier_column}' must be provided and exist in DataFrame for arXiv schema."
+                f"Identifier column '{identifier_column}' not found in DataFrame"
             )
-        if "extraction_metadata" not in df.columns:
-             raise ValueError("DataFrame must contain 'extraction_metadata' column for arXiv schema.")
 
         for idx, row in df.iterrows():
-            raw_entity_id = row[identifier_column]
-            if not raw_entity_id or not isinstance(raw_entity_id, str):
-                 print(f"Warning: Skipping row {idx} due to missing or invalid identifier.")
-                 continue
-
-            # Extract the core arXiv ID (remove version)
-            entity_id = raw_entity_id.split("v")[0].strip()
-            if not entity_id:
-                 print(f"Warning: Skipping row {idx} due to invalid arXiv ID format '{raw_entity_id}'.")
-                 continue
-
-            # print(f"arXiv ENTITY_ID: {entity_id}") # Keep for debugging if needed
+            entity_id = row[identifier_column].split("v")[0].strip()
+            print(f"arXiv ENTITY_ID: {entity_id}")
             id_hash = self.generate_entity_hash(platform, "ScholarlyArticle", entity_id)
             scholarly_article_uri = self.base_namespace[id_hash]
-
-            extraction_metadata = row["extraction_metadata"]
-            if not isinstance(extraction_metadata, dict):
-                 print(f"Warning: Skipping row {idx} due to invalid extraction_metadata format.")
-                 continue
-            extraction_time = extraction_metadata.get("extraction_time")
-            metadata_dict = {
-                "extraction_method": extraction_metadata.get("extraction_method", "arXiv API"), # Default method
-                "confidence": extraction_metadata.get("confidence", 1.0), # Assume high confidence
-            }
 
             # Add entity type with metadata
             self.add_triple_with_metadata(
                 scholarly_article_uri,
                 RDF.type,
                 self.namespaces["schema"]["ScholarlyArticle"],
-                metadata_dict,
-                extraction_time)
-
-            # Map DataFrame columns to schema properties
-            property_map = {
-                "title": (self.namespaces["schema"]["name"], XSD.string),
-                "summary": (self.namespaces["schema"]["abstract"], XSD.string),
-                "doi": (self.namespaces["schema"]["sameAs"], XSD.anyURI), # Assuming DOI is a URI
-                "published": (self.namespaces["schema"]["datePublished"], XSD.date), # Check if dateTime needed
-                # Handle list types separately below
-            }
-
-            for col, (predicate, datatype) in property_map.items():
-                if col in row and pd.notna(row[col]):
-                    value = row[col]
-                    literal_value = Literal(value, datatype=datatype)
-                    if datatype == XSD.anyURI:
-                        # Attempt to create URIRef for DOI, fallback to literal if invalid
-                        try:
-                           object_value = URIRef(value)
-                        except Exception:
-                            print(f"Warning: Invalid URI for DOI '{value}' in row {idx}. Storing as Literal.")
-                            object_value = Literal(value, datatype=XSD.string)
-                    else:
-                        object_value = Literal(value, datatype=datatype)
-
-                    self.add_triple_with_metadata(
-                        scholarly_article_uri,
-                        predicate,
-                        object_value,
-                        metadata_dict,
-                        extraction_time)
-
-            # Handle list-based properties (categories, authors)
-            if "categories" in row and row["categories"] is not None:
-                if isinstance(row["categories"], list):
-                     for category in row["categories"]:
-                        if category and isinstance(category, str):
-                             self.add_triple_with_metadata(
-                                scholarly_article_uri,
-                                self.namespaces["schema"]["keywords"], # Using keywords for categories
-                                Literal(category, datatype=XSD.string),
-                                metadata_dict,
-                                extraction_time)
-                else: 
-                     print(f"Warning: 'categories' column in row {idx} is not a list.")
-
-            if "authors" in row and row["authors"] is not None:
-                if isinstance(row["authors"], list):
-                     for author_name in row["authors"]:
-                        if author_name and isinstance(author_name, str):
-                            # Simple approach: add author names as literals.
-                            # Enhancement: Could create schema:Person entities if needed.
-                            self.add_triple_with_metadata(
-                                scholarly_article_uri,
-                                self.namespaces["schema"]["author"],
-                                Literal(author_name, datatype=XSD.string),
-                                metadata_dict,
-                                extraction_time)
-                else:
-                    print(f"Warning: 'authors' column in row {idx} is not a list.")
-
-            # Add the canonical arXiv URL
-            arxiv_url = f"https://arxiv.org/abs/{entity_id}"
+                row["extraction_metadata"])
+            
+            if row["title"] is not None:
+                self.add_triple_with_metadata(
+                    scholarly_article_uri,
+                    self.namespaces["schema"]["name"],
+                    Literal(row["title"], datatype=XSD.string),
+                    row["extraction_metadata"])
+            
+            
             self.add_triple_with_metadata(
                 scholarly_article_uri,
                 self.namespaces["schema"]["url"],
-                Literal(arxiv_url, datatype=XSD.anyURI), # Store as URI literal
-                metadata_dict,
-                extraction_time)
-
-        return self.graph, self.metadata_graph 
+                Literal("https://arxiv.org/abs/"+entity_id, datatype=XSD.string),
+                row["extraction_metadata"])
+            
+            if row["summary"] is not None:
+                self.add_triple_with_metadata(
+                    scholarly_article_uri,
+                    self.namespaces["schema"]["abstract"],
+                    Literal(row["summary"], datatype=XSD.string),
+                    row["extraction_metadata"])
+            
+            if row["doi"] is not None:
+                self.add_triple_with_metadata(
+                    scholarly_article_uri,
+                    self.namespaces["schema"]["sameAs"],
+                    URIRef(row["doi"]),
+                    row["extraction_metadata"])
+            
+            if row["published"] is not None:
+                self.add_triple_with_metadata(
+                    scholarly_article_uri,
+                    self.namespaces["schema"]["datePublished"],
+                    Literal(row["published"], datatype=XSD.date),
+                    row["extraction_metadata"])
+            
+            if row["categories"] is not None:
+                for category in row["categories"]:
+                    self.add_triple_with_metadata(
+                        scholarly_article_uri,
+                        self.namespaces["schema"]["keywords"],
+                        Literal(category, datatype=XSD.string),
+                        row["extraction_metadata"])
+            
+            if row["authors"] is not None:
+                for author in row["authors"]:
+                    self.add_triple_with_metadata(
+                        scholarly_article_uri,
+                        self.namespaces["schema"]["author"],
+                        Literal(author, datatype=XSD.string),
+                        row["extraction_metadata"])
+            
+            
+        return self.graph, self.metadata_graph
