@@ -93,7 +93,6 @@ class MlentoryTransform:
         
         return kg_integrated, extraction_metadata_integrated
     
-    def transform_HF_models(
 
     def transform_data(
         self,
