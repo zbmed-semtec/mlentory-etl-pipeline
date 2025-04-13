@@ -405,10 +405,16 @@ class MarkdownParser:
                     block_type = "Code Block"
                 elif "|" in paragraph_content and not paragraph_content.startswith(">"):
                     block_type = "Table"
+                    # Just return the first 4 lines of the table
+                    paragraph_content = "\n".join(paragraph_content.split("\n")[:4])
+                    paragraph_content = paragraph_content + "\n..."
                 elif paragraph_content.strip().startswith(">"):
                     block_type = "Blockquote"
                 elif any(paragraph_content.lstrip().startswith(marker + " ") for marker in ["-", "*", "+"]) or re.match(r"^\d+\.\s", paragraph_content.lstrip()):
                     block_type = "List"
+                    # Just return the first 4 lines of the list
+                    paragraph_content = "\n".join(paragraph_content.split("\n")[:4])
+                    paragraph_content = paragraph_content + "\n..."
                     
                 section_title = f"{title} - {block_type}" if title else f"{block_type}"
                 sections.append(
@@ -447,7 +453,7 @@ class MarkdownParser:
             
         return sections
     
-    def extract_hierarchical_sections(self, text: str, max_section_length: int = 1000) -> List[Section]:
+    def extract_hierarchical_sections(self, text: str, max_section_length: int = 2000) -> List[Section]:
         """
         Extract sections from text by combining header-based sections with fine-grained paragraph sections.
         This approach keeps the hierarchical structure but adds additional granularity within each section.
