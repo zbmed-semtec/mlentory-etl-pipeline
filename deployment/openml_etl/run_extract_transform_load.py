@@ -4,10 +4,21 @@ import logging
 import argparse
 import datetime
 import pandas as pd
-from tqdm import tqdm
 from typing import List
 
+import numpy as np
+np.float_ = np.float64
+import pandas as pd
+from rdflib import Graph
+
 from mlentory_extract.openml_extract import OpenMLExtractor
+from mlentory_transform.core.MlentoryTransform import (
+    MlentoryTransform,
+    KnowledgeGraphHandler,
+)
+
+def load_tsv_file_to_list(path: str) -> List[str]:
+    return [val[0] for val in pd.read_csv(path, sep="\t").values.tolist()]
 
 def setup_logging() -> logging.Logger:
     """
@@ -16,7 +27,7 @@ def setup_logging() -> logging.Logger:
     now = datetime.datetime.now()
     timestamp = now.strftime("%Y-%m-%d_%H-%M-%S")
     base_log_path = "./openml_etl/execution_logs"
-    os.makedirs(base_log_path, exist_ok=True)
+    os.makedirs(base_log_path, exist_ok=True, mode=0o777)
     logging_filename = f"{base_log_path}/extraction_{timestamp}.log"
 
     logging.basicConfig(
@@ -45,6 +56,29 @@ def initialize_extractor(config_path: str) -> OpenMLExtractor:
     return OpenMLExtractor(
         schema_file = schema_file
     )
+
+def initialize_transform_hf(config_path: str) -> MlentoryTransform:
+    """
+    Initializes the transformer with the configuration data.
+
+    Args:
+        config_path (str): The path to the configuration data.
+
+    Returns:
+        MlentoryTransform: The transformer instance.
+    """
+    new_schema = pd.read_csv(
+        f"{config_path}/transform/FAIR4ML_schema.csv", sep=",", lineterminator="\n"
+    )
+
+    kg_handler = KnowledgeGraphHandler(
+        FAIR4ML_schema_data=new_schema, 
+        base_namespace="http://mlentory.de/mlentory_graph/"
+    )
+
+    transformer = MlentoryTransform(kg_handler, None)
+
+    return transformer
 
 def parse_args() -> argparse.Namespace:
     """
@@ -86,16 +120,15 @@ def main():
     args = parse_args()
     logger = setup_logging()
 
+    if not os.path.exists(args.output_dir):
+        os.makedirs(args.output_dir, mode=0o777) 
+
     # Setup configuration data
     config_path = "./configuration/openml"  # Path to configuration folder
 
     # Extract
-    start_time = time.time()
     extractor = initialize_extractor(config_path)
-    end_time = time.time()
-    logger.info(f"Initialization time: {end_time - start_time} seconds")
-    
-    start_time = time.time()
+
     extracted_entities = extractor.extract_run_info_with_additional_entities(
         num_instances=args.num_instances, 
         offset=args.offset,
@@ -104,32 +137,18 @@ def main():
         save_result_in_json=args.save_extraction,
         additional_entities=["dataset"]
         )
-
-    end_time = time.time()
-
-    run_df = extracted_entities['run']
-    dataset_df = extracted_entities['dataset']
-
-    logger.info("\n--- Run DataFrame Summary ---\n")
-    logger.info(f"Shape: {run_df.shape}") 
-    logger.info(f"Number of Rows: {run_df.shape[0]}")
-    logger.info(f"Number of Columns: {run_df.shape[1]}")
-    logger.info("\n--- Column Info ---\n")
-    logger.info(str(run_df.info()) + "\n") 
-    logger.info("--- First Few Rows ---\n")
-    logger.info(str(run_df.head()) + "\n") 
-
-    logger.info("\n--- Dataset DataFrame Summary ---\n")
-    logger.info(f"Shape: {dataset_df.shape}") 
-    logger.info(f"Number of Rows: {dataset_df.shape[0]}")
-    logger.info(f"Number of Columns: {dataset_df.shape[1]}")
-    logger.info("\n--- Column Info ---\n")
-    logger.info(str(dataset_df.info()) + "\n") 
-    logger.info("--- First Few Rows ---\n")
-    logger.info(str(dataset_df.head()) + "\n") 
-
-    logger.info(f"Extraction Time: {end_time - start_time:.2f} seconds")
     
+    # Transform
+    transformer = initialize_transform_hf(config_path)
+
+    print(type(transformer))
+
+    models_kg, models_extraction_metadata = transformer.transform_OpenML_runs(
+        extracted_df=extracted_entities["run"],
+        save_output_in_json=True,
+        output_dir=args.output_dir+"/runs",
+    )
+
 
 if __name__ == "__main__":
     main()
