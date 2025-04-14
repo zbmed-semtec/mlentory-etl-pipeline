@@ -109,7 +109,8 @@ class KnowledgeGraphHandler:
             ValueError: If the DataFrame is empty or if the identifier column is not found.
         """
         if df.empty:
-            raise ValueError("Cannot convert empty DataFrame to graph")
+            print("Warning: Cannot convert empty DataFrame to graph")
+            return self.graph, self.metadata_graph
 
         if identifier_column and identifier_column not in df.columns:
             raise ValueError(
