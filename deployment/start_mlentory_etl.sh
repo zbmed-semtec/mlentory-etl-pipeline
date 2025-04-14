@@ -1,12 +1,12 @@
 #!/bin/bash
-# start_mlentory.sh
+# start_mlentory_etl.sh
 # Script to set up and start the MLentory environment
 
 set -e  # Exit on error
 
 # Check if running with sudo
 if [ "$EUID" -ne 0 ]; then
-  echo "Please run with sudo: sudo ./start_mlentory.sh"
+  echo "Please run with sudo: sudo ./start_mlentory_etl.sh"
   exit 1
 fi
 

@@ -84,7 +84,7 @@ The project structure is the following:
 │   ├── hf_etl
 │   ├── scheduler
 │   ├── docker-compose.yml
-│   ├── start_mlentory.sh
+│   ├── start_mlentory_etl.sh
 │   ├── db_connect.py
 │   └── requirements.txt
 ├── data
