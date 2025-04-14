@@ -59,7 +59,7 @@ class MlentoryTransformWithGraphBuilder:
 
         kg_integrated = self.unify_graphs(
             [models_kg, datasets_kg, arxiv_kg, keywords_kg],
-            save_output=save_output,
+            save_output_in_json=save_output,
             output_dir=kg_output_dir,
         )
 
@@ -68,7 +68,7 @@ class MlentoryTransformWithGraphBuilder:
              datasets_extraction_metadata,
              arxiv_extraction_metadata,
              keywords_extraction_metadata],
-            save_output=save_output,
+            save_output_in_json=save_output,
             output_dir=extraction_metadata_output_dir,
         )
         
