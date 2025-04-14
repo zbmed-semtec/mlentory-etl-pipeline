@@ -84,9 +84,9 @@ def initialize_extractor(config_path: str) -> HFExtractor:
     parser = ModelCardToSchemaParser(
         # qa_model="sentence-transformers/all-MiniLM-L6-v2",
         # qa_model="BAAI/bge-m3",
-        qa_model_name="Qwen/Qwen2.5-1.5B",
-        # matching_model="Alibaba-NLP/gte-Qwen2-1.5B-instruct",
-        matching_model_name="intfloat/multilingual-e5-large-instruct",
+        qa_model_name="Qwen/Qwen2.5-3B",
+        matching_model_name="Alibaba-NLP/gte-Qwen2-1.5B-instruct",
+        # matching_model_name="intfloat/multilingual-e5-large-instruct",
         schema_file=f"{config_path}/transform/FAIR4ML_schema.tsv",
         tags_language=tags_language,
         tags_libraries=tags_libraries,
