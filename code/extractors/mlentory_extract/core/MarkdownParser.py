@@ -387,9 +387,9 @@ class MarkdownParser:
             absolute_end = start_idx + relative_end
             
             # Skip tiny paragraphs (unless they're a special block, indicated by significantly larger line count compared to character count)
-            is_likely_special_block = (len(paragraph) > 2 and len(paragraph_content) / len(paragraph) < 20)
-            if len(paragraph_content) < 30 and not is_likely_special_block:
-                continue
+            # is_likely_special_block = (len(paragraph) > 2 and len(paragraph_content) / len(paragraph) < 20)
+            # if len(paragraph_content) < 30 and not is_likely_special_block:
+            #     continue
                 
             # Check if this paragraph is a special block (code block, table, etc.)
             is_special_block = False
@@ -428,16 +428,16 @@ class MarkdownParser:
                 continue
                 
             
-        # Create one section for the paragraph
-        section_title = f"{title} - Par. {p_idx+1}" if title else f"Paragraph {p_idx+1}"
-        sections.append(
-            Section(
-                title=section_title,
-                content=paragraph_content,
-                start_idx=absolute_start,
-                end_idx=absolute_end
+            # Create one section for the paragraph
+            section_title = f"{title} - Par. {p_idx+1}" if title else f"Paragraph {p_idx+1}"
+            sections.append(
+                Section(
+                    title=section_title,
+                    content=paragraph_content,
+                    start_idx=absolute_start,
+                    end_idx=absolute_end
+                )
             )
-        )
                 
         # If no sections were created (e.g., all paragraphs were too small),
         # create one section for the entire content
