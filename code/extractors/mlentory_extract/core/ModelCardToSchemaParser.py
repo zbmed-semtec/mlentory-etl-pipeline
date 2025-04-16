@@ -524,7 +524,8 @@ class ModelCardToSchemaParser:
         """
         # Generate queries for each schema property based on their descriptions
         schema_property_questions = self.create_schema_property_questions()
-        if not schema_property_questions:
+        print(f"Schema property questions: {schema_property_questions}")
+        if len(schema_property_questions) == 0:
             print("No properties identified for text extraction. Skipping.")
             return HF_df
 
@@ -611,6 +612,8 @@ class ModelCardToSchemaParser:
         """
         # Initialize columns that will be populated
         schema_columns = list(self.schema_properties.keys())
+        
+        self.processed_properties = []
         
         # Create columns if they don't exist, initializing with empty lists for consistency
         for col in schema_columns:
