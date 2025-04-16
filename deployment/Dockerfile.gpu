@@ -1,4 +1,5 @@
-FROM nvidia/cuda:11.2.2-cudnn8-devel-ubuntu20.04 AS gpu_base
+# FROM nvidia/cuda:11.2.2-cudnn8-devel-ubuntu20.04 AS gpu_base
+FROM nvidia/cuda:11.8.0-devel-ubuntu22.04 AS gpu_base
 
 ARG DEBIAN_FRONTEND=noninteractive
 
@@ -7,7 +8,7 @@ RUN apt-get update && apt-get install -y \
     wget \
     curl \
     git \
-    python3.8 \
+    python3.10 \
     python3-pip \
     && rm -rf /var/lib/apt/lists/*
 

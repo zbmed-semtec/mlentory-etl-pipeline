@@ -39,7 +39,7 @@ class ModelCardToSchemaParser:
     def __init__(
         self,
         qa_model_name: str = "Qwen/Qwen2.5-Coder-3B",
-        matching_model_name: str = "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2",
+        matching_model_name: str = "Alibaba-NLP/gte-modernbert-base",
         tags_language: List[str] = None,
         tags_libraries: pd.DataFrame = None,
         tags_other: pd.DataFrame = None,
@@ -92,7 +92,7 @@ class ModelCardToSchemaParser:
         self.matching_engine = QAMatchingEngine(matching_model_name)
         
         # Initialize QA engine for extractive QA
-        self.qa_engine = QAInferenceEngine(model_name=qa_model_name, batch_size=1)
+        self.qa_engine = QAInferenceEngine(model_name=qa_model_name, batch_size=4)
         
         # Load schema properties from file
         self.schema_properties = self.load_schema_properties(schema_file)
@@ -401,7 +401,7 @@ class ModelCardToSchemaParser:
             match_results = self.matching_engine.find_relevant_sections(
                 questions=questions,
                 context=context,
-                top_k=4
+                top_k=2
             )
             
             for question_item, match_results in zip(question_items, match_results):

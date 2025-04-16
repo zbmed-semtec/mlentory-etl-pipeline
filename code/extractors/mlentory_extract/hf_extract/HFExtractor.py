@@ -38,7 +38,7 @@ class HFExtractor:
         """
         self.parser = parser or ModelCardToSchemaParser()
         self.dataset_manager = dataset_manager or HFDatasetManager()
-
+        
     def download_models_with_related_entities(
         self,
         num_models: int = 10,
@@ -49,83 +49,77 @@ class HFExtractor:
         save_result_in_json: bool = False,
         from_date: str = None,
         threads: int = 4,
+        depth: int = 1,
     ) -> pd.DataFrame:
         """
-        Download models with all related entities specified.
+        Download models with all related entities specified, then repeat the process for the base models found.
+        That process will be repeated depth times.
         """
-        extracted_entities = {}
+        if depth <= 0:
+            print("Warning: Depth is 0 or negative, no download will be performed")
+            return {}
         
-        # Download models
-        models_df = self.download_models(
-            num_models=num_models,
-            update_recent=update_recent,
+        extracted_entities = {}
+        processed_models = list()
+        processed_models_ids = set()
+        related_entities_names = {}
+        related_entities = {}
+        models_to_process = list()
+        
+        for current_depth in range(depth):
+            current_models_df = pd.DataFrame()
+            if current_depth == 0:
+                current_models_df = self.download_models(
+                    num_models=num_models,
+                    update_recent=update_recent,
+                    output_dir=output_dir,
+                    save_raw_data=save_initial_data,
+                    save_result_in_json=save_result_in_json,
+                )
+            else:
+                current_models_df = self.download_specific_models(
+                    model_ids=models_to_process,
+                    output_dir=output_dir,
+                    save_result_in_json=save_result_in_json,
+                )
+                
+            processed_models.append(current_models_df)
+            for index, row in current_models_df.iterrows():
+                processed_models_ids.add(row["schema.org:identifier"][0]["data"])
+            
+            current_related_entities_names = self.get_related_entities_names(current_models_df)
+            
+            models_to_process = list()
+            
+            for model_id in current_related_entities_names["base_models"]:
+                if model_id not in processed_models_ids:
+                    models_to_process.append(model_id)
+            
+            for key, value in current_related_entities_names.items():
+                if key in related_entities_to_download:
+                    if key not in related_entities:
+                        related_entities[key] = value
+                    else:
+                        related_entities[key].update(value)
+        
+        #Concatenate all processed models
+        models_df = pd.concat(processed_models, ignore_index=True)
+        models_df = models_df.drop_duplicates(subset=["schema.org:identifier"], keep="last")
+        
+        # Download related entities
+        extracted_entities = self.download_related_entities(
+            related_entities=related_entities,
+            related_entities_to_download=related_entities_to_download,
             output_dir=output_dir,
-            save_raw_data=save_initial_data,
             save_result_in_json=save_result_in_json,
-            from_date=from_date,
-            threads=threads
+            threads=threads,
         )
         
-        # Get related entities
-        related_entities = self.get_models_related_entities(models_df)
-        
-        if "base_models" in related_entities_to_download:
-            # Download base models
-            if len(related_entities["base_models"]) > 0:
-                # Use download_specific_datasets if base model names are provided
-                extracted_base_models_df = self.download_specific_models(
-                    model_ids=related_entities["base_models"],
-                    output_dir=output_dir,
-                    save_result_in_json=False,
-                    threads=threads,
-                )
-                #merge base models with models
-                models_df = pd.concat([models_df, extracted_base_models_df], ignore_index=True)
-                models_df = models_df.drop_duplicates(subset=["schema.org:identifier"], keep="last")
-                print(f"Downloaded {len(extracted_base_models_df)} base models")
-            else:
-                print("No base models found to download")
-        
+        #merge base models with models
+        models_df = pd.concat([models_df, extracted_entities["models"]], ignore_index=True)
+        models_df = models_df.drop_duplicates(subset=["schema.org:identifier"], keep="last")
         
         extracted_entities["models"] = models_df
-        
-        if "datasets" in related_entities_to_download:
-            # Download datasets
-            if len(related_entities["datasets"]) > 0:
-                # Use download_specific_datasets if dataset names are provided
-                extracted_datasets_df = self.download_specific_datasets(
-                    dataset_names=related_entities["datasets"],
-                    output_dir=output_dir+"/datasets",
-                    save_result_in_json=False,
-                    threads=threads,
-                )
-                print(f"Downloaded {len(extracted_datasets_df)} datasets")
-                extracted_entities["datasets"] = extracted_datasets_df
-            else:
-                print("No datasets found to download")
-        
-        
-        if "articles" in related_entities_to_download:
-            # Download arxiv articles
-            if len(related_entities["articles"]) > 0:
-                # Use download_specific_arxiv_metadata if arxiv ids are provided
-                extracted_arxiv_df = self.download_specific_arxiv_metadata(
-                    arxiv_ids=related_entities["articles"],
-                    output_dir=output_dir+"/articles",
-                    save_result_in_json=False,
-                    threads=threads,
-                )
-                print(f"Downloaded {len(extracted_arxiv_df)} arxiv articles")
-                extracted_entities["articles"] = extracted_arxiv_df
-            else:
-                print("No arxiv articles found to download")
-        
-        if "keywords" in related_entities_to_download:
-            # Download keywords
-            extracted_keywords_df = self.get_keywords()
-            print(f"Processed {len(extracted_keywords_df)} keywords")
-            extracted_entities["keywords"] = extracted_keywords_df
-        
         
         return extracted_entities
     
@@ -220,7 +214,7 @@ class HFExtractor:
         
         return result_df
 
-    def get_models_related_entities(self, HF_models_df: pd.DataFrame) -> Dict[str, List[str]]:
+    def get_related_entities_names(self, HF_models_df: pd.DataFrame) -> Dict[str, Set[str]]:
         """
         Get the related entities for all models in the dataframe.
 
@@ -254,14 +248,74 @@ class HFExtractor:
                             else:
                                 # Add single item
                                 related_entities[name].add(list_item["data"])
-
-        # Convert sets to lists
-        for name in related_entities_names.keys():
-            related_entities[name] = list(related_entities[name])
         
         return related_entities
+    
+    def download_related_entities(
+        self,
+        related_entities_to_download: List[str],
+        related_entities: Dict[str, Set[str]],
+        output_dir: str = "./outputs",
+        save_result_in_json: bool = False,
+        threads: int = 4,
+    ) -> pd.DataFrame:
+        
+        extracted_entities = {}
+        
+        # Download base models
+        if len(related_entities["base_models"]) > 0:
+            # Use download_specific_datasets if base model names are provided
+            extracted_base_models_df = self.download_specific_models(
+                model_ids=related_entities["base_models"],
+                output_dir=output_dir,
+                save_result_in_json=False,
+                threads=threads,
+            )
+            extracted_entities["models"] = extracted_base_models_df
+            print(f"Downloaded {len(extracted_base_models_df)} base models")
+        else:
+            print("No base models found to download")
         
         
+        
+        if "datasets" in related_entities_to_download:
+            # Download datasets
+            if len(related_entities["datasets"]) > 0:
+                # Use download_specific_datasets if dataset names are provided
+                extracted_datasets_df = self.download_specific_datasets(
+                    dataset_names=related_entities["datasets"],
+                    output_dir=output_dir+"/datasets",
+                    save_result_in_json=False,
+                    threads=threads,
+                )
+                print(f"Downloaded {len(extracted_datasets_df)} datasets")
+                extracted_entities["datasets"] = extracted_datasets_df
+            else:
+                print("No datasets found to download")
+        
+        
+        if "articles" in related_entities_to_download:
+            # Download arxiv articles
+            if len(related_entities["articles"]) > 0:
+                # Use download_specific_arxiv_metadata if arxiv ids are provided
+                extracted_arxiv_df = self.download_specific_arxiv_metadata(
+                    arxiv_ids=related_entities["articles"],
+                    output_dir=output_dir+"/articles",
+                    save_result_in_json=False,
+                    threads=threads,
+                )
+                print(f"Downloaded {len(extracted_arxiv_df)} arxiv articles")
+                extracted_entities["articles"] = extracted_arxiv_df
+            else:
+                print("No arxiv articles found to download")
+        
+            if "keywords" in related_entities_to_download:
+                # Download keywords
+                extracted_keywords_df = self.get_keywords()
+                print(f"Processed {len(extracted_keywords_df)} keywords")
+                extracted_entities["keywords"] = extracted_keywords_df
+        
+        return extracted_entities
     
     def download_datasets(
         self,

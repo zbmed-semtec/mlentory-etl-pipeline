@@ -17,7 +17,7 @@ deployment/
 │ ├── plugins/
 │ ├── scripts/
 │ └── requirements.txt
-├── start_mlentory.sh                     # Script to set up and start the environment
+├── start_mlentory_etl.sh                     # Script to set up and start the environment
 ├── setup_pgadmin.sh                      # Script to set up pgAdmin permissions
 ├── db_connect.py                         # Database connection utility
 └── requirements.txt
@@ -43,7 +43,7 @@ HF_TOKEN=your_hugging_face_token_here
 2. Use the automated setup script (recommended):
 
 ```bash
-sudo ./start_mlentory.sh
+sudo ./start_mlentory_etl.sh
 ```
 
 This script will:
@@ -56,7 +56,7 @@ This script will:
 You can override the profile selection:
 
 ```bash
-sudo ./start_mlentory.sh --profile no_gpu
+sudo ./start_mlentory_etl.sh --profile no_gpu
 ```
 
 3. Alternatively, choose your deployment profile manually:

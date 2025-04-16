@@ -59,7 +59,7 @@ class MlentoryTransformWithGraphBuilder:
 
         kg_integrated = self.unify_graphs(
             [models_kg, datasets_kg, arxiv_kg, keywords_kg],
-            save_output=save_output,
+            save_output_in_json=save_output,
             output_dir=kg_output_dir,
         )
 
@@ -68,7 +68,7 @@ class MlentoryTransformWithGraphBuilder:
              datasets_extraction_metadata,
              arxiv_extraction_metadata,
              keywords_extraction_metadata],
-            save_output=save_output,
+            save_output_in_json=save_output,
             output_dir=extraction_metadata_output_dir,
         )
         
@@ -99,7 +99,7 @@ class MlentoryTransformWithGraphBuilder:
         output_dir: str = None,
     ) -> Tuple[rdflib.Graph, rdflib.Graph]:
         
-        knowledge_graph, extraction_metadata_graph = self.graph_builder_fair4ml.hf_dataframe_to_graph(extracted_df, identifier_column="datasetId", platform=Platform.HUGGING_FACE.value)
+        knowledge_graph, extraction_metadata_graph = self.graph_builder_croissant.hf_dataframe_to_graph(extracted_df, identifier_column="datasetId", platform=Platform.HUGGING_FACE.value)
         
         if save_output:
             self.save_graph(knowledge_graph, "Transformed_HF_datasets_kg", output_dir)
