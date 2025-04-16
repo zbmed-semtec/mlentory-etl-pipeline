@@ -39,7 +39,7 @@ class ModelCardToSchemaParser:
     def __init__(
         self,
         qa_model_name: str = "Qwen/Qwen2.5-Coder-3B",
-        matching_model_name: str = "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2",
+        matching_model_name: str = "Alibaba-NLP/gte-modernbert-base",
         tags_language: List[str] = None,
         tags_libraries: pd.DataFrame = None,
         tags_other: pd.DataFrame = None,
