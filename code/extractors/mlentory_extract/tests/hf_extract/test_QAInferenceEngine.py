@@ -110,6 +110,35 @@ def test_batch_inference_logging(qa_engine: QAInferenceEngine, test_logger: logg
             # if i == 0: assert "Paris" in res.answer
             # if i == 1: assert "Shakespeare" in res.answer
             # if i == 2: assert res.answer == "Information not found" # Check model correctly identifies missing info
+            # --- Enhanced Logging ---
+            if i == 0:  # Question: "What is the name of the model described?"
+                expected_keywords = ["gemma"]
+                test_logger.info(f"    Check {i+1}: Expected keywords '{expected_keywords}', Answer='{res.answer[:100]}...'")
+                assert any(kw in res.answer.lower() for kw in expected_keywords), f"Expected keywords {expected_keywords} not found in answer for Q{i+1}"
+            elif i == 1:  # Question: "Who are the authors of the model?"
+                expected_keywords = ["google", "gemma team"]
+                test_logger.info(f"    Check {i+1}: Expected keywords '{expected_keywords}', Answer='{res.answer[:100]}...'")
+                # Allow flexibility in how the author is stated
+                assert any(kw in res.answer.lower() for kw in expected_keywords), f"Expected keywords {expected_keywords} not found in answer for Q{i+1}"
+            elif i == 2: # Question: "What hardware was used for training?"
+                expected_keywords = ["tpu", "tensor processing unit"]
+                test_logger.info(f"    Check {i+1}: Expected keywords '{expected_keywords}', Answer='{res.answer[:100]}...'")
+                assert any(kw in res.answer.lower() for kw in expected_keywords), f"Expected keywords {expected_keywords} not found in answer for Q{i+1}"
+            elif i == 3: # Question: "What is the primary license associated with the model?"
+                expected_keywords = ["gemma"]
+                test_logger.info(f"    Check {i+1}: Expected keyword 'gemma', Answer='{res.answer[:100]}...'")
+                assert "gemma" in res.answer.lower(), f"Expected keyword 'gemma' not found in answer for Q{i+1}"
+            elif i == 4: # Question: "What programming languages was the model trained on?"
+                # This depends heavily on the model's ability to infer absence of information
+                # A less strict check might be appropriate, or checking for specific "not found" phrasing
+                expected_phrases = ["not found", "not specified", "not mentioned", "web documents", "code", "mathematics"] # Allow context leak
+                test_logger.info(f"    Check {i+1}: Expecting indication of missing info or context leak ('{expected_phrases}'), Answer='{res.answer[:100]}...'")
+                # assert any(phrase in res.answer.lower() for phrase in expected_phrases), f"Expected indication of missing info not found for Q{i+1}" # Might be too strict
+            elif i == 5: # Question: "What are some limitations regarding factual accuracy?"
+                expected_keywords = ["incorrect", "outdated", "factual statements", "not knowledge bases"]
+                test_logger.info(f"    Check {i+1}: Expected keywords '{expected_keywords}', Answer='{res.answer[:100]}...'")
+                assert any(kw in res.answer.lower() for kw in expected_keywords), f"Expected keywords {expected_keywords} not found in answer for Q{i+1}"
+            # --- End Enhanced Logging ---
 
     except Exception as e:
         end_time = time.time()
