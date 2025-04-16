@@ -518,6 +518,6 @@ class MarkdownParser:
             )
             for fine_section in fine_sections:
                 add_or_update_section(fine_section)
-
+        
         # Return the unique sections stored in the map values
         return list(content_map.values())
