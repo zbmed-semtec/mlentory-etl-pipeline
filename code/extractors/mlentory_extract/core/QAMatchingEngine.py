@@ -79,7 +79,7 @@ class QAMatchingEngine:
                     batch_texts,
                     padding=True,
                     truncation=True,
-                    max_length=2048,  # Reduced max length
+                    max_length=1024,
                     return_tensors="pt",
                 ).to(self.device)
 
@@ -178,6 +178,10 @@ class QAMatchingEngine:
             context, max_section_length
         )
         
+        print(f"\n \n Printing all sections!!!!!!!! \n \n", len(sections))
+        for s in sections:
+            print(f"Section: {s.title} \n {s.content} \n")
+        
         # print(f"\n \n Sections: {sections} \n \n")
         if not sections:
             return [
@@ -186,7 +190,7 @@ class QAMatchingEngine:
             ]
 
         # Get embeddings for sections
-        section_texts = [f"{s.title}" for s in sections]
+        section_texts = [f"{s.content}" for s in sections]
         section_embeddings = self._get_embeddings(section_texts)
 
         # Get embeddings for questions, using cache if possible
