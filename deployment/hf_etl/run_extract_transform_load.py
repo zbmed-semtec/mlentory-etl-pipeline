@@ -231,7 +231,7 @@ def main():
     # Setup configuration data
     config_path = "./configuration/hf"  # Path to configuration folder
     kg_files_directory = "./../kg_files"  # Path to kg files directory
-    intialize_folder_structure(args.output_dir,clean_folders=True)
+    intialize_folder_structure(args.output_dir,clean_folders=False)
     
     use_dummy_data = False
     kg_integrated = Graph()  
@@ -251,6 +251,7 @@ def main():
             update_recent=False,
             related_entities_to_download=["datasets", "articles", "base_models", "keywords"],
             threads=4,
+            depth=2,
         )
         
         # Initialize transformer
