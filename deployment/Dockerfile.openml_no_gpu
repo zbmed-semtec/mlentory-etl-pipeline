@@ -1,5 +1,27 @@
 FROM python:3.11 AS no_gpu_base
 
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    wget \
+    unzip \
+    curl \
+    gnupg \
+    libglib2.0-0 \
+    libnss3 \
+    libgconf-2-4 \
+    libx11-xcb1 \
+    libxcb1 \
+    fonts-liberation \
+    libappindicator3-1 \
+    xdg-utils \
+    chromium \
+    chromium-driver \
+    && rm -rf /var/lib/apt/lists/*
+
+# Set environment variables for Chromium
+ENV CHROME_BIN=/usr/bin/chromium
+ENV CHROMEDRIVER_PATH=/usr/bin/chromedriver
+
 WORKDIR /app
 
 COPY code/extractors /app/extractors
