@@ -16,15 +16,31 @@ from mlentory_extract.hf_extract import HFExtractor
 from mlentory_extract.core import ModelCardToSchemaParser
 from mlentory_load.core import LoadProcessor, GraphHandlerForKG
 from mlentory_load.dbHandler import RDFHandler, SQLHandler, IndexHandler
-from mlentory_transform.hf_transform import TransformHF
-from mlentory_transform.core.MlentoryTransform import (
+from mlentory_transform.core import (
     MlentoryTransform,
     KnowledgeGraphHandler,
+    MlentoryTransformWithGraphBuilder,
 )
 
+# Load environment variables with defaults
+POSTGRES_HOST = os.getenv("POSTGRES_HOST", "postgres_db")
+POSTGRES_USER = os.getenv("POSTGRES_USER", "user")
+POSTGRES_PASSWORD = os.getenv("POSTGRES_PASSWORD", "password")
+POSTGRES_DB = os.getenv("POSTGRES_DB", "history_DB")
+
+VIRTUOSO_HOST = os.getenv("VIRTUOSO_HOST", "virtuoso_db")
+VIRTUOSO_USER = os.getenv("VIRTUOSO_USER", "dba")
+VIRTUOSO_PASSWORD = os.getenv("VIRTUOSO_PASSWORD", "my_strong_password")
+VIRTUOSO_SPARQL_ENDPOINT = os.getenv("VIRTUOSO_SPARQL_ENDPOINT", f"http://{VIRTUOSO_HOST}:8890/sparql") # Default uses VIRTUOSO_HOST
+
+ELASTICSEARCH_HOST = os.getenv("ELASTICSEARCH_HOST", "elastic_db")
+ELASTICSEARCH_PORT = int(os.getenv("ELASTICSEARCH_PORT", "9200")) # Env vars are strings
 
 def load_tsv_file_to_list(path: str) -> List[str]:
     return [val[0] for val in pd.read_csv(path, sep="\t").values.tolist()]
+
+def load_tsv_file_to_df(path: str) -> pd.DataFrame:
+    return pd.read_csv(path, sep="\t")
 
 
 def setup_logging() -> logging.Logger:
@@ -57,21 +73,20 @@ def initialize_extractor(config_path: str) -> HFExtractor:
     Returns:
         HFExtractor: The extractor instance.
     """
-    questions = load_tsv_file_to_list(f"{config_path}/extract/questions.tsv")
     tags_language = load_tsv_file_to_list(f"{config_path}/extract/tags_language.tsv")
-    tags_libraries = load_tsv_file_to_list(f"{config_path}/extract/tags_libraries.tsv")
-    tags_other = load_tsv_file_to_list(f"{config_path}/extract/tags_other.tsv")
-    tags_task = load_tsv_file_to_list(f"{config_path}/extract/tags_task.tsv")
     
-
+    tags_libraries = load_tsv_file_to_df(f"{config_path}/extract/tags_libraries.tsv")
+    tags_other = load_tsv_file_to_df(f"{config_path}/extract/tags_other.tsv")
+    tags_task = load_tsv_file_to_df(f"{config_path}/extract/tags_task.tsv")
+    
     dataset_manager = HFDatasetManager(api_token=os.getenv("HF_TOKEN"))
     
     parser = ModelCardToSchemaParser(
         # qa_model="sentence-transformers/all-MiniLM-L6-v2",
         # qa_model="BAAI/bge-m3",
-        qa_model="Alibaba-NLP/gte-Qwen2-1.5B-instruct",
+        qa_model_name="Qwen/Qwen2.5-1.5B-Instruct",
         # matching_model="Alibaba-NLP/gte-Qwen2-1.5B-instruct",
-        matching_model="Alibaba-NLP/gte-Qwen2-1.5B-instruct",
+        matching_model_name="Alibaba-NLP/gte-Qwen2-1.5B-instruct",
         schema_file=f"{config_path}/transform/FAIR4ML_schema.tsv",
         tags_language=tags_language,
         tags_libraries=tags_libraries,
@@ -98,20 +113,8 @@ def initialize_transform_hf(config_path: str) -> MlentoryTransform:
     new_schema = pd.read_csv(
         f"{config_path}/transform/FAIR4ML_schema.csv", sep=",", lineterminator="\n"
     )
-    transformations = pd.read_csv(
-        f"{config_path}/transform/column_transformations.csv",
-        lineterminator="\n",
-        sep=",",
-    )
 
-    transform_hf = TransformHF(new_schema, transformations)
-
-    kg_handler = KnowledgeGraphHandler(
-        FAIR4ML_schema_data=new_schema, 
-        base_namespace="http://mlentory.de/mlentory_graph/"
-    )
-
-    transformer = MlentoryTransform(kg_handler, transform_hf)
+    transformer = MlentoryTransformWithGraphBuilder(base_namespace="http://mlentory.de/mlentory_graph/", FAIR4ML_schema_data=new_schema)
 
     return transformer
 
@@ -127,24 +130,24 @@ def initialize_load_processor(kg_files_directory: str) -> LoadProcessor:
         LoadProcessor: The load processor instance.
     """
     sqlHandler = SQLHandler(
-        host="postgres",
-        user="user",
-        password="password",
-        database="history_DB",
+        host=POSTGRES_HOST,
+        user=POSTGRES_USER,
+        password=POSTGRES_PASSWORD,
+        database=POSTGRES_DB,
     )
     sqlHandler.connect()
 
     rdfHandler = RDFHandler(
-        container_name="virtuoso",
+        container_name=VIRTUOSO_HOST,  # Assuming container name is the same as the host
         kg_files_directory=kg_files_directory,
-        _user="dba",
-        _password="my_strong_password",
-        sparql_endpoint="http://virtuoso:8890/sparql",
+        _user=VIRTUOSO_USER,
+        _password=VIRTUOSO_PASSWORD,
+        sparql_endpoint=VIRTUOSO_SPARQL_ENDPOINT,
     )
 
     elasticsearchHandler = IndexHandler(
-        es_host="elastic",
-        es_port=9200,
+        es_host=ELASTICSEARCH_HOST,
+        es_port=ELASTICSEARCH_PORT,
     )
 
     elasticsearchHandler.initialize_HF_index(index_name="hf_models")
@@ -168,10 +171,12 @@ def initialize_load_processor(kg_files_directory: str) -> LoadProcessor:
         kg_files_directory=kg_files_directory,
     )
 
-def intialize_folder_structure(output_dir: str) -> None:
+def intialize_folder_structure(output_dir: str, clean_folders: bool = False) -> None:
     """
     Initializes the folder structure.
     """
+    if clean_folders:
+        shutil.rmtree(output_dir, ignore_errors=True)
     os.makedirs(output_dir, exist_ok=True)
     os.makedirs(output_dir+"/models", exist_ok=True)
     os.makedirs(output_dir+"/datasets", exist_ok=True)
@@ -226,7 +231,7 @@ def main():
     # Setup configuration data
     config_path = "./configuration/hf"  # Path to configuration folder
     kg_files_directory = "./../kg_files"  # Path to kg files directory
-    intialize_folder_structure(args.output_dir)
+    intialize_folder_structure(args.output_dir,clean_folders=True)
     
     use_dummy_data = False
     kg_integrated = Graph()  
@@ -241,49 +246,21 @@ def main():
             num_models=args.num_models,
             from_date=datetime(2023, 1, 1),
             output_dir=args.output_dir+"/models",
-            save_result_in_json=False,
+            save_result_in_json=True,
             save_initial_data=False,
             update_recent=False,
-            related_entities_to_download=["datasets", "articles"],
+            related_entities_to_download=["datasets", "articles", "base_models", "keywords"],
             threads=4,
         )
-    
-        # # Load extracted data from csv
-        # extracted_models_df = pd.read_csv(args.output_dir+"/models/2025-02-16_13-59-25_Processed_HF_kg.json")
-        # extracted_datasets_df = pd.read_csv(args.output_dir+"/datasets/2025-02-16_16-07-57_Extracted_Models_HF_df.json")
         
         # Initialize transformer
         transformer = initialize_transform_hf(config_path)
 
-        models_kg, models_extraction_metadata = transformer.transform_HF_models(
-            extracted_df=extracted_entities["models"],
-            save_output_in_json=False,
-            output_dir=args.output_dir+"/models",
-        )
-
-        datasets_kg, datasets_extraction_metadata = transformer.transform_HF_datasets(
-            extracted_df=extracted_entities["datasets"],
-            save_output_in_json=False,
-            output_dir=args.output_dir+"/datasets",
-        )
-
-        arxiv_kg, arxiv_extraction_metadata = transformer.transform_HF_arxiv(
-            extracted_df=extracted_entities["articles"],
-            save_output_in_json=True,
-            output_dir=args.output_dir+"/articles",
-        )
-
-        kg_integrated = transformer.unify_graphs(
-            [models_kg, datasets_kg, arxiv_kg],
-            save_output_in_json=True,
-            output_dir=args.output_dir + "/kg",
-        )
-
-        extraction_metadata_integrated = transformer.unify_graphs(
-            [models_extraction_metadata, datasets_extraction_metadata, arxiv_extraction_metadata],
-            save_output_in_json=True,
-            output_dir=args.output_dir + "/extraction_metadata",
-            # disambiguate_extraction_metadata=True,
+        kg_integrated, extraction_metadata_integrated = transformer.transform_HF_models_with_related_entities(
+            extracted_entities=extracted_entities,
+            save_output=True,
+            kg_output_dir=args.output_dir+"/kg",
+            extraction_metadata_output_dir=args.output_dir+"/extraction_metadata",
         )
     else:
         # load kg with rdflib   
@@ -294,14 +271,9 @@ def main():
     loader = initialize_load_processor(kg_files_directory)
 
     # loader.clean_DBs()
-    
-    # Wait for 5 seconds
-    # time.sleep(5)
 
     # Load data
     loader.update_dbs_with_kg(kg_integrated, extraction_metadata_integrated)
-    
-    # loader.print_DB_states()
 
 
 if __name__ == "__main__":

@@ -34,10 +34,10 @@ If you want further information on how to configure your machine to run the MLen
 
 ## Quick Start
 
-1. Create the required Docker network:
+1. Make sure to include a `.env` file with your **Hugging Face Token** inside the `deployment` folder:
 
 ```bash
-docker network create mlentory_network
+HF_TOKEN=your_hugging_face_token_here
 ```
 
 2. Use the automated setup script (recommended):

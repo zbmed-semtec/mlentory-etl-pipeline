@@ -48,12 +48,13 @@ class QAMatchingEngine:
         # Set model to eval mode
         self.model.eval()
         
-        self.last_context = None
-        self.last_created_sections = []
-        
         # Initialize markdown parser
         self.markdown_parser = MarkdownParser()
 
+        # Cache for question embeddings
+        self.last_questions = []
+        self.last_question_embeddings: Optional[torch.Tensor] = None
+        
     @torch.no_grad()
     def _get_embeddings(self, texts: List[str]) -> torch.Tensor:
         """
@@ -78,7 +79,7 @@ class QAMatchingEngine:
                     batch_texts,
                     padding=True,
                     truncation=True,
-                    max_length=512,  # Reduced max length
+                    max_length=2048,  # Reduced max length
                     return_tensors="pt",
                 ).to(self.device)
 
@@ -107,7 +108,7 @@ class QAMatchingEngine:
                             [text],
                             padding=True,
                             truncation=True,
-                            max_length=512,
+                            max_length=2048,
                             return_tensors="pt",
                         ).to(self.device)
 
@@ -157,7 +158,7 @@ class QAMatchingEngine:
         return torch.mm(query_embedding.unsqueeze(0), section_embeddings.t()).squeeze(0)
 
     def find_relevant_sections(
-        self, questions: List[str], context: str, top_k: int = 2, max_section_length: int = 500
+        self, questions: List[str], context: str, top_k: int = 2, max_section_length: int = 800
     ) -> List[List[Tuple[Section, float]]]:
         """
         Find the most relevant sections for each question.
@@ -171,26 +172,32 @@ class QAMatchingEngine:
         Returns:
             List[List[Tuple[Section, float]]]: For each question, list of (section, score) tuples
         """
+        
         # Extract sections using the markdown parser
         sections = self.markdown_parser.extract_hierarchical_sections(
             context, max_section_length
         )
-        self.last_created_sections = sections
-        self.last_context = context
         
+        # print(f"\n \n Sections: {sections} \n \n")
         if not sections:
             return [
                 [(Section("", context, 0, len(context.split("\n"))), 1.0)]
                 for _ in questions
             ]
 
-        # Get embeddings for sections (both title and content)
-        section_texts = [f"{s.title} {s.content}" for s in sections]
+        # Get embeddings for sections
+        section_texts = [f"{s.title}" for s in sections]
         section_embeddings = self._get_embeddings(section_texts)
 
-        # Get embeddings for questions
-        question_embeddings = self._get_embeddings(questions)
-
+        # Get embeddings for questions, using cache if possible
+        if self.last_questions == questions and self.last_question_embeddings is not None:
+            question_embeddings = self.last_question_embeddings
+            # Ensure embeddings are on the correct device (might have been moved to CPU)
+            question_embeddings = question_embeddings.to(self.device)
+        else:
+            question_embeddings = self._get_embeddings(questions)
+            self.last_question_embeddings = question_embeddings
+            self.last_questions = questions
         results = []
         for q_emb in question_embeddings:
             # Compute similarities
@@ -209,25 +216,5 @@ class QAMatchingEngine:
             results.append(question_results)
 
         return results
-
-    def get_best_context(self, question: str, context: str) -> str:
-        """
-        Get the best context for a single question.
-
-        Args:
-            question (str): The question to find context for
-            context (str): The full text context
-
-        Returns:
-            str: The most relevant context for the question
-        """
-        relevant_sections = self.find_relevant_sections([question], context, top_k=2)[0]
-
-        # Combine the top sections
-        combined_context = "\n".join(
-            section.content for section, score in relevant_sections
-        )
-
-        return combined_context
 
 
