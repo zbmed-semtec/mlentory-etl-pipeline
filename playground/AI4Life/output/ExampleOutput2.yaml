@@ -1,0 +1,125 @@
+attachments:
+  files: [per_sample_scale_range.ijm, stardist_postprocessing.ijm, stardist_weights.h5]
+authors:
+- {github_user: uschmidt83, name: Uwe Schmidt}
+- {github_user: maweigert, name: Martin Weigert}
+cite:
+- {doi: 10.1007/978-3-030-00934-2_30, text: Cell Detection with Star-Convex Polygons}
+- {doi: 10.1109/WACV45572.2020.9093435, text: Star-convex Polyhedra for 3D Object
+    Detection and Segmentation in Microscopy}
+config:
+  bioimageio:
+    nickname: chatty-frog
+    nickname_icon: 🐸
+    thumbnails: {example_histo.jpg: example_histo.thumbnail.png, stardist_logo.jpg: stardist_logo.thumbnail.png}
+  deepimagej:
+    allow_tiling: true
+    model_keys: null
+    prediction:
+      postprocess:
+      - {spec: null}
+      preprocess:
+      - {kwargs: per_sample_scale_range.ijm, spec: 'ij.IJ::runMacroFile'}
+    pyramidal_model: false
+    test_information:
+      inputs:
+      - name: test_input.npy
+        pixel_size: {x: 1, y: 1, z: 1}
+        size: 512 x 304 x 1 x 3
+      memory_peak: null
+      outputs:
+      - {name: test_output.npy, size: 512 x 304 x 1 x 33, type: image}
+      runtime: null
+  stardist:
+    config:
+      axes: YXC
+      backbone: unet
+      grid: [2, 2]
+      n_channel_in: 3
+      n_channel_out: 33
+      n_classes: null
+      n_dim: 2
+      n_rays: 32
+      net_conv_after_unet: 128
+      net_input_shape: [null, null, 3]
+      net_mask_shape: [null, null, 1]
+      train_background_reg: 0.0001
+      train_batch_size: 8
+      train_checkpoint: weights_best.h5
+      train_checkpoint_epoch: weights_now.h5
+      train_checkpoint_last: weights_last.h5
+      train_class_weights: [1, 1]
+      train_completion_crop: 32
+      train_dist_loss: mae
+      train_epochs: 200
+      train_foreground_only: 0.9
+      train_learning_rate: 0.0003
+      train_loss_weights: [1, 0.1]
+      train_n_val_patches: 3
+      train_patch_size: [512, 512]
+      train_reduce_lr: {factor: 0.5, min_delta: 0, patience: 50}
+      train_sample_cache: true
+      train_shape_completion: false
+      train_steps_per_epoch: 200
+      train_tensorboard: true
+      unet_activation: relu
+      unet_batch_norm: false
+      unet_dropout: 0
+      unet_kernel_size: [3, 3]
+      unet_last_activation: relu
+      unet_n_conv_per_depth: 2
+      unet_n_depth: 3
+      unet_n_filter_base: 32
+      unet_pool: [2, 2]
+      unet_prefix: ''
+      use_gpu: false
+    postprocessing_macro: stardist_postprocessing.ijm
+    python_version: 0.7.3
+    thresholds: {nms: 0.3, prob: 0.6924782541382084}
+    weights: stardist_weights.h5
+covers: [stardist_logo.jpg, example_histo.jpg]
+description: StarDist - Object Detection with Star-convex Shapes
+documentation: README.md
+format_version: 0.4.10
+id: 10.5281/zenodo.6338614/6338615
+id_emoji: 🐸
+inputs:
+- axes: byxc
+  data_range: [-.inf, .inf]
+  data_type: float32
+  name: input
+  preprocessing:
+  - kwargs: {axes: yxc, max_percentile: 99.8, min_percentile: 1, mode: per_sample}
+    name: scale_range
+  shape:
+    min: [1, 208, 208, 3]
+    step: [0, 16, 16, 0]
+license: BSD-3-Clause
+links: [deepimagej/deepimagej, imjoy/BioImageIO-Packager, ilastik/tnbc, bioimageio/stardist,
+  bioimageio/qupath]
+name: StarDist H&E Nuclei Segmentation
+outputs:
+- axes: byxc
+  data_range: [-.inf, .inf]
+  data_type: float32
+  halo: [0, 96, 96, 0]
+  name: output
+  shape:
+    offset: [0, 0, 0, 16.5]
+    reference_tensor: input
+    scale: [1.0, 1.0, 1.0, 0.0]
+sample_inputs: [sample_input_0.tif]
+sample_outputs: [sample_output_0.tif]
+tags: [whole-slide-imaging, 2d, nuclei, tensorflow, unet, instance-segmentation, object-detection,
+  stardist]
+test_inputs: [test_input.npy]
+test_outputs: [test_output.npy]
+timestamp: '2022-03-08T18:36:28.378522'
+training_data: {id: deepimagej/monuseg_digital_pathology_miccai2018}
+type: model
+uploader: {email: bioimageiobot@gmail.com}
+version: 1
+version_number: 1
+weights:
+  tensorflow_saved_model_bundle: {dependencies: conda:environment.yaml, sha256: 32394dc07a98bb18b0b06082dbeb1a1f5df50a403fcdfe658548284adb77c69b,
+    source: TF_SavedModel.zip, tensorflow_version: 1.15.3}
