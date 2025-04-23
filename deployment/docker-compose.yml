@@ -151,6 +151,8 @@ services:
     volumes:
       - ../data/configuration/openml:/app/configuration/openml
       - ../code/extractors:/app/extractors 
+      - ../code/transform:/app/transform
+      - ../code/load:/app/load
       - ./openml_etl:/app/openml_etl
     dns:
       - 1.1.1.1
