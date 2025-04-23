@@ -92,7 +92,7 @@ class ModelCardToSchemaParser:
         self.matching_engine = QAMatchingEngine(matching_model_name)
         
         # Initialize QA engine for extractive QA
-        self.qa_engine = QAInferenceEngine(model_name=qa_model_name, batch_size=4)
+        self.qa_engine = QAInferenceEngine(model_name=qa_model_name, batch_size=8)
         
         # Load schema properties from file
         self.schema_properties = self.load_schema_properties(schema_file)
@@ -123,7 +123,8 @@ class ModelCardToSchemaParser:
                 properties[row["Property"]] = {
                     "source": row["Source"],
                     "range": row["Range"],
-                    "description": row["Description"]
+                    "description": row["Description"],
+                    "HF_Readme_Section": row["HF_Readme_Section"]
                 }
             
             return properties
@@ -406,9 +407,9 @@ class ModelCardToSchemaParser:
             
             for question_item, match_results in zip(question_items, match_results):
                 question, property = question_item
-                print(f"\n \n Question: {question} \n \n")
+                # print(f"\n \n Question: {question} \n \n")
                 new_context = "\n".join([match[0].title + ": " + match[0].content for match in match_results])
-                print(f"\n\n New context for question:\n\n {new_context} \n \n")
+                # print(f"\n\n New context for question:\n\n {new_context} \n \n")
                 match_scores = [match[1] for match in match_results]
                 
                 qa_inputs_for_df.append(
@@ -421,40 +422,7 @@ class ModelCardToSchemaParser:
                                 }
                             )
                 properties_to_process.add(property)
-            
-            
-            # for question, prop in schema_property_questions.items():
-            #     try:
-            #         print(f"\n \n Questionssssssssss!!!!!!!!!!!!!!!: {question} \n \n")
-            #         # Find the most relevant context snippets for this specific question
-            #         match_results = self.matching_engine.find_relevant_sections(
-            #             questions=[question],
-            #             context=context,
-            #             top_k=4
-            #         )
-                    
-            #         best_matches = match_results[0] if match_results else []
-                    
-            #         if best_matches:
-            #             new_context = "\n".join([match[0].content for match in best_matches])
-            #             print(f"\n \n New context for question: {question} \n \n {new_context} \n \n")
-            #             match_scores = [match[1] for match in best_matches]
-                        
-            #             if new_context:
-            #                 qa_inputs_for_df.append(
-            #                     {
-            #                         "index": index,
-            #                         "prop": prop,
-            #                         "question": question,
-            #                         "context": new_context,
-            #                         "scores": match_scores,
-            #                     }
-            #                 )
-            #                 properties_to_process.add(prop)
-            #     except Exception as e:
-            #         import traceback
-            #         print(f"Error getting context/scores for Q: '{question}' on index {index}:\n{traceback.format_exc()}")
-        
+
         return qa_inputs_for_df, properties_to_process
 
     def _run_batch_qa(self, qa_inputs_for_df: List[Dict]) -> List[QAResult]:
