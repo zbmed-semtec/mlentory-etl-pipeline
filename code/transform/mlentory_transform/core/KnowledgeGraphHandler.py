@@ -109,7 +109,8 @@ class KnowledgeGraphHandler:
             ValueError: If the DataFrame is empty or if the identifier column is not found.
         """
         if df.empty:
-            raise ValueError("Cannot convert empty DataFrame to graph")
+            print("Warning: Cannot convert empty DataFrame to graph")
+            return self.graph, self.metadata_graph
 
         if identifier_column and identifier_column not in df.columns:
             raise ValueError(
@@ -180,8 +181,11 @@ class KnowledgeGraphHandler:
         
         # Determine entity type and extraction method based on platform
         if platform == "open_ml":
-            entity_type = "Run"
             extraction_method = "openml_python_package"
+            if identifier_column == "schema.org:name":
+                entity_type = "Run"
+            elif identifier_column == "schema.org:identifier":
+                entity_type = "Dataset"
         else:
             entity_type = "ML_Model"
             extraction_method = "System"
@@ -270,15 +274,13 @@ class KnowledgeGraphHandler:
         objects = []
 
         if platform == "open_ml":
-            entity_type = "Run"
             extraction_method = "openml_python_package"
         else:
-            entity_type = "ML_Model"
             extraction_method = "System"
 
         for value in values:
 
-            # print("VALUE\n", value)
+            print("VALUE\n", value)
             if isinstance(value, dict):
                 value = value.get('data', value)  # Handle OpenML-style dicts
 
@@ -391,6 +393,9 @@ class KnowledgeGraphHandler:
 
             elif "Boolean" in range_value:
                 objects.append(Literal(bool(value), datatype=XSD.boolean))
+
+            elif "Integer" in range_value:
+                objects.append(Literal(int(value), datatype=XSD.integer))
 
             elif "URL" in range_value:
                 objects.append(URIRef(value))

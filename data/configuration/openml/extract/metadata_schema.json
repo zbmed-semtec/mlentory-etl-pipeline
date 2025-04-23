@@ -1,60 +1,35 @@
 {
   "run": {
-    "name": "Run_{run.id}",
-    "url": "run.openml_url",
-    "version": "flow.version",
-    "description": "flow.description",
+    "schema.org:name": "Run_{run.id}",
+    "schema.org:url": "run.openml_url",
+    "schema.org:version": "flow.version",
+    "schema.org:description": "flow.description",
     "fair4ml:intendedUse": "flow.description",
     "fair4ml:mlTask": "task.task_type",
     "fair4ml:modelCategory": "run.flow_name",
     "fair4ml:evaluatedOn": "dataset.name",
-    "author": {
-          "name": "run.uploader_name",
-          "url": "https://www.openml.org/u/{run.uploader}"
-      }, 
-    "fair4ml:sharedBy": {
-          "name": "run.uploader_name",
-          "url": "https://www.openml.org/u/{run.uploader}"
-      }, 
-    "maintainer": {
-          "name": "run.uploader_name",
-          "url": "https://www.openml.org/u/{run.uploader}"
-      }, 
-    "fair4ml:trainedOn": {
-          "name" : "dataset.name", 
-          "url": "dataset.openml_url" 
-      },
-    "fair4ml:testedOn": {
-          "name" : "dataset.name", 
-          "url": "dataset.openml_url"
-      },
-    "fair4ml:validatedOn": {
-          "name" : "dataset.name", 
-          "url": "dataset.openml_url"
-      },
-    "dateCreated": "flow.upload_date",
-    "dateModified": "flow.upload_date",
-    "datePublished": "flow.upload_date",
-    "inLanguage": "flow.language"
+    "schema.org:dateCreated": "flow.upload_date",
+    "schema.org:dateModified": "flow.upload_date",
+    "schema.org:datePublished": "flow.upload_date",
+    "schema.org:inLanguage": "flow.language"
     },
 
   "dataset":{
-      "datasetID": "dataset.id",
-      "datasetName" : "dataset.name", 
-      "datasetPage": "dataset.openml_url",
-      "datasetFormat": "dataset.format",
-      "datasetLicence": "dataset.licence",
-      "datasetCitation": "dataset.citation",
-      "datasetLanguage": "dataset.language",
-      "datasetUploaddate": "dataset.upload_date",
-      "datasetVersion": "dataset.version",
-      "datasetCreator": "dataset.creator",
-      "datasetContributor": "dataset.contributor", 
-      "datasetKeywords": "dataset.tag",
-      "datasetFeatures": "dataset.features",
-      "datasetQualities": "dataset.qualities",
-      "datasetDownloadURL": "dataset.url",
-      "datasetPaperURL": "dataset.paper_url",
-      "datasetDescription": "dataset.description"
+      "schema.org:identifier": "dataset.id",
+      "schema.org:name" : "dataset.name", 
+      "schema.org:WebPage": "dataset.openml_url",
+      "schema.org:fileFormat": "dataset.format",
+      "schema.org:licence": "dataset.licence",
+      "schema.org:citation": "dataset.citation",
+      "schema.org:inLanguage": "dataset.language",
+      "schema.org:uploadDate": "dataset.upload_date",
+      "schema.org:version": "dataset.version",
+      "schema.org:distribution": "dataset.url",
+      "schema.org:sameAs": "dataset.paper_url",
+      "schema.org:description": "dataset.description",
+      "schema.org:status": "NA",
+      "likes": "NA",
+      "downloads": "NA",
+      "issues": "NA"
    }
  }

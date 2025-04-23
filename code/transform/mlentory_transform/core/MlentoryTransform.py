@@ -162,7 +162,16 @@ class MlentoryTransform:
             platform=Platform.OPEN_ML.value,
             save_output_in_json=save_output_in_json,
             output_dir=output_dir,
-            identifier_column="name"
+            identifier_column="schema.org:name"
+        )
+    
+    def transform_OpenML_datasets(self, extracted_df, save_output_in_json=False, output_dir=None):
+        return self.transform_data(
+            extracted_df=extracted_df,
+            platform=Platform.OPEN_ML.value,
+            save_output_in_json=save_output_in_json,
+            output_dir=output_dir,
+            identifier_column="schema.org:identifier"
         )
 
     def transform_HF_models(self, extracted_df, save_output_in_json=False, output_dir=None):
@@ -332,6 +341,9 @@ class MlentoryTransform:
         # Disambiguate metadata if requested
         if disambiguate_extraction_metadata:
             unified_graph = self.disambiguate_statement_metadata(unified_graph)
+
+        if not os.path.exists(output_dir):
+            os.makedirs(output_dir, mode=0o777)
 
         if save_output_in_json:
             current_date = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")

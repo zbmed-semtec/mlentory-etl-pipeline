@@ -57,7 +57,7 @@ def initialize_extractor(config_path: str) -> OpenMLExtractor:
         schema_file = schema_file
     )
 
-def initialize_transform_hf(config_path: str) -> MlentoryTransform:
+def initialize_transformer(config_path: str) -> MlentoryTransform:
     """
     Initializes the transformer with the configuration data.
 
@@ -125,6 +125,7 @@ def main():
 
     # Setup configuration data
     config_path = "./configuration/openml"  # Path to configuration folder
+    kg_files_directory = "./../kg_files" 
 
     # Extract
     extractor = initialize_extractor(config_path)
@@ -139,16 +140,32 @@ def main():
         )
     
     # Transform
-    transformer = initialize_transform_hf(config_path)
+    transformer = initialize_transformer(config_path)
 
-    print(type(transformer))
-
-    models_kg, models_extraction_metadata = transformer.transform_OpenML_runs(
+    runs_kg, runs_extraction_metadata = transformer.transform_OpenML_runs(
         extracted_df=extracted_entities["run"],
         save_output_in_json=True,
         output_dir=args.output_dir+"/runs",
     )
 
+    datasets_kg, datasets_extraction_metadata = transformer.transform_OpenML_datasets(
+        extracted_df=extracted_entities["dataset"],
+        save_output_in_json=True,
+        output_dir=args.output_dir+"/datasets",
+    )
+
+    kg_integrated = transformer.unify_graphs(
+            [runs_kg, datasets_kg],
+            save_output_in_json=True,
+            output_dir=args.output_dir+"/kg",
+        )
+    
+    extraction_metadata_integrated = transformer.unify_graphs(
+            [runs_extraction_metadata,
+             datasets_extraction_metadata],
+            save_output_in_json=True,
+            output_dir=args.output_dir+"/extraction_metadata",
+        )  
 
 if __name__ == "__main__":
     main()

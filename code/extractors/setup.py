@@ -12,6 +12,7 @@ setup(
         "huggingface-hub",
         "tqdm",
         "openml",
+        "selenium",
         "arxiv"
     ],
     python_requires=">=3.8.10",
