@@ -114,7 +114,7 @@ def initialize_transform_hf(config_path: str) -> MlentoryTransform:
         f"{config_path}/transform/FAIR4ML_schema.csv", sep=",", lineterminator="\n"
     )
 
-    transformer = MlentoryTransformWithGraphBuilder(base_namespace="http://mlentory.de/mlentory_graph/", FAIR4ML_schema_data=new_schema)
+    transformer = MlentoryTransformWithGraphBuilder(base_namespace="http://mlentory.zbmed.de/mlentory_graph/", FAIR4ML_schema_data=new_schema)
 
     return transformer
 
@@ -158,8 +158,8 @@ def initialize_load_processor(kg_files_directory: str) -> LoadProcessor:
         RDFHandler=rdfHandler,
         IndexHandler=elasticsearchHandler,
         kg_files_directory=kg_files_directory,
-        graph_identifier="http://mlentory.de/mlentory_graph",
-        deprecated_graph_identifier="http://mlentory.de/deprecated_mlentory_graph",
+        graph_identifier="http://mlentory.zbmed.de/mlentory_graph",
+        deprecated_graph_identifier="http://mlentory.zbmed.de/deprecated_mlentory_graph",
     )
 
     # Initializing the load processor

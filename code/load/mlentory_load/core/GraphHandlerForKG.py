@@ -28,8 +28,8 @@ class GraphHandlerForKG(GraphHandler):
         IndexHandler,
         kg_files_directory: str = "./../kg_files",
         platform: str = "hugging_face",
-        graph_identifier: str = "http://mlentory.de/mlentory_graph",
-        deprecated_graph_identifier: str = "http://mlentory.de/deprecated_mlentory_graph",
+        graph_identifier: str = "http://mlentory.zbmed.de/mlentory_graph",
+        deprecated_graph_identifier: str = "http://mlentory.zbmed.de/deprecated_mlentory_graph",
     ):
 
         super().__init__(

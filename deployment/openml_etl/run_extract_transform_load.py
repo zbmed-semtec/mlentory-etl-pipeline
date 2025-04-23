@@ -73,7 +73,7 @@ def initialize_transform_hf(config_path: str) -> MlentoryTransform:
 
     kg_handler = KnowledgeGraphHandler(
         FAIR4ML_schema_data=new_schema, 
-        base_namespace="http://mlentory.de/mlentory_graph/"
+        base_namespace="http://mlentory.zbmed.de/mlentory_graph/"
     )
 
     transformer = MlentoryTransform(kg_handler, None)
