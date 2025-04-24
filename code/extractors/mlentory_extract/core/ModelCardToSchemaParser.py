@@ -92,7 +92,7 @@ class ModelCardToSchemaParser:
         self.matching_engine = QAMatchingEngine(matching_model_name)
         
         # Initialize QA engine for extractive QA
-        self.qa_engine = QAInferenceEngine(model_name=qa_model_name, batch_size=8)
+        self.qa_engine = QAInferenceEngine(model_name=qa_model_name, batch_size=4)
         
         # Load schema properties from file
         self.schema_properties = self.load_schema_properties(schema_file)
