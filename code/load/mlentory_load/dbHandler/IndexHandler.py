@@ -105,6 +105,8 @@ class IndexHandler:
             index_model_entity.author = self.handle_raw_data(row["schema.org:author"])
         else:
             index_model_entity.author = []
+        
+        
 
         # print(index_model_entity.to_dict())
         return index_model_entity
@@ -116,11 +118,13 @@ class IndexHandler:
 
         index_model_entity.db_identifier = dataset_uri
         index_model_entity.name = ""
-        index_model_entity.sharedBy = []
+        index_model_entity.sharedBy = ""
         index_model_entity.releaseNotes = ""
-        index_model_entity.mlTask = []
         index_model_entity.license = ""
-        index_model_entity.relatedDatasets = []
+        index_model_entity.mlTask = []
+        index_model_entity.keywords = []
+        index_model_entity.relatedDatasets = set()
+        index_model_entity.baseModels = []
 
         for key, value in info.items():
             if "identifier" in key:
@@ -129,16 +133,23 @@ class IndexHandler:
                 )
             elif "releaseNotes" in key:
                 index_model_entity.releaseNotes = value[0]
-            elif "mlTask" in key:
-                index_model_entity.mlTask = value
-            elif "trainedOn" in key:
-                index_model_entity.relatedDatasets.append(value[0])
-            elif "testedOn" in key:
-                index_model_entity.relatedDatasets.append(value[0])
             elif "sharedBy" in key:
                 index_model_entity.sharedBy = value[0]
             elif "license" in key:
                 index_model_entity.license = value[0]
+            elif "mlTask" in key:
+                index_model_entity.mlTask.extend(value)
+            elif "trainedOn" in key:
+                index_model_entity.relatedDatasets.update(value)
+            elif "testedOn" in key:
+                index_model_entity.relatedDatasets.update(value)
+            elif "keywords" in key:
+                index_model_entity.keywords.extend(value)
+            elif "fineTunedFrom" in key:
+                index_model_entity.baseModels.extend(value)
+        
+        index_model_entity.relatedDatasets = list(index_model_entity.relatedDatasets)
+        
         return index_model_entity
 
     def handle_raw_data(self, raw_data: Any):
