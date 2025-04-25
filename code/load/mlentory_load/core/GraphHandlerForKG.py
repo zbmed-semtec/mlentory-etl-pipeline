@@ -4,17 +4,39 @@ import os
 import hashlib
 import pprint
 import pandas as pd
-from rdflib import Graph, URIRef, Literal, BNode
-from rdflib.namespace import RDF, XSD, FOAF
+from rdflib import Graph, URIRef, Literal, BNode, Namespace
+from rdflib.namespace import RDF, XSD, FOAF, RDFS, SKOS
 from rdflib.util import from_n3
 from pandas import Timestamp
 from tqdm import tqdm
 from datetime import datetime
-from typing import Callable, List, Dict, Set, Tuple
+from typing import Callable, List, Dict, Set, Tuple, Optional
 import pprint
 
+# Use the enum for schema definition
+from mlentory_transform.utils.enums import SchemasURL
 from .GraphHandler import GraphHandler
 
+# Define SCHEMA namespace using the enum
+SCHEMA = Namespace(SchemasURL.SCHEMA.value)
+FAIR4ML = Namespace(SchemasURL.FAIR4ML.value)
+
+# Define predicates for name resolution (adjust if needed)
+_NAME_PREDICATES_N3 = [
+    SCHEMA.name.n3(),  # schema.org name
+    # SKOS.prefLabel.n3(),  # SKOS preferred label
+    # RDFS.label.n3(),  # RDFS label
+]
+
+# Define predicates whose objects should be resolved to names
+_PREDICATES_TO_RESOLVE_N3 = {
+    SCHEMA.keywords.n3(): True,  # Assuming schema:keywords links to entities with names
+    FAIR4ML.sharedBy.n3(): True,
+    FAIR4ML.mlTask.n3(): True,
+    FAIR4ML.fineTunedFrom.n3(): True,
+    FAIR4ML.trainedOn.n3(): True,
+    FAIR4ML.testedOn.n3(): True,
+}
 
 class GraphHandlerForKG(GraphHandler):
     """
@@ -162,6 +184,52 @@ class GraphHandlerForKG(GraphHandler):
         self.update_triplet_ranges_for_unchanged_models(self.curr_update_date)
         self.curr_update_date = None
 
+    def _resolve_identifier(self, identifier_n3: str, entities_lookup: Dict[str, Dict[str, List[str]]]) -> Optional[str]:
+        """
+        Attempt to resolve a single identifier (URI N3 string) to its name using
+        the pre-built entities dictionary.
+
+        Args:
+            identifier_n3 (str): The identifier string in N3 format (e.g., '<uri>').
+            entities_lookup (Dict[str, Dict[str, List[str]]]): The pre-built
+                dictionary mapping entity URIs (N3) to their properties.
+
+        Returns:
+            Optional[str]: The resolved name if found, otherwise None.
+        """
+        if not(identifier_n3.startswith("<") and identifier_n3.endswith(">")):
+            identifier_n3 = "<" + str(identifier_n3) + ">"
+        
+        if identifier_n3 in entities_lookup:
+            entity_props = entities_lookup[identifier_n3]
+            for name_predicate_n3 in _NAME_PREDICATES_N3:
+                if name_predicate_n3 in entity_props:
+                    # Return the first non-empty name found
+                    return entity_props[name_predicate_n3][0]
+                
+        # Identifier not found in lookup or no name predicate found/matched is probably a text value
+        return identifier_n3[1:-1]
+
+    def _resolve_identifier_list(self, identifiers_list: List[str], entities_lookup: Dict[str, Dict[str, List[str]]]) -> List[str]:
+        """
+        Resolve a list of potential identifiers (N3 strings) to their names using
+        the pre-built entities dictionary.
+
+        Args:
+            identifiers_list (List[str]): A list of strings, some of which may be URIs (N3).
+            entities_lookup (Dict[str, Dict[str, List[str]]]): The pre-built
+                dictionary mapping entity URIs (N3) to their properties.
+
+        Returns:
+            List[str]: A list where URIs have been replaced by their names if found,
+                       otherwise the original identifier is kept.
+        """
+        resolved_list = []
+        for identifier_n3 in identifiers_list:
+            resolved_name = self._resolve_identifier(identifier_n3, entities_lookup)
+            resolved_list.append(resolved_name if resolved_name else identifier_n3)
+        return resolved_list
+
     def update_indexes_with_kg(self):
         """
         Update search indices with new and modified models.
@@ -191,9 +259,19 @@ class GraphHandlerForKG(GraphHandler):
                 "ML_Model"
                 in entity_dict["<http://www.w3.org/1999/02/22-rdf-syntax-ns#type>"][0]
             ):
+
+                # Resolve identifiers for specific fields before creating the index entity
+                resolved_entity_dict = {}
+                for predicate_uri_str, objects_list in entity_dict.items():
+                    if _PREDICATES_TO_RESOLVE_N3.get(predicate_uri_str, False):
+                        resolved_entity_dict[predicate_uri_str] = self._resolve_identifier_list(objects_list, entities_in_kg)
+                    else:
+                        resolved_entity_dict[predicate_uri_str] = objects_list
+
+
                 index_model_entity = (
                     self.IndexHandler.create_hf_dataset_index_entity_with_dict(
-                        entity_dict, entity_uri
+                        resolved_entity_dict, entity_uri
                     )
                 )
                 
