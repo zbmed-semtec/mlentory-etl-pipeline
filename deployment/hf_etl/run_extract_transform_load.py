@@ -233,7 +233,7 @@ def main():
     kg_files_directory = "./../kg_files"  # Path to kg files directory
     intialize_folder_structure(args.output_dir,clean_folders=False)
     
-    use_dummy_data = False
+    use_dummy_data = True
     kg_integrated = Graph()  
     extraction_metadata_integrated = Graph()
     
@@ -265,13 +265,13 @@ def main():
         )
     else:
         # load kg with rdflib   
-        kg_integrated.parse(args.output_dir + "/kg/2025-02-24_05-23-35_unified_kg.ttl", format="turtle")
-        extraction_metadata_integrated.parse(args.output_dir + "/extraction_metadata/2025-02-24_05-24-15_unified_kg.ttl", format="turtle")
+        kg_integrated.parse(args.output_dir + "/../../copy_examples/files/kg/2025-04-24_10-58-10_unified_kg.ttl", format="turtle")
+        extraction_metadata_integrated.parse(args.output_dir + "/../../copy_examples/files/extraction_metadata/2025-04-24_10-58-11_unified_kg.ttl", format="turtle")
 
     # Initialize loader
     loader = initialize_load_processor(kg_files_directory)
 
-    # loader.clean_DBs()
+    loader.clean_DBs()
 
     # Load data
     loader.update_dbs_with_kg(kg_integrated, extraction_metadata_integrated)
