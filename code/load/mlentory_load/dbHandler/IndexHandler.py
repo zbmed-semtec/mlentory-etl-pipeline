@@ -136,8 +136,9 @@ class IndexHandler:
             elif "sharedBy" in key:
                 index_model_entity.sharedBy = value[0]
             elif "license" in key:
-                index_model_entity.license = value[0]
+                index_model_entity.license = value[0].lower()
             elif "mlTask" in key:
+                value = [v.lower() for v in value]
                 index_model_entity.mlTask.extend(value)
             elif "trainedOn" in key:
                 index_model_entity.relatedDatasets.update(value)
