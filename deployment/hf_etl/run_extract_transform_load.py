@@ -265,8 +265,8 @@ def main():
         )
     else:
         # load kg with rdflib   
-        kg_integrated.parse(args.output_dir + "/../../copy_examples/files/kg/2025-04-24_10-58-10_unified_kg.ttl", format="turtle")
-        extraction_metadata_integrated.parse(args.output_dir + "/../../copy_examples/files/extraction_metadata/2025-04-24_10-58-11_unified_kg.ttl", format="turtle")
+        kg_integrated.parse(args.output_dir + "/../../copy_examples/files/kg/2025-04-29_09-57-26_unified_kg.ttl", format="turtle")
+        extraction_metadata_integrated.parse(args.output_dir + "/../../copy_examples/files/extraction_metadata/2025-04-29_09-57-27_unified_kg.ttl", format="turtle")
 
     # Initialize loader
     loader = initialize_load_processor(kg_files_directory)
