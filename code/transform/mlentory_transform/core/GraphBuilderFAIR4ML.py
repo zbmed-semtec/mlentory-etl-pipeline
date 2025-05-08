@@ -92,50 +92,49 @@ class GraphBuilderFAIR4ML(GraphBuilderBase):
 
             # Go through the properties of the model
             for column in df.columns:
-                if column != identifier_column:
-                    try:
-                        predicate = self.get_predicate_uri(column)
-                    except ValueError as e:
-                        print(f"Warning: Skipping column '{column}' due to error: {e}")
-                        continue # Skip to next column if predicate URI error
+                try:
+                    predicate = self.get_predicate_uri(column)
+                except ValueError as e:
+                    print(f"Warning: Skipping column '{column}' due to error: {e}")
+                    continue # Skip to next column if predicate URI error
 
-                    values = row[column]
+                values = row[column]
 
-                    # Check if the values are a list
-                    if isinstance(values, list):
-                        for value_info in values:
-                            rdf_objects = self.generate_objects_for_FAIR4ML_schema(
-                                column, value_info["data"], platform
+                # Check if the values are a list
+                if isinstance(values, list):
+                    for value_info in values:
+                        rdf_objects = self.generate_objects_for_FAIR4ML_schema(
+                            column, value_info["data"], platform
+                        )
+                        for rdf_object in rdf_objects:
+                            self.add_triple_with_metadata(
+                                entity_uri,
+                                predicate,
+                                rdf_object,
+                                {
+                                    "extraction_method": value_info[
+                                        "extraction_method"
+                                    ],
+                                    "confidence": value_info["confidence"],
+                                },
+                                value_info["extraction_time"],
                             )
-                            for rdf_object in rdf_objects:
-                                self.add_triple_with_metadata(
-                                    entity_uri,
-                                    predicate,
-                                    rdf_object,
-                                    {
-                                        "extraction_method": value_info[
-                                            "extraction_method"
-                                        ],
-                                        "confidence": value_info["confidence"],
-                                    },
-                                    value_info["extraction_time"],
-                                )
-                    else:
-                         # Handle cases where the value might not be a list of dicts (e.g., direct values)
-                         # This part might need adjustment based on expected data structure variations
-                        if values is not None: # Ensure value is not None
-                            rdf_objects = self.generate_objects_for_FAIR4ML_schema(
-                                column, values, platform # Assuming direct value here
+                else:
+                        # Handle cases where the value might not be a list of dicts (e.g., direct values)
+                        # This part might need adjustment based on expected data structure variations
+                    if values is not None: # Ensure value is not None
+                        rdf_objects = self.generate_objects_for_FAIR4ML_schema(
+                            column, values, platform # Assuming direct value here
+                        )
+                        for rdf_object in rdf_objects:
+                            # Assuming default metadata if not provided in this structure
+                            self.add_triple_with_metadata(
+                                entity_uri,
+                                predicate,
+                                rdf_object,
+                                {"extraction_method": "Unknown", "confidence": 0.0}, # Placeholder metadata
+                                None # No extraction time provided
                             )
-                            for rdf_object in rdf_objects:
-                                # Assuming default metadata if not provided in this structure
-                                self.add_triple_with_metadata(
-                                    entity_uri,
-                                    predicate,
-                                    rdf_object,
-                                    {"extraction_method": "Unknown", "confidence": 0.0}, # Placeholder metadata
-                                    None # No extraction time provided
-                                )
 
 
         return self.graph, self.metadata_graph

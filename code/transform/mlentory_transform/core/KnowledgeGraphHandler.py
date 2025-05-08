@@ -205,28 +205,27 @@ class KnowledgeGraphHandler:
 
             # Go through the properties of the model
             for column in df.columns:
-                if column != identifier_column:
-                    predicate = self.get_predicate_uri(column)
-                    values = row[column]
+                predicate = self.get_predicate_uri(column)
+                values = row[column]
 
-                    # Check if the values are a list
-                    for value_info in values:
-                        rdf_objects = self.generate_objects_for_FAIR4ML_schema(
-                            column, value_info["data"], platform
+                # Check if the values are a list
+                for value_info in values:
+                    rdf_objects = self.generate_objects_for_FAIR4ML_schema(
+                        column, value_info["data"], platform
+                    )
+                    for rdf_object in rdf_objects:
+                        self.add_triple_with_metadata(
+                            entity_uri,
+                            predicate,
+                            rdf_object,
+                            {
+                                "extraction_method": value_info[
+                                    "extraction_method"
+                                ],
+                                "confidence": value_info["confidence"],
+                            },
+                            value_info["extraction_time"],
                         )
-                        for rdf_object in rdf_objects:
-                            self.add_triple_with_metadata(
-                                entity_uri,
-                                predicate,
-                                rdf_object,
-                                {
-                                    "extraction_method": value_info[
-                                        "extraction_method"
-                                    ],
-                                    "confidence": value_info["confidence"],
-                                },
-                                value_info["extraction_time"],
-                            )
 
         return self.graph, self.metadata_graph
 

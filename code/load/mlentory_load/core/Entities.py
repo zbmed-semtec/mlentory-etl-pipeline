@@ -28,10 +28,11 @@ class Model(Document):
     )
     releaseNotes = Text()
     license = Keyword()
+    sharedBy = Text()
     mlTask = Keyword(multi=True)
-    sharedBy = Text(multi=True)
+    keywords = Keyword(multi=True)  
     relatedDatasets = Text(multi=True)
-
+    baseModels = Text(multi=True)
     # citation = Text()
     # version = Text()
     # ethicalLegalSocial = Text()

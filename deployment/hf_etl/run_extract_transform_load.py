@@ -114,7 +114,7 @@ def initialize_transform_hf(config_path: str) -> MlentoryTransform:
         f"{config_path}/transform/FAIR4ML_schema.csv", sep=",", lineterminator="\n"
     )
 
-    transformer = MlentoryTransformWithGraphBuilder(base_namespace="http://mlentory.de/mlentory_graph/", FAIR4ML_schema_data=new_schema)
+    transformer = MlentoryTransformWithGraphBuilder(base_namespace="http://mlentory.zbmed.de/mlentory_graph/", FAIR4ML_schema_data=new_schema)
 
     return transformer
 
@@ -158,8 +158,8 @@ def initialize_load_processor(kg_files_directory: str) -> LoadProcessor:
         RDFHandler=rdfHandler,
         IndexHandler=elasticsearchHandler,
         kg_files_directory=kg_files_directory,
-        graph_identifier="http://mlentory.de/mlentory_graph",
-        deprecated_graph_identifier="http://mlentory.de/deprecated_mlentory_graph",
+        graph_identifier="http://mlentory.zbmed.de/mlentory_graph",
+        deprecated_graph_identifier="http://mlentory.zbmed.de/deprecated_mlentory_graph",
     )
 
     # Initializing the load processor
@@ -233,7 +233,7 @@ def main():
     kg_files_directory = "./../kg_files"  # Path to kg files directory
     intialize_folder_structure(args.output_dir,clean_folders=False)
     
-    use_dummy_data = False
+    use_dummy_data = True
     kg_integrated = Graph()  
     extraction_metadata_integrated = Graph()
     
@@ -265,13 +265,13 @@ def main():
         )
     else:
         # load kg with rdflib   
-        kg_integrated.parse(args.output_dir + "/kg/2025-02-24_05-23-35_unified_kg.ttl", format="turtle")
-        extraction_metadata_integrated.parse(args.output_dir + "/extraction_metadata/2025-02-24_05-24-15_unified_kg.ttl", format="turtle")
+        kg_integrated.parse(args.output_dir + "/../../copy_examples/files/kg/2025-04-29_09-57-26_unified_kg.ttl", format="turtle")
+        extraction_metadata_integrated.parse(args.output_dir + "/../../copy_examples/files/extraction_metadata/2025-04-29_09-57-27_unified_kg.ttl", format="turtle")
 
     # Initialize loader
     loader = initialize_load_processor(kg_files_directory)
 
-    # loader.clean_DBs()
+    loader.clean_DBs()
 
     # Load data
     loader.update_dbs_with_kg(kg_integrated, extraction_metadata_integrated)
