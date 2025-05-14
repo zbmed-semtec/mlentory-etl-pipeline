@@ -182,7 +182,7 @@ class HFDatasetManager:
         
         def process_model(model_id: str):
             
-            models_to_process = self.api.list_models(model_name=model_id,limit=3,full=True)
+            models_to_process = self.api.list_models(model_name=model_id,limit=1,full=True)
             results = []
             
             for model in models_to_process:
@@ -225,6 +225,7 @@ class HFDatasetManager:
                     model_data.extend(results)
                 
         model_data = pd.DataFrame(model_data)
+        print(f"Model data!!!!!!!!: {model_data}")
         model_data = model_data.drop_duplicates(subset=["modelId"], keep="last")
         return model_data
                 
