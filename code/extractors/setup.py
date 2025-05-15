@@ -15,7 +15,8 @@ setup(
         "tqdm>=4.62.1",
         "openml>=0.14.0",
         "arxiv>=2.1.0",
-        "scikit-learn>=1.6.0"
+        "scikit-learn>=1.6.0",
+        "vllm>=0.1.0"
     ],
     python_requires=">=3.8.10",
     author="Nelson Q, Suhasini V",
