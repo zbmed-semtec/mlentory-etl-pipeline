@@ -203,6 +203,10 @@ class HFExtractor:
             model_ids=model_ids, threads=threads
         )
         
+        if result_df.empty:
+            print("No models found to download")
+            return pd.DataFrame()
+        
         result_df = self.parser.process_dataframe(result_df)
         
         if save_result_in_json:
@@ -474,3 +478,123 @@ class HFExtractor:
             print()
         print("\nDataFrame Info:")
         print(HF_df.info())
+
+    def download_specific_models_with_related_entities(
+        self,
+        model_ids: List[str],
+        related_entities_to_download: List[str] = ["datasets", "articles", "base_models", "keywords"],
+        output_dir: str = "./outputs",
+        save_result_in_json: bool = False,
+        threads: int = 4,
+    ) -> Dict[str, pd.DataFrame]:
+        """
+        Downloads specific models and their specified related entities.
+
+        Args:
+            model_ids (List[str]): A list of model IDs to download.
+            related_entities_to_download (List[str], optional): List of related entity types to download.
+                Defaults to ["datasets", "articles", "base_models", "keywords"].
+            output_dir (str, optional): Directory to save output files. Defaults to "./outputs".
+            save_result_in_json (bool, optional): Whether to save intermediate results as JSON.
+                Defaults to False.
+            threads (int, optional): Number of threads for parallel downloads. Defaults to 4.
+
+        Returns:
+            Dict[str, pd.DataFrame]: A dictionary where keys are entity types (e.g., "models", "datasets")
+                                     and values are DataFrames of the extracted entities.
+                                     Returns an empty dict if no models are processed.
+        """
+        extracted_entities = {}
+        final_models_df = pd.DataFrame()
+
+        if not model_ids:
+            print("Warning: No model IDs provided to download_specific_models_with_related_entities.")
+            return extracted_entities
+
+        # 1. Download the specific models listed
+        initial_models_df = self.download_specific_models(
+            model_ids=model_ids,
+            output_dir=os.path.join(output_dir, "models"), # Save models in their subdir
+            save_result_in_json=save_result_in_json,
+            threads=threads,
+        )
+        
+        
+
+        if initial_models_df.empty:
+            print("Warning: No valid models could be downloaded from the provided list.")
+            extracted_entities["models"] = pd.DataFrame() # Ensure models key exists
+            return extracted_entities
+        
+        # Even if initial_models_df is empty, proceed to ensure the "models" key is in extracted_entities
+        # This makes the downstream processing in the ETL script more robust.
+        processed_models_ids = set()
+        if not initial_models_df.empty:
+            # Ensure 'schema.org:identifier' exists and is not empty before trying to access its elements
+            if "schema.org:identifier" in initial_models_df.columns and not initial_models_df["schema.org:identifier"].empty:
+                try:
+                    processed_models_ids = set(initial_models_df["schema.org:identifier"].dropna().apply(lambda x: x[0]['data'] if isinstance(x, list) and len(x) > 0 and isinstance(x[0], dict) and 'data' in x[0] else None))
+                    processed_models_ids.discard(None) # Remove None if any conversion failed
+                except Exception as e:
+                    print(f"Error processing schema.org:identifier: {e}. Processed_models_ids will be empty.")
+            else:
+                print("Warning: 'schema.org:identifier' column is missing or empty in initial_models_df.")
+        
+        final_models_df = initial_models_df.copy() if not initial_models_df.empty else pd.DataFrame()
+        
+        # 2. Find related entities for these initial models
+        # Only proceed if there are models to get related entities from
+        related_entities_names = {} # type: Dict[str, Set[str]]
+        if not initial_models_df.empty:
+            related_entities_names = self.get_related_entities_names(initial_models_df)
+        else:
+            # Initialize with empty sets if no initial models
+            for entity_type in related_entities_to_download:
+                related_entities_names[entity_type] = set()
+
+        # Filter base models to only those not already downloaded
+        # And ensure 'base_models' key exists even if not in related_entities_to_download initially for safety
+        current_base_models_set = related_entities_names.get("base_models", set())
+        base_models_to_download_set = {
+            bm for bm in current_base_models_set
+            if bm not in processed_models_ids
+        }
+        related_entities_names["base_models"] = base_models_to_download_set # Update the set
+
+        # 3. Prepare to download the related entities
+        entities_to_actually_download = {}
+        for entity_type in related_entities_to_download:
+            if entity_type in related_entities_names and related_entities_names[entity_type]:
+                entities_to_actually_download[entity_type] = related_entities_names[entity_type]
+        
+        downloaded_related_entities = {} # type: Dict[str, pd.DataFrame]
+        if entities_to_actually_download: # Only call if there's something to download
+            downloaded_related_entities = self.download_related_entities(
+                related_entities_to_download=list(entities_to_actually_download.keys()),
+                related_entities=entities_to_actually_download, # Pass the filtered dict
+                output_dir=output_dir, # Use base output_dir for subfolders like 'datasets', 'articles'
+                save_result_in_json=save_result_in_json,
+                threads=threads,
+            )
+
+        # 4. Combine results
+        # Ensure final_models_df is a DataFrame, even if empty
+        if not isinstance(final_models_df, pd.DataFrame):
+            final_models_df = pd.DataFrame()
+            
+        if "models" in downloaded_related_entities and not downloaded_related_entities["models"].empty:
+            final_models_df = pd.concat([final_models_df, downloaded_related_entities["models"]], ignore_index=True)\
+                                    .drop_duplicates(subset=["schema.org:identifier"], keep="last")
+
+        # Prepare the final extracted_entities dict
+        extracted_entities = downloaded_related_entities
+        extracted_entities["models"] = final_models_df
+        
+        # Ensure all requested entity types are keys in extracted_entities, even if empty
+        for entity_type in related_entities_to_download:
+            if entity_type not in extracted_entities:
+                extracted_entities[entity_type] = pd.DataFrame()
+        if "models" not in extracted_entities: # Crucial for downstream
+             extracted_entities["models"] = pd.DataFrame()
+
+        return extracted_entities
