@@ -6,12 +6,22 @@ from datetime import datetime
 from tqdm import tqdm
 import math
 import os
+import logging
+import pprint
 
 from huggingface_hub import HfApi
 from huggingface_hub.hf_api import RepoFile, RepoFolder
 
 from mlentory_extract.core.QAMatchingEngine import QAMatchingEngine
 from mlentory_extract.core.QAInferenceEngine import QAInferenceEngine, QAResult
+from .MarkdownParser import Section # Assuming Section is importable
+
+# Define the structure for prepared grouped inputs
+# {index: [{"questions": List[str], "properties": List[str], "context": str, "avg_score": float}, ...]}
+PreparedGroupedInput = Dict[int, List[Dict[str, Any]]]
+# Define the structure for results from grouped QA run
+# {index: {property_name: QAResult}}
+GroupedQAResults = Dict[int, Dict[str, QAResult]]
 
 
 class ModelCardToSchemaParser:
@@ -192,7 +202,9 @@ class ModelCardToSchemaParser:
         Returns:
             pd.DataFrame: DataFrame with parsed fields mapped to FAIR4ML schema
         """
+        print(f"HF_df.columns!!!!!!!!!!!!!!!!!\n\n\n: {HF_df.columns}")
         
+        # raise ValueError("Throwing error for testing")
         # Map known fields directly
         # HF_df.loc[:, "schema.org:author"] = HF_df.loc[:, "author"]
         HF_df.loc[:, "fair4ml:sharedBy"] = HF_df.loc[:, "author"]
@@ -399,18 +411,18 @@ class ModelCardToSchemaParser:
             question_items = schema_property_questions.items()
             questions = [question for question, _ in question_items]
             
-            match_results = self.matching_engine.find_relevant_sections(
+            match_results_for_all_questions = self.matching_engine.find_relevant_sections(
                 questions=questions,
                 context=context,
-                top_k=2
+                top_k=4
             )
             
-            for question_item, match_results in zip(question_items, match_results):
+            for question_item, individual_question_match_results in zip(question_items, match_results_for_all_questions):
                 question, property = question_item
                 # print(f"\n \n Question: {question} \n \n")
-                new_context = "\n".join([match[0].title + ": " + match[0].content for match in match_results])
+                new_context = "\n".join([match.section.title + ": " + match.section.content for match in individual_question_match_results])
                 # print(f"\n\n New context for question:\n\n {new_context} \n \n")
-                match_scores = [match[1] for match in match_results]
+                match_scores = [match.score for match in individual_question_match_results]
                 
                 qa_inputs_for_df.append(
                                 {
@@ -555,15 +567,280 @@ class ModelCardToSchemaParser:
                         
                 readable_prop = temp_readable_prop
                 
-                question = f"Find the {readable_prop} in the following text, here is a description of the property: ({description}) here are some related sections: {posible_sections}"
+                question = f"In the following text find {description}, here are some related sections that may contain information: {posible_sections}"
                 
                 context_queries[question] = property_name
                 
         return context_queries
     
+    def _prepare_inputs_with_question_grouping(
+        self, HF_df: pd.DataFrame, schema_property_questions: Dict[str, str], max_questions_per_group: int = 5
+    ) -> Tuple[PreparedGroupedInput, Set[str]]:
+        """
+        Prepares inputs for grouped QA by clustering questions semantically within each context.
+
+        Args:
+            HF_df (pd.DataFrame): DataFrame containing model information.
+            schema_property_questions (Dict[str, str]): Mapping from question string to property name.
+
+        Returns:
+            Tuple[PreparedGroupedInput, Set[str]]:
+                - Dictionary mapping row index to a list of prepared groups.
+                - Set of properties being processed.
+        """
+        prepared_data: PreparedGroupedInput = {}
+        properties_to_process = set()
+        input_questions = list(schema_property_questions.keys())
+
+        print("Preparing QA inputs with question grouping...")
+        for index, row in tqdm(
+            HF_df.iterrows(), total=len(HF_df), desc="Grouping questions and finding sections"
+        ):
+            context = row.get("card", "")
+            if not context or not isinstance(context, str):
+                continue
+
+            # Find grouped relevant sections (questions grouped by similarity)
+            # Returns List[Tuple[List[int], List[Tuple[Section, float]]]]
+            try:
+                grouped_sections_info = self.matching_engine.find_grouped_relevant_sections(
+                    input_questions, context, top_k=5, max_questions_per_group=max_questions_per_group
+                )
+            except Exception as e:
+                print(f"Error finding grouped sections for index {index}: {e}")
+                continue
+
+            prepared_groups_for_index = []
+            processed_q_indices_in_row = set()
+
+            for group_match in grouped_sections_info:  # Iterate through GroupedRelevantSectionMatch objects
+                q_indices = group_match.question_indices
+                relevant_sections_for_group = group_match.relevant_sections # This is List[RelevantSectionMatch]
+                
+                if not relevant_sections_for_group:  # Skip if no relevant sections found for this group
+                    continue
+
+                group_questions = [input_questions[i] for i in q_indices]
+                group_properties = [schema_property_questions[q] for q in group_questions]
+
+                # Combine relevant sections into a single context for the group
+                group_context = "\n".join(
+                    [f"{match.section.title}: {match.section.content}" for match in relevant_sections_for_group]
+                )
+                # Calculate average score for the context found for this group
+                group_scores = [match.score for match in relevant_sections_for_group]
+                avg_group_score = sum(group_scores) / len(group_scores) if group_scores else 0.0
+
+                prepared_groups_for_index.append({
+                    "questions": group_questions,
+                    "properties": group_properties,
+                    "context": group_context,
+                    "avg_score": avg_group_score,
+                })
+
+                # Track processed properties and indices
+                properties_to_process.update(group_properties)
+                processed_q_indices_in_row.update(q_indices)
+                
+            # Handle questions that might not have been grouped (e.g., if find_grouped_relevant_sections filtered some out)
+            # This ensures we attempt to process all requested properties
+            # Note: This part might need refinement depending on how find_grouped_relevant_sections behaves
+            unprocessed_q_indices = [i for i, q in enumerate(input_questions) if i not in processed_q_indices_in_row]
+            if unprocessed_q_indices:
+                 # Option 1: Process them individually (less efficient) - requires find_relevant_sections
+                 # Option 2: Log a warning or attempt to find context individually here
+                 print(f"Warning: {len(unprocessed_q_indices)} questions were not processed in groups for index {index}.")
+                 # For simplicity, we'll skip them for now, assuming find_grouped_relevant_sections covers all necessary questions.
+
+
+            if prepared_groups_for_index:
+                prepared_data[index] = prepared_groups_for_index
+
+        return prepared_data, properties_to_process
+
+    def _run_grouped_batch_qa(
+        self, prepared_data: PreparedGroupedInput
+    ) -> GroupedQAResults:
+        """
+        Runs batch inference for questions grouped by similarity and context.
+
+        Args:
+            prepared_data (PreparedGroupedInput): Data prepared by _prepare_inputs_with_question_grouping.
+
+        Returns:
+            GroupedQAResults: Dictionary mapping row index to property->QAResult mapping.
+        """
+        results_data: GroupedQAResults = {}
+        print(f"Running grouped batch QA inference with {self.qa_engine.model_name}...")
+        # print(prepared_data)
+        print(f"Number of groups: {len(prepared_data)}")
+        pprint.pprint(prepared_data)
+
+        for index, groups_for_index in tqdm(prepared_data.items(), desc="Processing QA for grouped questions"):
+            results_data[index] = {}
+            group_counter = 0 # For more informative extraction method string
+            
+            print(f"Processing groups for index {index}")
+            print(groups_for_index)
+            print("KEYS: ", groups_for_index.keys())
+
+            for group_info in groups_for_index:
+                print(f"Processing group {group_counter} of {len(groups_for_index)} for index {index}")
+                group_questions = group_info["questions"]
+                group_properties = group_info["properties"]
+                group_context = group_info["context"]
+                avg_group_score = group_info["avg_score"] # Confidence derived from section matching
+                group_counter += 1
+                
+                print(group_questions)
+                
+                try:
+                    # Get results for this batch of questions using the shared group context
+                    batch_results: List[QAResult] = self.qa_engine.batch_questions_single_context(
+                        group_questions, group_context
+                    )
+
+                    # Map results back to their original properties
+                    for j, result in enumerate(batch_results):
+                        if j < len(group_properties): # Safety check
+                            original_property = group_properties[j]
+
+                            # Debug: Log if we are about to overwrite an existing result
+                            if original_property in results_data[index]:
+                                print(f"DEBUG: Overwriting result for index={index}, property='{original_property}'")
+                            
+                            # Assign confidence based on the relevance of the context found for the group
+                            result.confidence = avg_group_score
+                            # Update extraction method to be more descriptive
+                            result.extraction_method = (
+                                f"GroupedSimilarityQA "
+                                f"Q: {j+1}/{len(group_questions)}, "
+                                f"CtxMatch: {self.matching_engine.model_name}, "
+                                f"QA: {self.qa_engine.model_name})"
+                            )
+                            results_data[index][original_property] = result
+                        else:
+                            print(f"Warning: More results in batch ({len(batch_results)}) than properties ({len(group_properties)}) for index {index}, group {group_counter}. Result index {j} is out of bounds.")
+
+                except Exception as e:
+                    print(f"Error during QA inference for index {index}, group {group_counter}: {e}")
+                    # Log error results for this batch
+                    error_time = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+                    for prop in group_properties:
+                        results_data[index][prop] = QAResult(
+                            answer="Error during generation",
+                            extraction_time=error_time,
+                            confidence=0.0,
+                            extraction_method="GroupedSimilarityQA Error"
+                        )
+
+        return results_data
     
+    def _populate_dataframe_with_grouped_qa_results(
+        self,
+        HF_df: pd.DataFrame,
+        results_data: GroupedQAResults
+    ) -> pd.DataFrame:
+        """
+        Populates the DataFrame with grouped QA results stored by property.
+
+        Args:
+            HF_df (pd.DataFrame): DataFrame to populate.
+            results_data (GroupedQAResults): Results keyed by index and property.
+
+        Returns:
+            pd.DataFrame: Populated DataFrame.
+        """
+        print("Populating DataFrame with grouped QA results...")
+
+        for index, property_results in tqdm(results_data.items(), desc="Updating DataFrame with grouped results"):
+            if index not in HF_df.index:
+                print(f"Warning: Index {index} from QA results not found in DataFrame.")
+                continue
+
+            for property_name, result in property_results.items():
+                # Ensure the column exists
+                if property_name not in HF_df.columns:
+                    HF_df[property_name] = pd.Series([[] for _ in range(len(HF_df))], index=HF_df.index, dtype=object)
+
+                # Create the standard extraction metadata dictionary
+                extraction_info = self.add_default_extraction_info(
+                    data=result.answer,
+                    extraction_method=result.extraction_method,
+                    confidence=result.confidence if result.confidence is not None else 0.0, # Handle potential None
+                )
+
+                # Update the cell
+                # Ensure we are updating a list within the cell
+                HF_df.loc[index, property_name] = [extraction_info]
+
+        return HF_df
+
+    # Renamed the original method slightly to avoid conflict if kept for comparison
+    def parse_fields_from_text_by_grouping_ORIGINAL_HF(self, HF_df: pd.DataFrame, max_questions_per_group: int = 15) -> pd.DataFrame:
+        """
+        [Original Implementation - Kept for reference]
+        Extract information from model card text using semantic matching and grouped QA.
+        This version grouped questions by ROW INDEX, not question similarity.
+        """
+        # ... (original implementation code) ...
+        pass # Placeholder to avoid syntax error
+
+    def parse_fields_from_text_by_grouping_HF(self, HF_df: pd.DataFrame, max_questions_per_group: int = 10) -> pd.DataFrame:
+        """
+        Extract information from model card text using semantic question grouping and QA.
+
+        This method groups questions by semantic similarity first, finds relevant context
+        for each group, and then uses batched QA for efficiency.
+
+        Args:
+            HF_df (pd.DataFrame): DataFrame containing HuggingFace model information.
+            max_questions_per_group (int, optional): Maximum questions to group per QA prompt.
+                Defaults to 15.
+
+        Returns:
+            pd.DataFrame: DataFrame with extracted information from text fields using grouped QA.
+        """
+        # Generate queries for each schema property based on their descriptions
+        schema_property_questions = self.create_schema_property_questions()
+        print(f"Schema property questions for grouped QA: {len(schema_property_questions)}")
+        if not schema_property_questions:
+            print("No properties identified for text extraction. Skipping.")
+            return HF_df
+
+        # 1. Prepare inputs: Group questions by similarity within each row's context
+        #    and find relevant sections for each question group.
+        prepared_data, properties_to_process = self._prepare_inputs_with_question_grouping(
+            HF_df, schema_property_questions, max_questions_per_group
+        )
+
+        if not prepared_data:
+            print("No valid question groups found for QA. Skipping QA step.")
+            return HF_df
+
+        # 2. Perform batch QA inference on the prepared groups.
+        results_data = self._run_grouped_batch_qa(
+            prepared_data
+        )
+
+        # 3. Populate DataFrame with QA results if inference was successful.
+        if results_data:
+            HF_df = self._populate_dataframe_with_grouped_qa_results(
+                HF_df, results_data
+            )
+            # Add processed properties to the list
+            self.processed_properties.extend(list(properties_to_process))
+            print(f"Processed text fields via similarity-grouped QA: {list(properties_to_process)}")
+        else:
+            print("Grouped QA inference did not produce results. Skipping DataFrame population.")
+
+        # Clear GPU memory if possible
+        if hasattr(torch.cuda, "empty_cache"):
+            torch.cuda.empty_cache()
+
+        return HF_df
     
-    def process_dataframe(self, HF_df: pd.DataFrame, clean_columns: bool = True) -> pd.DataFrame:
+    def process_dataframe(self, HF_df: pd.DataFrame, clean_columns: bool = True, use_grouped_qa: bool = True, max_questions_per_group: int = 15) -> pd.DataFrame:
         """
         Process a HuggingFace DataFrame by applying all parsing methods.
         
@@ -574,6 +851,10 @@ class ModelCardToSchemaParser:
             HF_df (pd.DataFrame): DataFrame containing HuggingFace model information
             clean_columns (bool, optional): Whether to remove original HF columns.
                 Defaults to True.
+            use_grouped_qa (bool, optional): Whether to use grouped QA for text extraction.
+                Defaults to True (uses similarity grouping).
+            max_questions_per_group (int, optional): Maximum questions per group when using
+                grouped QA. Defaults to 15.
                 
         Returns:
             pd.DataFrame: Processed DataFrame with FAIR4ML schema properties
@@ -595,8 +876,14 @@ class ModelCardToSchemaParser:
         HF_df = self.parse_known_fields_HF(HF_df)
         print("Step 2: Parsing fields from HF tags...")
         HF_df = self.parse_fields_from_tags_HF(HF_df)
-        print("Step 3: Parsing fields from model card text using Matching + QA...")
-        HF_df = self.parse_fields_from_text_HF(HF_df) # This now uses QA
+        
+        # Step 3: Choose between regular or grouped QA
+        if use_grouped_qa:
+            print(f"Step 3: Parsing fields from model card text using Similarity Grouped Matching + QA (max {max_questions_per_group} questions per group)...")
+            HF_df = self.parse_fields_from_text_by_grouping_HF(HF_df, max_questions_per_group=max_questions_per_group) # Now uses the new similarity grouping method
+        else:
+            print("Step 3: Parsing fields from model card text using Matching + QA (individual questions)...")
+            HF_df = self.parse_fields_from_text_HF(HF_df) # Original individual QA method
         
         
         # Clean up columns if requested
@@ -664,11 +951,18 @@ class ModelCardToSchemaParser:
                             )
                         ]
                     else:
-                        df.at[index, property] = [
-                            self.add_default_extraction_info(
-                                df.at[index, property], extraction_method, confidence
-                            )
-                        ]
+                        # Check if the data is already in the desired format (list of dicts)
+                        current_data = df.at[index, property]
+                        if isinstance(current_data, list) and all(isinstance(item, dict) and 'data' in item for item in current_data):
+                            # Data is already formatted, leave it as is
+                            pass
+                        else:
+                            # Wrap the existing data
+                            df.at[index, property] = [
+                                self.add_default_extraction_info(
+                                        current_data, extraction_method, confidence
+                                )
+                            ]
         
         return df
     
@@ -687,14 +981,20 @@ class ModelCardToSchemaParser:
             print(f"\n{col}:")
             for row in HF_df[col].head(3):  # Show only first 3 rows for each column
                 # Limit the text to 100 characters
-                if isinstance(row, list):
-                    row_data = row[0]["data"]
+                if isinstance(row, list) and row: # Check if list is not empty
+                    first_item = row[0]
+                    if isinstance(first_item, dict) and 'data' in first_item:
+                        row_data = first_item["data"]
                     if isinstance(row_data, str):
                         print(row_data[:100])
+                        if isinstance(row_data, list):
+                             print(f"[List: {len(row_data)} items]") # Avoid printing long lists
+                        else:
+                            print(row_data)
                     else:
-                        print(row_data)
+                        print(f"[List item not dict or missing 'data']: {str(first_item)[:100]}")
                 else:
-                    print(row)
+                     print(str(row)[:100]) # Print other types, truncated
 
             print()
         print("\nDataFrame Info:")
