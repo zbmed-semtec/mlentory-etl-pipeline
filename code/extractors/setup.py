@@ -7,14 +7,15 @@ setup(
     install_requires=[
         "pytest>=7.0.0",
         "pandas>=2.0.0,<3.0.0",
-        "transformers~=4.41.0",
+        "transformers>=4.48.0",
         "datasets~=2.19.0",
         "torch>=2.1.0,<2.4.0",
         "flash_attn>=2.5.0",
         "huggingface-hub>=0.22.0",
         "tqdm>=4.62.1",
         "openml>=0.14.0",
-        "arxiv>=2.1.0"
+        "arxiv>=2.1.0",
+        "scikit-learn>=1.6.0"
     ],
     python_requires=">=3.8.10",
     author="Nelson Q, Suhasini V",
