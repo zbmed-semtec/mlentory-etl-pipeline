@@ -8,10 +8,38 @@
     "fair4ml:mlTask": "task.task_type",
     "fair4ml:modelCategory": "run.flow_name",
     "fair4ml:evaluatedOn": "dataset.name",
+    "fair4ml:hasEvaluation": "run.evaluations",
     "schema.org:dateCreated": "flow.upload_date",
     "schema.org:dateModified": "flow.upload_date",
     "schema.org:datePublished": "flow.upload_date",
-    "schema.org:inLanguage": "flow.language"
+    "schema.org:inLanguage": "flow.language",
+    "schema.org:author": {
+          "name": "run.uploader_name",
+          "url": "https://www.openml.org/u/{run.uploader}"
+      },
+    "fair4ml:sharedBy": {
+          "name": "run.uploader_name",
+          "url": "https://www.openml.org/u/{run.uploader}"
+      }, 
+    "schema.org:maintainer": {
+          "name": "run.uploader_name",
+          "url": "https://www.openml.org/u/{run.uploader}"
+      },
+    "fair4ml:trainedOn": {
+          "name" : "dataset.name", 
+          "url": "dataset.openml_url",
+          "estimationProcedure" : "task.estimation_procedure"
+      },
+    "fair4ml:testedOn": {
+          "name" : "dataset.name", 
+          "url": "dataset.openml_url",
+          "estimationProcedure" : "task.estimation_procedure"
+      },
+    "fair4ml:validatedOn": {
+          "name" : "dataset.name", 
+          "url": "dataset.openml_url",
+          "estimationProcedure" : "task.estimation_procedure"
+      }
     },
 
   "dataset":{
