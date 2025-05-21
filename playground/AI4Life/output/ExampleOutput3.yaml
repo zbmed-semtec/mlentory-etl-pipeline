@@ -1,0 +1,135 @@
+attachments:
+- sha256: 767f2c3a50e36365c30b9e46e57fcf82e606d337e8a48d4a2440dc512813d186
+  source: zero_mean_unit_variance.ijm
+authors:
+- affiliation: EMBL Heidelberg
+  github_user: constantinpape
+  name: Constantin Pape
+cite:
+- {text: training library, doi: 10.5281/zenodo.5108853}
+- {text: architecture, doi: 10.1007/978-3-319-24574-4_28}
+- {text: segmentation algorithm, doi: 10.1038/nmeth.4151}
+- {text: data, url: 'https://www.nature.com/articles/s41592-019-0612-7'}
+config:
+  _conceptdoi: 10.5281/zenodo.5764892
+  bioimageio:
+    nickname: affable-shark
+    nickname_icon: 🦈
+    thumbnails: {cover.png: cover.thumbnail.png}
+  deepimagej:
+    allow_tiling: true
+    model_keys: null
+    prediction:
+      postprocess:
+      - {spec: null}
+      preprocess:
+      - {kwargs: zero_mean_unit_variance.ijm, spec: 'ij.IJ::runMacroFile'}
+    pyramidal_model: false
+    test_information:
+      inputs:
+      - name: sample_input_0.tif
+        pixel_size: {x: 1, y: 1, z: 1}
+        size: 256 x 256 x 1 x 1
+      memory_peak: null
+      outputs:
+      - {name: sample_output_0.tif, size: 256 x 256 x 1 x 2, type: image}
+      runtime: null
+covers: [cover.png]
+description: Nucleus segmentation for fluorescence microscopy
+documentation: documentation.md
+format_version: 0.5.3
+id: 10.5281/zenodo.5764892/6647674
+id_emoji: 🦈
+inputs:
+- axes:
+  - type: batch
+  - channel_names: [channel0]
+    description: ''
+    id: channel
+    type: channel
+  - concatenable: false
+    description: ''
+    id: y
+    scale: 1.0
+    size: {min: 64, step: 16}
+    type: space
+  - concatenable: false
+    description: ''
+    id: x
+    scale: 1.0
+    size: {min: 64, step: 16}
+    type: space
+  data:
+    offset: null
+    range: [null, null]
+    scale: 1.0
+    type: float32
+    unit: arbitrary unit
+  description: ''
+  id: input0
+  optional: false
+  preprocessing:
+  - id: zero_mean_unit_variance
+    kwargs:
+      axes: [channel, y, x]
+      eps: 1e-06
+  sample_tensor: {sha256: a24b3c708b6ca6825494eb7c5a4d221335fb3eef5eb9d03f4108907cdaad2bf9,
+    source: sample_input_0.tif}
+  test_tensor: {sha256: c29bd6e16e3f7856217b407ba948222b1c2a0da41922a0f79297e25588614fe2,
+    source: test_input_0.npy}
+license: CC-BY-4.0
+links: [ilastik/stardist_dsb_training_data, ilastik/ilastik, deepimagej/deepimagej,
+  imjoy/BioImageIO-Packager]
+maintainers:
+- {github_user: constantinpape, name: Constantin Pape}
+name: NucleiSegmentationBoundaryModel
+outputs:
+- axes:
+  - type: batch
+  - channel_names: [channel0, channel1]
+    description: ''
+    id: channel
+    type: channel
+  - halo: 16
+    id: y
+    scale: 1.0
+    size: {axis_id: y, offset: 0, tensor_id: input0}
+    type: space
+  - halo: 16
+    id: x
+    scale: 1.0
+    size: {axis_id: x, offset: 0, tensor_id: input0}
+    type: space
+  data:
+    offset: null
+    range: [null, null]
+    scale: 1.0
+    type: float32
+    unit: arbitrary unit
+  description: ''
+  id: output0
+  sample_tensor: {sha256: e8f99aabe8405427f515eba23a49f58ba50302f57d1fdfd07026e1984f836c5e,
+    source: sample_output_0.tif}
+  test_tensor: {sha256: 510181f38930e59e4fd8ecc03d6ea7c980eb6609759655f2d4a41fe36108d5f5,
+    source: test_output_0.npy}
+tags: [fluorescence-light-microscopy, nuclei, instance-segmentation, unet, 2d]
+timestamp: '2022-06-15T22:06:22.658325'
+training_data: {id: ilastik/stradist_dsb_training_data}
+type: model
+uploader:
+  name: Fynn Beuttenmüller
+  email: thefynnbe@gmail.com
+version: 1.2
+weights:
+  pytorch_state_dict:
+    architecture:
+      callable: UNet2d
+      kwargs: {depth: 4, final_activation: Sigmoid, gain: 2, in_channels: 1, initial_features: 64,
+        out_channels: 2, postprocessing: null, return_side_outputs: false}
+      sha256: 7f5b15948e8e2c91f78dcff34fbf30af517073e91ba487f3edb982b948d099b3
+      source: unet.py
+    pytorch_version: '1.13'
+    sha256: 608f52cd7f5119f7a7b8272395b0c169714e8be34536eaf159820f72a1d6a5b7
+    source: weights.pt
+  torchscript: {parent: pytorch_state_dict, pytorch_version: '1.13', sha256: 8410950508655a300793b389c815dc30b1334062fc1dadb1e15e55a93cbb99a0,
+    source: weights-torchscript.pt}

@@ -387,9 +387,9 @@ class MarkdownParser:
             absolute_end = start_idx + relative_end
             
             # Skip tiny paragraphs (unless they're a special block, indicated by significantly larger line count compared to character count)
-            is_likely_special_block = (len(paragraph) > 2 and len(paragraph_content) / len(paragraph) < 20)
-            if len(paragraph_content) < 30 and not is_likely_special_block:
-                continue
+            # is_likely_special_block = (len(paragraph) > 2 and len(paragraph_content) / len(paragraph) < 20)
+            # if len(paragraph_content) < 30 and not is_likely_special_block:
+            #     continue
                 
             # Check if this paragraph is a special block (code block, table, etc.)
             is_special_block = False
@@ -405,10 +405,16 @@ class MarkdownParser:
                     block_type = "Code Block"
                 elif "|" in paragraph_content and not paragraph_content.startswith(">"):
                     block_type = "Table"
+                    # Just return the first 4 lines of the table
+                    paragraph_content = "\n".join(paragraph_content.split("\n")[:4])
+                    paragraph_content = paragraph_content + "\n..."
                 elif paragraph_content.strip().startswith(">"):
                     block_type = "Blockquote"
                 elif any(paragraph_content.lstrip().startswith(marker + " ") for marker in ["-", "*", "+"]) or re.match(r"^\d+\.\s", paragraph_content.lstrip()):
                     block_type = "List"
+                    # Just return the first 4 lines of the list
+                    paragraph_content = "\n".join(paragraph_content.split("\n")[:4])
+                    paragraph_content = paragraph_content + "\n..."
                     
                 section_title = f"{title} - {block_type}" if title else f"{block_type}"
                 sections.append(
@@ -422,16 +428,16 @@ class MarkdownParser:
                 continue
                 
             
-        # Create one section for the paragraph
-        section_title = f"{title} - Par. {p_idx+1}" if title else f"Paragraph {p_idx+1}"
-        sections.append(
-            Section(
-                title=section_title,
-                content=paragraph_content,
-                start_idx=absolute_start,
-                end_idx=absolute_end
+            # Create one section for the paragraph
+            section_title = f"{title} - Par. {p_idx+1}" if title else f"Paragraph {p_idx+1}"
+            sections.append(
+                Section(
+                    title=section_title,
+                    content=paragraph_content,
+                    start_idx=absolute_start,
+                    end_idx=absolute_end
+                )
             )
-        )
                 
         # If no sections were created (e.g., all paragraphs were too small),
         # create one section for the entire content
@@ -447,7 +453,7 @@ class MarkdownParser:
             
         return sections
     
-    def extract_hierarchical_sections(self, text: str, max_section_length: int = 1000) -> List[Section]:
+    def extract_hierarchical_sections(self, text: str, max_section_length: int = 2000) -> List[Section]:
         """
         Extract sections from text by combining header-based sections with fine-grained paragraph sections.
         This approach keeps the hierarchical structure but adds additional granularity within each section.
@@ -512,6 +518,6 @@ class MarkdownParser:
             )
             for fine_section in fine_sections:
                 add_or_update_section(fine_section)
-
+        
         # Return the unique sections stored in the map values
         return list(content_map.values())

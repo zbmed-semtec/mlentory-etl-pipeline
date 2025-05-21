@@ -6,7 +6,7 @@ from pathlib import Path
 # Add the parent directory to the Python path so we can import our modules
 sys.path.append(str(Path(__file__).parent.parent))
 
-from core.MarkdownParser import MarkdownParser, Section
+from mlentory_extract.core.MarkdownParser import MarkdownParser, Section
 
 
 @pytest.fixture
@@ -295,17 +295,24 @@ def test_special_markdown_block_detection(parser, lines, start_idx, expected_is_
 def test_fine_grained_section_extraction(parser):
     """Test extraction of fine-grained sections."""
     md_text = """This is a paragraph with several sentences. It should be kept together.
-It contains multiple lines that form one logical paragraph.
+It contains multiple lines that form one logical paragraph.\n
 
 This is another paragraph. It should be separate from the first.
-It also has multiple sentences to test sentence-based splitting if needed.
+It also has multiple sentences to test sentence-based splitting if needed.\n
 
-A short line.
+A short line.\n
 
-A very long paragraph that should be split into sentences if it exceeds the maximum length. This sentence adds more content to ensure that the paragraph becomes long enough to trigger the sentence splitting logic. We need to have enough text to exceed the threshold. More text is added to make this paragraph even longer and ensure it will be split into multiple chunks based on sentence boundaries."""
+A very long paragraph that should be split into sentences if it exceeds the maximum length. This sentence adds more content to ensure that the paragraph becomes long enough to trigger the sentence splitting logic. We need to have enough text to exceed the threshold. More text is added to make this paragraph even longer and ensure it will be split into multiple chunks based on sentence boundaries.\n"""
 
     # Test with a small max_section_length to force splitting
-    fine_sections = parser.extract_fine_grained_sections(md_text, max_section_length=100)
+    fine_sections = parser.extract_fine_grained_sections(md_text, max_section_length=20)
+    
+    print("FINE Grained Sections: ", len(fine_sections))
+    
+    for section in fine_sections:
+        print(section.title)
+        print(section.content)
+        print("--------------------------------")
     
     # We should have more sections than paragraphs due to splitting
     assert len(fine_sections) > 3, "Long paragraphs should be split into smaller sections"

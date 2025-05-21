@@ -119,13 +119,11 @@ class QAInferenceEngine:
 
         pipeline_outputs = []
         try:
-            for output in tqdm(self.pipeline(prompts, batch_size=self.batch_size), total=len(prompts), desc="Processing Generation Batches"):
-                 pipeline_outputs.append(output)
-
+            for batch_start in tqdm(range(0, len(prompts), self.batch_size), total=len(prompts), desc="Processing QA batches"):
+                batch_prompts = prompts[batch_start:batch_start + self.batch_size]
+                pipeline_outputs.extend(self.pipeline(batch_prompts, batch_size=self.batch_size))
         except Exception as e:
-             print(f"Error during pipeline execution: {e}")
-             # Return partial results or raise error depending on desired behavior
-             # For now, return empty list if error occurs mid-batch
+             print(f"Error during pipeline execution, retuning empty list: {e}")
              return []
 
         print("Parsing generated outputs...")

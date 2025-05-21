@@ -246,7 +246,7 @@ class GraphBuilderFAIR4ML(GraphBuilderBase):
                              self.add_triple_with_metadata(
                                 dataset_uri,
                                 self.namespaces["schema"]["url"],
-                                Literal("https://huggingface.co/"+item_value_str, datatype=XSD.anyURI),
+                                Literal("https://huggingface.co/datasets/"+item_value_str, datatype=XSD.anyURI),
                                 {"extraction_method": "System", "confidence": 1.0})
                     else:
                         self.add_triple_with_metadata(

@@ -56,72 +56,50 @@ class GraphBuilderCroissant(GraphBuilderBase):
             ValueError: If the DataFrame is empty or essential columns are missing.
         """
         if df.empty:
-            raise ValueError("Cannot convert empty DataFrame to graph")
+            print("Warning: Cannot convert empty DataFrame to graph")
+            return self.graph, self.metadata_graph
 
-        if "croissant_metadata" not in df.columns or "extraction_metadata" not in df.columns:
-            raise ValueError("DataFrame must contain 'croissant_metadata' and 'extraction_metadata' columns.")
-        if platform is None:
-             raise ValueError("Platform must be specified for Croissant schema conversion.")
-
-        # identifier_column check remains for potential future use/consistency
-        # if identifier_column and identifier_column not in df.columns:
-        #     raise ValueError(
-        #         f"Identifier column '{identifier_column}' not found in DataFrame"
-        #     )
+        if identifier_column and identifier_column not in df.columns:
+            raise ValueError(
+                f"Identifier column '{identifier_column}' not found in DataFrame"
+            )
 
         for idx, row in df.iterrows():
             item_json_ld = row["croissant_metadata"]
-            if not item_json_ld or not isinstance(item_json_ld, str):
-                print(f"Warning: Skipping row {idx} due to missing or invalid croissant_metadata.")
-                continue
+            temp_graph = Graph()
+            temp_graph.parse(
+                data=item_json_ld, format="json-ld", base=URIRef(self.base_namespace)
+            )
 
-            try:
-                temp_graph = Graph()
-                # Use the base namespace when parsing to resolve relative URIs correctly
-                temp_graph.parse(
-                    data=item_json_ld, format="json-ld", publicID=self.base_namespace.toPython()
-                )
-            except Exception as e:
-                 print(f"Warning: Skipping row {idx} due to JSON-LD parsing error: {e}")
-                 continue
-
-            # --- Node Replacement Logic --- Needed BEFORE deleting unwanted nodes
-            self.replace_blank_nodes_with_type(temp_graph, row, platform)
-            self.replace_default_nodes(temp_graph, row, platform)
-            # self.replace_blank_nodes_with_no_type(temp_graph,row,platform) # Consider if this is still needed
-
-            # --- Deletion Logic --- AFTER replacements
             self.delete_unwanted_nodes(temp_graph)
-            self.delete_remaining_blank_nodes(temp_graph) # Clean up any remaining BNodes
+            self.replace_blank_nodes_with_type(temp_graph, row, platform)
+            self.delete_remaining_blank_nodes(temp_graph)
+            # self.replace_blank_nodes_with_no_type(temp_graph,row,platform)
+            # self.delete_remaining_blank_nodes(temp_graph)
+            # self.replace_default_nodes(temp_graph, row, platform)
+            
 
-            # --- Add Triples with Metadata --- Processing the cleaned graph
-            extraction_metadata = row["extraction_metadata"]
-            if not isinstance(extraction_metadata, dict):
-                 print(f"Warning: Skipping row {idx} due to invalid extraction_metadata format.")
-                 continue
-
-            extraction_time = extraction_metadata.get("extraction_time")
-            metadata_dict = {
-                "extraction_method": extraction_metadata.get("extraction_method", "Unknown"),
-                "confidence": extraction_metadata.get("confidence", 0.0),
-            }
-
+            # Go through the triples and add them
             for triple in temp_graph:
-                # Ensure components are valid RDF terms
-                if isinstance(triple[0], URIRef) and isinstance(triple[1], URIRef) and (isinstance(triple[2], URIRef) or isinstance(triple[2], Literal)):
-                    self.add_triple_with_metadata(
-                        triple[0],
-                        triple[1],
-                        triple[2],
-                        metadata_dict,
-                        extraction_time,
-                    )
-                else:
-                    print(f"Warning: Skipping invalid triple in row {idx}: {triple}")
+                # print("TRIPLE:", triple)
+                # Transform the triple to the correct format
 
+                self.add_triple_with_metadata(
+                    triple[0],
+                    triple[1],
+                    triple[2],
+                    {
+                        "extraction_method": row["extraction_metadata"][
+                            "extraction_method"
+                        ],
+                        "confidence": row["extraction_metadata"]["confidence"],
+                    },
+                    row["extraction_metadata"]["extraction_time"],
+                )
 
         return self.graph, self.metadata_graph
-
+    
+    
     def replace_blank_nodes_with_type(
         self, graph: Graph, row: pd.Series, platform: str
     ) -> None:

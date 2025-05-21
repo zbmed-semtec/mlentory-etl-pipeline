@@ -27,6 +27,10 @@
 - [Category Emoji] [Brief description of change 2]
 - ...
 
+## How to test this setup
+[Provide instructions on how to test the changes in this pull request. If commands or scripts are available, the better.]
+
+
 ## Next Steps
 <!-- Optional: Outline potential future work or follow-up tasks related to this PR -->
 - [ ] [Next step 1]

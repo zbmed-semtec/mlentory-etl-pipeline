@@ -47,7 +47,7 @@ To run the full extraction, transformation and loading process, use the automate
 
 ```bash
 cd deployment
-sudo ./start_mlentory.sh
+sudo ./start_mlentory_etl.sh
 ```
 
 This script will:

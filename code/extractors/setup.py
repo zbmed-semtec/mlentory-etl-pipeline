@@ -5,10 +5,12 @@ setup(
     version="0.1.0",
     packages=find_packages(),
     install_requires=[
+        "pytest",
         "pandas",
         "transformers",
         "datasets",
         "torch",
+        "flash_attn",
         "huggingface-hub",
         "tqdm",
         "openml",

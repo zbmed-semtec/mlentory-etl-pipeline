@@ -79,7 +79,7 @@ class QAMatchingEngine:
                     batch_texts,
                     padding=True,
                     truncation=True,
-                    max_length=2048,  # Reduced max length
+                    max_length=1024,
                     return_tensors="pt",
                 ).to(self.device)
 
@@ -158,7 +158,7 @@ class QAMatchingEngine:
         return torch.mm(query_embedding.unsqueeze(0), section_embeddings.t()).squeeze(0)
 
     def find_relevant_sections(
-        self, questions: List[str], context: str, top_k: int = 2, max_section_length: int = 800
+        self, questions: List[str], context: str, top_k: int = 2, max_section_length: int = 2000
     ) -> List[List[Tuple[Section, float]]]:
         """
         Find the most relevant sections for each question.
@@ -178,6 +178,10 @@ class QAMatchingEngine:
             context, max_section_length
         )
         
+        print(f"\n \n Printing all sections!!!!!!!! \n \n", len(sections))
+        for s in sections:
+            print(f"Section: {s.title} \n {s.content} \n")
+        
         # print(f"\n \n Sections: {sections} \n \n")
         if not sections:
             return [
@@ -186,7 +190,7 @@ class QAMatchingEngine:
             ]
 
         # Get embeddings for sections
-        section_texts = [f"{s.title}" for s in sections]
+        section_texts = [f"{s.content}" for s in sections]
         section_embeddings = self._get_embeddings(section_texts)
 
         # Get embeddings for questions, using cache if possible
