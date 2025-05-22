@@ -52,9 +52,19 @@ def setup_logging() -> logging.Logger:
         filemode="w",
         format="%(asctime)s %(name)s - %(levelname)s - %(message)s",
         datefmt="%d-%b-%y %H:%M:%S",
+        level=logging.INFO,  # Set level for the root logger
     )
     logger = logging.getLogger(__name__)
-    logger.setLevel(logging.INFO)
+    # logger.setLevel(logging.INFO) # No longer needed as root logger level is set
+
+    # Create a StreamHandler to output logs to the console
+    console_handler = logging.StreamHandler(sys.stdout)
+    console_handler.setLevel(logging.INFO)
+    formatter = logging.Formatter("%(asctime)s %(name)s - %(levelname)s - %(message)s", datefmt="%d-%b-%y %H:%M:%S")
+    console_handler.setFormatter(formatter)
+    logging.getLogger("").addHandler(console_handler) # Add handler to the root logger
+
+    logger.info(f"Logging to file: {os.path.abspath(logging_filename)}")
 
     return logger
 
