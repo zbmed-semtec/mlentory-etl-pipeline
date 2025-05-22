@@ -255,11 +255,10 @@ class QAMatchingEngine:
         """
         
         # Extract sections using the markdown parser
-        sections = self.markdown_parser.extract_hierarchical_sections(
-            context, max_section_length
+        sections = self.markdown_parser.extract_chunk_sections(
+            context, max_section_length, max_list_table_lines=5
         )
         
-        # print(f"\n \n Sections: {sections} \n \n")
         if not sections:
             return [
                 GroupedRelevantSectionMatch(
@@ -270,7 +269,7 @@ class QAMatchingEngine:
             ]
 
         # Get embeddings for sections
-        section_texts = [f"{s.content}" for s in sections]
+        section_texts = [f"{s.title} \n {s.content}" for s in sections]
         section_embeddings = self._get_embeddings(section_texts)
 
         # Get embeddings for questions, using cache if possible
