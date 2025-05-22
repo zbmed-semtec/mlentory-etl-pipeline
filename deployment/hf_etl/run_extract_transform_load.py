@@ -262,7 +262,7 @@ def parse_args() -> argparse.Namespace:
         "--model-list-file",
         "-mlf",
         type=str,
-        default="./hf_etl/inputs/models_to_download.txt",
+        # default="./hf_etl/inputs/models_to_download.txt",
         help="Path to a text file containing a list of Hugging Face model IDs (one per line). If provided, --num-models and --from-date are ignored.",
     )
     return parser.parse_args()
@@ -288,7 +288,7 @@ def main():
         extracted_entities = {}
         models_df = pd.DataFrame()
 
-        if args.model_list_file:
+        if args.model_list_file :
             logging.info(f"Processing models from file: {args.model_list_file}")
             try:
                 model_ids_from_file = load_models_from_file(args.model_list_file)
