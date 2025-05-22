@@ -110,7 +110,7 @@ def initialize_transformer(config_path: str, logger: logging.Logger) -> Mlentory
         
         kg_handler = KnowledgeGraphHandler(
             FAIR4ML_schema_data=new_schema, 
-            base_namespace="http://mlentory.de/mlentory_graph/"
+            base_namespace="http://mlentory.zbmed.de/mlentory_graph/"
         )
         logger.info("KnowledgeGraphHandler initialized")
         

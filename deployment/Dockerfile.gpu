@@ -17,6 +17,8 @@ RUN nvcc --version
 # Install PyTorch with CUDA support
 RUN pip3 install torch -f https://download.pytorch.org/whl/cu113
 
+RUN pip3 install packaging
+
 # Create working directory
 WORKDIR /app
 

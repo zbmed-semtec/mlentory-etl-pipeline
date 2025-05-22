@@ -10,6 +10,7 @@ from typing import List
 from tqdm import tqdm
 import os
 import argparse
+import re
 
 from mlentory_extract.hf_extract import HFDatasetManager
 from mlentory_extract.hf_extract import HFExtractor
@@ -40,8 +41,44 @@ def load_tsv_file_to_list(path: str) -> List[str]:
     return [val[0] for val in pd.read_csv(path, sep="\t").values.tolist()]
 
 def load_tsv_file_to_df(path: str) -> pd.DataFrame:
+    """Loads data from a TSV file into a Pandas DataFrame."""
     return pd.read_csv(path, sep="\t")
 
+def load_models_from_file(file_path: str) -> List[str]:
+    """
+    Loads model IDs from a text file, extracting 'owner/repo_name' format.
+
+    Args:
+        file_path (str): The path to the text file containing model IDs or URLs.
+
+    Returns:
+        List[str]: A list of model IDs in 'owner/repo_name' format.
+
+    Raises:
+        FileNotFoundError: If the specified file does not exist.
+        ValueError: If a line in the file does not contain a valid model ID format.
+    """
+    if not os.path.exists(file_path):
+        raise FileNotFoundError(f"Model list file not found: {file_path}")
+
+    model_ids = []
+    
+    with open(file_path, "r") as f:
+        for line in f:
+            line = line.strip()
+            if not line or line.startswith("#"): # Skip empty lines and comments
+                continue
+            
+            id_match = line.split("/")[-1]
+
+            if id_match:
+                model_ids.append(id_match)
+            else:
+                logging.warning(f"Skipping invalid line in model list file: {line}")
+                # Or raise ValueError("Invalid model format found in file: {line}")
+
+    logging.info(f"Loaded {len(model_ids)} model IDs from {file_path}")
+    return model_ids
 
 def setup_logging() -> logging.Logger:
     """
@@ -84,8 +121,8 @@ def initialize_extractor(config_path: str) -> HFExtractor:
     parser = ModelCardToSchemaParser(
         # qa_model="sentence-transformers/all-MiniLM-L6-v2",
         # qa_model="BAAI/bge-m3",
-        qa_model_name="Qwen/Qwen2.5-3B",
-        matching_model_name="Alibaba-NLP/gte-Qwen2-1.5B-instruct",
+        qa_model_name="Qwen/Qwen3-1.7B",
+        matching_model_name="Alibaba-NLP/gte-base-en-v1.5",
         # matching_model_name="intfloat/multilingual-e5-large-instruct",
         schema_file=f"{config_path}/transform/FAIR4ML_schema.tsv",
         tags_language=tags_language,
@@ -114,7 +151,7 @@ def initialize_transform_hf(config_path: str) -> MlentoryTransform:
         f"{config_path}/transform/FAIR4ML_schema.csv", sep=",", lineterminator="\n"
     )
 
-    transformer = MlentoryTransformWithGraphBuilder(base_namespace="http://mlentory.de/mlentory_graph/", FAIR4ML_schema_data=new_schema)
+    transformer = MlentoryTransformWithGraphBuilder(base_namespace="http://mlentory.zbmed.de/mlentory_graph/", FAIR4ML_schema_data=new_schema)
 
     return transformer
 
@@ -158,8 +195,8 @@ def initialize_load_processor(kg_files_directory: str) -> LoadProcessor:
         RDFHandler=rdfHandler,
         IndexHandler=elasticsearchHandler,
         kg_files_directory=kg_files_directory,
-        graph_identifier="http://mlentory.de/mlentory_graph",
-        deprecated_graph_identifier="http://mlentory.de/deprecated_mlentory_graph",
+        graph_identifier="http://mlentory.zbmed.de/mlentory_graph",
+        deprecated_graph_identifier="http://mlentory.zbmed.de/deprecated_mlentory_graph",
     )
 
     # Initializing the load processor
@@ -221,6 +258,13 @@ def parse_args() -> argparse.Namespace:
         default="./hf_etl/outputs/files",
         help="Directory to save intermediate results",
     )
+    parser.add_argument(
+        "--model-list-file",
+        "-mlf",
+        type=str,
+        # default="./hf_etl/inputs/models_to_download.txt",
+        help="Path to a text file containing a list of Hugging Face model IDs (one per line). If provided, --num-models and --from-date are ignored.",
+    )
     return parser.parse_args()
 
 
@@ -241,20 +285,55 @@ def main():
 
         # Initialize extractor
         extractor = initialize_extractor(config_path)
+        extracted_entities = {}
+        models_df = pd.DataFrame()
 
-        extracted_entities = extractor.download_models_with_related_entities(
-            num_models=args.num_models,
-            from_date=datetime(2023, 1, 1),
-            output_dir=args.output_dir+"/models",
-            save_result_in_json=True,
-            save_initial_data=False,
-            update_recent=False,
-            related_entities_to_download=["datasets", "articles", "base_models", "keywords"],
-            threads=4,
-            depth=2,
-        )
-        
-        # Initialize transformer
+        if args.model_list_file :
+            logging.info(f"Processing models from file: {args.model_list_file}")
+            try:
+                model_ids_from_file = load_models_from_file(args.model_list_file)
+            except FileNotFoundError as e:
+                logging.error(e)
+                return # Exit if file not found
+
+            if not model_ids_from_file:
+                logging.warning("Model list file is empty or contains no valid IDs. Skipping extraction.")
+                extracted_entities = {"models": pd.DataFrame()} # Ensure models key exists
+            else:
+                # Call the new method in HFExtractor
+                entities_to_download_config = ["datasets", "articles", "keywords", "base_models"]
+                extracted_entities = extractor.download_specific_models_with_related_entities(
+                    model_ids=model_ids_from_file,
+                    output_dir=args.output_dir, # Pass the base output_dir
+                    save_result_in_json=args.save_extraction,
+                    threads=4, # TODO: Consider making threads an arg
+                    related_entities_to_download=entities_to_download_config
+                )
+                if "models" not in extracted_entities or extracted_entities["models"].empty:
+                    logging.warning("No models were extracted using the model list file.")
+
+        else:
+            # Existing logic: download models and related entities based on num_models/date
+            logging.info(f"Downloading {args.num_models} models, last modified after {args.from_date.strftime('%Y-%m-%d')}")
+            entities_to_download_config = ["datasets", "articles", "keywords", "base_models"]
+            extracted_entities = extractor.download_models_with_related_entities(
+                num_models=args.num_models,
+                from_date=args.from_date, # Use the parsed date
+                output_dir=args.output_dir, # Use the base output dir
+                save_initial_data=False, # Controlled by save_extraction?
+                save_result_in_json=args.save_extraction, # Reuse flag
+                update_recent=True, # Default behavior
+                related_entities_to_download=entities_to_download_config,
+                threads=4, # Reuse threads
+                depth=2, # Default behavior
+            )
+            # 'models' key in extracted_entities already contains the combined models here
+            if "models" not in extracted_entities or extracted_entities["models"].empty:
+                logging.warning("No models were extracted using the default method. Check parameters or HF connection.")
+                # Decide if to exit or continue without models
+                # return
+
+        # Initialize transformer (outside the if/else)
         transformer = initialize_transform_hf(config_path)
 
         kg_integrated, extraction_metadata_integrated = transformer.transform_HF_models_with_related_entities(
@@ -265,8 +344,8 @@ def main():
         )
     else:
         # load kg with rdflib   
-        kg_integrated.parse(args.output_dir + "/kg/2025-02-24_05-23-35_unified_kg.ttl", format="turtle")
-        extraction_metadata_integrated.parse(args.output_dir + "/extraction_metadata/2025-02-24_05-24-15_unified_kg.ttl", format="turtle")
+        kg_integrated.parse(args.output_dir + "/../../copy_examples/files/kg/2025-04-29_09-57-26_unified_kg.ttl", format="turtle")
+        extraction_metadata_integrated.parse(args.output_dir + "/../../copy_examples/files/extraction_metadata/2025-04-29_09-57-27_unified_kg.ttl", format="turtle")
 
     # Initialize loader
     loader = initialize_load_processor(kg_files_directory)

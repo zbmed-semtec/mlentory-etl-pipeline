@@ -385,11 +385,6 @@ class MarkdownParser:
             # Convert to absolute indices in the original document
             absolute_start = start_idx + relative_start
             absolute_end = start_idx + relative_end
-            
-            # Skip tiny paragraphs (unless they're a special block, indicated by significantly larger line count compared to character count)
-            # is_likely_special_block = (len(paragraph) > 2 and len(paragraph_content) / len(paragraph) < 20)
-            # if len(paragraph_content) < 30 and not is_likely_special_block:
-            #     continue
                 
             # Check if this paragraph is a special block (code block, table, etc.)
             is_special_block = False
@@ -453,7 +448,99 @@ class MarkdownParser:
             
         return sections
     
-    def extract_hierarchical_sections(self, text: str, max_section_length: int = 2000) -> List[Section]:
+    def trim_tables_and_lists(self, text: str, max_lines: int = 5) -> str:
+        """
+        Finds tables and lists in the markdown text and trims them to a specified maximum number of lines.
+
+        Args:
+            text (str): The input markdown text.
+            max_lines (int): The maximum number of lines to keep for tables and lists. Defaults to 5.
+
+        Returns:
+            str: The markdown text with tables and lists trimmed.
+        
+        Example:
+            >>> parser = MarkdownParser()
+            >>> markdown_text =
+            ... Some text
+            ... | Header 1 | Header 2 |
+            ... |----------|----------|
+            ... | Cell 1   | Cell 2   |
+            ... | Cell 3   | Cell 4   |
+            ... | Cell 5   | Cell 6   |
+            ... | Cell 7   | Cell 8   |
+            ... - Item 1
+            ... - Item 2
+            ... - Item 3
+            ... - Item 4
+            ... - Item 5
+            ... - Item 6
+            ... 
+            >>> trimmed_text = parser.trim_tables_and_lists(markdown_text, max_lines=3)
+            >>> print(trimmed_text)
+            <BLANKLINE>
+            # Title
+            Some text
+            | Header 1 | Header 2 |
+            |----------|----------|
+            | Cell 1   | Cell 2   |
+            ...
+            - Item 1
+            - Item 2
+            - Item 3
+            ...
+            <BLANKLINE>
+        """
+        lines = text.split("\n")
+        processed_lines = []
+        i = 0
+        while i < len(lines):
+            is_special, block_end = self._is_special_markdown_block(lines, i)
+            
+            # Check if the special block is a table or a list
+            is_table_or_list = False
+            if is_special:
+                block_content = "\n".join(lines[i : block_end + 1])
+                # Check for table characteristics (contains '|')
+                if "|" in block_content and not block_content.strip().startswith(">"):
+                    is_table_or_list = True
+                # Check for list characteristics (starts with list markers)
+                elif any(
+                    block_content.lstrip().startswith(marker + " ") for marker in ["-", "*", "+"]
+                ) or re.match(r"^\d+\.\s", block_content.lstrip()):
+                    is_table_or_list = True
+
+            if is_special and is_table_or_list:
+                # If it's a table or list and longer than max_lines, trim it
+                if (block_end - i + 1) > max_lines:
+                    processed_lines.extend(lines[i : i + max_lines])
+                    processed_lines.append("...")
+                else:
+                    # If not longer, add as is
+                    processed_lines.extend(lines[i : block_end + 1])
+                i = block_end + 1
+            else:
+                # If not a table/list or not special, add line as is
+                processed_lines.append(lines[i])
+                i += 1
+        
+        return "\n".join(processed_lines)
+    
+    def extract_chunk_sections(self, text: str, max_section_length: int = 2000, max_list_table_lines: int = 5) -> List[Section]:
+        """
+        Extract sections from text by splitting it into chunks of the given maximum length.
+        """
+        sections = []
+        # First we want to trim any tables and lists to 5 lines in the original text
+        
+        text = self.trim_tables_and_lists(text, max_lines=max_list_table_lines)
+        
+        for i in range(0, len(text), max_section_length):
+            sections.append(Section(title=f"Chunk {i//max_section_length+1}", content=text[i:i+max_section_length], start_idx=i, end_idx=i+max_section_length))
+        
+        return sections
+    
+    def extract_hierarchical_sections(self, text: str, max_section_length: int = 5000) -> List[Section]:
         """
         Extract sections from text by combining header-based sections with fine-grained paragraph sections.
         This approach keeps the hierarchical structure but adds additional granularity within each section.
