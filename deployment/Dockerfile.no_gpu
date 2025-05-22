@@ -3,6 +3,8 @@ FROM python:3.11 AS no_gpu_base
 # Additional dependencies for HF ETL
 RUN pip3 install torch -f https://download.pytorch.org/whl/cu113
 
+RUN pip3 install packaging
+
 WORKDIR /app
 
 # Copy the package files
