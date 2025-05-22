@@ -277,12 +277,12 @@ class QAInferenceEngine:
             questions=formatted_questions
         )
         
-        print(f"\n\nPrompt for vLLM multi-question: {prompt}\n\n")
+        # print(f"\n\nPrompt for vLLM multi-question: {prompt}\n\n")
         extraction_time = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
         
         # Generate response
         try:
-            print(f"Generating response for multi-question prompt using vLLM:")
+            # print(f"Generating response for multi-question prompt using vLLM:")
             # vLLM generate expects a list of prompts
             outputs = self.llm.generate([prompt], self.sampling_params)
         except Exception as e:
