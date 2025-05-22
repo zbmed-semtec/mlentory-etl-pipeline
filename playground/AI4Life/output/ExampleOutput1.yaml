@@ -1,0 +1,85 @@
+attachments:
+  files: [zero_mean_unit_variance.ijm]
+authors:
+- {affiliation: EMBL Heidelberg, name: Constantin Pape}
+cite:
+- {text: training library, url: 'https://doi.org/10.5281/zenodo.5108853'}
+- {text: architecture, url: 'https://doi.org/10.1007/978-3-319-24574-4_28'}
+- {text: segmentation algorithm, url: 'https://doi.org/10.1038/nmeth.4151'}
+- {text: data, url: 'https://www.nature.com/articles/s41592-021-01249-6'}
+config:
+  _conceptdoi: 10.5281/zenodo.5869899
+  bioimageio:
+    nickname: hiding-tiger
+    nickname_icon: 🐅
+    thumbnails: {cover.png: cover.thumbnail.png}
+  deepimagej:
+    allow_tiling: true
+    model_keys: null
+    prediction:
+      postprocess:
+      - {spec: null}
+      preprocess:
+      - {kwargs: zero_mean_unit_variance.ijm, spec: 'ij.IJ::runMacroFile'}
+    pyramidal_model: false
+    test_information:
+      inputs:
+      - name: sample_input_0.tif
+        pixel_size: {x: 1, y: 1, z: 1}
+        size: 512 x 512 x 1 x 1
+      memory_peak: null
+      outputs:
+      - {name: sample_output_0.tif, size: 512 x 512 x 1 x 2, type: image}
+      runtime: null
+covers: [cover.png]
+description: Cell segmentation for phase-contrast microscopy.
+documentation: documentation.md
+format_version: 0.4.10
+id: 10.5281/zenodo.5869899/6647688
+id_emoji: 🐅
+inputs:
+- axes: bcyx
+  data_type: float32
+  name: input0
+  preprocessing:
+  - kwargs: {axes: cyx, mode: per_sample}
+    name: zero_mean_unit_variance
+  shape:
+    min: [1, 1, 32, 32]
+    step: [0, 0, 16, 16]
+license: CC-BY-4.0
+links: [ilastik/livecell_dataset, ilastik/ilastik, deepimagej/deepimagej, imjoy/BioImageIO-Packager]
+maintainers:
+- {github_user: constantinpape, name: Constantin Pape}
+name: LiveCellSegmentationBoundaryModel
+outputs:
+- axes: bcyx
+  data_range: [-.inf, .inf]
+  data_type: float32
+  halo: [0, 0, 8, 8]
+  name: output0
+  shape:
+    offset: [0, 0, 0, 0]
+    reference_tensor: input0
+    scale: [1.0, 2.0, 1.0, 1.0]
+sample_inputs: [sample_input_0.tif]
+sample_outputs: [sample_output_0.tif]
+tags: [2d, transmission-light-microscopy, label-free, cells, instance-segmentation,
+  unet]
+test_inputs: [test_input_0.npy]
+test_outputs: [test_output_0.npy]
+timestamp: '2022-06-15T22:09:35.368273'
+training_data: {id: ilastik/livecell_dataset}
+type: model
+uploader: {email: bioimageiobot@gmail.com}
+version: 1.1
+weights:
+  pytorch_state_dict:
+    architecture: unet.py:UNet2d
+    architecture_sha256: 7f5b15948e8e2c91f78dcff34fbf30af517073e91ba487f3edb982b948d099b3
+    kwargs: {depth: 4, final_activation: Sigmoid, gain: 2, in_channels: 1, initial_features: 64,
+      out_channels: 2, postprocessing: null, return_side_outputs: false}
+    sha256: 39c61381dd63e7152ecae132ff17b3189b515ae6ac23f8450777003fbbec722c
+    source: weights.pt
+  torchscript: {sha256: 4453051c9604d68390b1a61b24a8d947f5af380e4f90c6065d8430b89150ef5c,
+    source: weights-torchscript.pt}

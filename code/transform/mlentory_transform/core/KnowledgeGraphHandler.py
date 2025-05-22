@@ -15,7 +15,6 @@ import hashlib
 import json
 from ..utils.enums import Platform, SchemasURL, EntityType, ExtractionMethod
 
-
 class KnowledgeGraphHandler:
     """
     A class for converting pandas DataFrames to RDF Knowledge Graphs and handling graph integration.
@@ -181,10 +180,13 @@ class KnowledgeGraphHandler:
         
         # Determine entity type and extraction method based on platform
         if platform == "open_ml":
-            entity_type = "Run"
             extraction_method = "openml_python_package"
+            if identifier_column == "schema.org:name":
+                entity_type = "Run"
+            elif identifier_column == "schema.org:identifier":
+                entity_type = "Dataset"
         else:
-            entity_type = "ML_Model"
+            entity_type = "MLModel"
             extraction_method = "System"
 
         for idx, row in df.iterrows():
@@ -192,7 +194,7 @@ class KnowledgeGraphHandler:
                 row[identifier_column][0]["data"] if identifier_column else str(idx)
             )
             
-            id_hash = self.generate_entity_hash(platform, "MLModel", entity_id)
+            id_hash = self.generate_entity_hash(platform, entity_type, entity_id)
             entity_uri = self.base_namespace[id_hash]
 
             # Add entity type with metadata
@@ -270,15 +272,11 @@ class KnowledgeGraphHandler:
         objects = []
 
         if platform == "open_ml":
-            entity_type = "Run"
             extraction_method = "openml_python_package"
         else:
-            entity_type = "ML_Model"
             extraction_method = "System"
 
         for value in values:
-
-            # print("VALUE\n", value)
             if isinstance(value, dict):
                 value = value.get('data', value)  # Handle OpenML-style dicts
 
@@ -310,6 +308,73 @@ class KnowledgeGraphHandler:
                     # If parsing fails, treat it as a regular string
                     print(f"Warning: Could not parse '{value}' as a date for property '{predicate}'. Treating as string.")
                     objects.append(Literal(value, datatype=XSD.string))
+
+            elif "DatasetObject" in range_value: 
+                id_hash = self.generate_entity_hash(platform, "DatasetObject", value)
+                dataset_object_uri = self.base_namespace[id_hash]
+
+                self.add_triple_with_metadata(
+                    dataset_object_uri, 
+                    RDF.type, 
+                    self.namespaces["fair4ml"]["DatasetObject"], 
+                    {"extraction_method": "openml_python_package", "confidence": 1.0}
+                )
+
+                self.add_triple_with_metadata(
+                    dataset_object_uri, 
+                    self.namespaces["schema"]["name"], 
+                    Literal(value["name"], datatype=XSD.string), 
+                    {"extraction_method": extraction_method, "confidence": 1.0})
+                
+                self.add_triple_with_metadata(
+                    dataset_object_uri, 
+                    self.namespaces["schema"]["url"], 
+                    Literal(value["url"], datatype=XSD.string), 
+                    {"extraction_method": "openml_python_package", "confidence": 1.0}
+                )
+
+                sub_id_hash = self.generate_entity_hash(platform, "estimationProcedure"+str(id_hash), value["estimationProcedure"])
+                est_proc_uri = self.base_namespace[sub_id_hash]
+
+                # Link estimation procedure to dataset
+                self.add_triple_with_metadata(
+                    dataset_object_uri,
+                    self.namespaces["fair4ml"]["estimationProcedure"],
+                    est_proc_uri,
+                    {"extraction_method": "openml_python_package", "confidence": 1.0}
+                )
+
+                self.add_triple_with_metadata(
+                    est_proc_uri,
+                    RDF.type,
+                    self.namespaces["fair4ml"]["estimationProcedure"],
+                    {"extraction_method": "openml_python_package", "confidence": 1.0}
+                )
+
+                self.add_triple_with_metadata(
+                    est_proc_uri,
+                    self.namespaces["schema"]["type"],
+                    Literal(value["estimationProcedure"]["type"], datatype=XSD.string),
+                    {"extraction_method": "openml_python_package", "confidence": 1.0}
+                )
+
+                self.add_triple_with_metadata(
+                    est_proc_uri,
+                    self.namespaces["schema"]["url"],
+                    Literal(value["estimationProcedure"]["data_splits_url"], datatype=XSD.anyURI),
+                    {"extraction_method": "openml_python_package", "confidence": 1.0}
+                )
+
+                params = value['estimationProcedure']['parameters']
+                for param_key, param_val in params.items():
+                    self.add_triple_with_metadata(
+                        est_proc_uri,
+                        self.namespaces["fair4ml"][param_key],
+                        Literal(param_val, datatype=XSD.string),
+                        {"extraction_method": "openml_python_package", "confidence": 1.0}
+                    )
+
+                objects.append(dataset_object_uri)
 
             elif "Dataset" in range_value:
                 #Check if the value can be encoded in a URI
@@ -348,33 +413,32 @@ class KnowledgeGraphHandler:
                 except:
                     objects.append(Literal(value, datatype=XSD.string))
 
-            elif "DatasetObject" in range_value: 
-                id_hash = self.generate_entity_hash(platform, "Dataset", value)
-                dataset_uri = self.base_namespace[id_hash]
+            elif "EvalutionObject" in range_value:
+                # Generate a unique URI for the evaluation result            
+                id_hash = self.generate_entity_hash(platform, "EvaluationObject", value)
+                evaluation_uri = self.base_namespace[id_hash]
 
+                # Add RDF type
                 self.add_triple_with_metadata(
-                    dataset_uri, 
-                    RDF.type, 
-                    self.namespaces["fair4ml"]["Dataset"], 
+                    evaluation_uri,
+                    RDF.type,
+                    self.namespaces["fair4ml"]["EvaluationObject"],
                     {"extraction_method": "openml_python_package", "confidence": 1.0}
                 )
 
-                self.add_triple_with_metadata(
-                    dataset_uri, 
-                    self.namespaces["schema"]["name"], 
-                    Literal(value, datatype=XSD.string), 
-                    {"extraction_method": extraction_method, "confidence": 1.0})
+                # Add all evaluation metrics as triples
+                for metric_key, metric_val in value.items():
+                    self.add_triple_with_metadata(
+                        evaluation_uri,
+                        self.namespaces["fair4ml"][metric_key],
+                        Literal(metric_val, datatype=XSD.double if isinstance(metric_val, float) else XSD.string),
+                        {"extraction_method": "openml_python_package", "confidence": 1.0}
+                    )
 
-                self.add_triple_with_metadata(
-                    dataset_uri, 
-                    self.namespaces["schema"]["url"], 
-                    Literal(value, datatype=XSD.string), 
-                    {"extraction_method": "openml_python_package", "confidence": 1.0}
-                )
-
+                objects.append(evaluation_uri)
+ 
             elif "ScholarlyArticle" in range_value:
                 value = value.split("/")[-1].split("v")[0].strip()
-                print(f"ScholarlyArticle VALUE: {value}")
                 id_hash = self.generate_entity_hash(platform, "ScholarlyArticle", value)
                 scholarly_article_uri = self.base_namespace[id_hash]
                 self.add_triple_with_metadata(
@@ -392,6 +456,9 @@ class KnowledgeGraphHandler:
             elif "Boolean" in range_value:
                 objects.append(Literal(bool(value), datatype=XSD.boolean))
 
+            elif "Integer" in range_value:
+                objects.append(Literal(int(value), datatype=XSD.integer))
+
             elif "URL" in range_value:
                 objects.append(URIRef(value))
 
@@ -407,13 +474,13 @@ class KnowledgeGraphHandler:
                 self.add_triple_with_metadata(
                     person_uri, 
                     self.namespaces["schema"]["name"], 
-                    Literal(value, datatype=XSD.string), 
+                    Literal(value['name'], datatype=XSD.string), 
                     {"extraction_method": extraction_method, "confidence": 1.0})
-                url_value = f"https://huggingface.co/{value}" if platform == "HF" else value
+                url_value = f"https://huggingface.co/{value}" if platform == "HF" else value['url']
                 self.add_triple_with_metadata(
                     person_uri, 
                     self.namespaces["schema"]["url"], 
-                    Literal(url_value, datatype=XSD.string) if platform == "HF" else URIRef(url_value), 
+                    Literal(url_value, datatype=XSD.string), 
                     {"extraction_method": extraction_method, "confidence": 1.0})
                 objects.append(person_uri)
                 
@@ -474,7 +541,7 @@ class KnowledgeGraphHandler:
                     {"extraction_method": extraction_method, "confidence": 1.0})
                 objects.append(ml_model_uri)
         return objects
-
+    
     def dataframe_to_graph_arXiv_schema(
         self,
         df: pd.DataFrame,
@@ -494,7 +561,6 @@ class KnowledgeGraphHandler:
 
         for idx, row in df.iterrows():
             entity_id = row[identifier_column].split("v")[0].strip()
-            print(f"arXiv ENTITY_ID: {entity_id}")
             id_hash = self.generate_entity_hash(platform, "ScholarlyArticle", entity_id)
             scholarly_article_uri = self.base_namespace[id_hash]
 

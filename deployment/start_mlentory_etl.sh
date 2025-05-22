@@ -71,6 +71,14 @@ else
 fi
 # docker compose --profile $PROFILE down
 
+# Build containers
+echo "Building containers..."
+if command -v docker compose &> /dev/null; then
+    docker compose --profile "$PROFILE" build
+else
+    docker-compose --profile "$PROFILE" build
+fi
+
 # Start containers with environment variables explicitly passed
 echo "Starting containers with profile: $PROFILE"
 if command -v docker compose &> /dev/null; then

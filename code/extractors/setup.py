@@ -10,13 +10,14 @@ setup(
         "transformers>=4.48.0",
         "datasets~=2.19.0",
         "torch>=2.1.0,<2.4.0",
-        "flash_attn>=2.5.0",
+        # "flash_attn>=2.5.0",
         "huggingface-hub>=0.22.0",
         "tqdm>=4.62.1",
         "openml>=0.14.0",
         "arxiv>=2.1.0",
         "scikit-learn>=1.6.0",
-        "vllm>=0.1.0"
+        "vllm>=0.1.0",
+        "selenium>=4.11.0"
     ],
     python_requires=">=3.8.10",
     author="Nelson Q, Suhasini V",
