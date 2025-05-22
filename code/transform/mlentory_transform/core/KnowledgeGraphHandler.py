@@ -186,7 +186,7 @@ class KnowledgeGraphHandler:
             elif identifier_column == "schema.org:identifier":
                 entity_type = "Dataset"
         else:
-            entity_type = "ML_Model"
+            entity_type = "MLModel"
             extraction_method = "System"
 
         for idx, row in df.iterrows():
@@ -194,7 +194,7 @@ class KnowledgeGraphHandler:
                 row[identifier_column][0]["data"] if identifier_column else str(idx)
             )
             
-            id_hash = self.generate_entity_hash(platform, "MLModel", entity_id)
+            id_hash = self.generate_entity_hash(platform, entity_type, entity_id)
             entity_uri = self.base_namespace[id_hash]
 
             # Add entity type with metadata
