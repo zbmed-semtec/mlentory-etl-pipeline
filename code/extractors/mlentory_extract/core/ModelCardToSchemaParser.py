@@ -604,7 +604,7 @@ class ModelCardToSchemaParser:
             # Returns List[Tuple[List[int], List[Tuple[Section, float]]]]
             try:
                 grouped_sections_info = self.matching_engine.find_grouped_relevant_sections(
-                    input_questions, context, top_k=5, max_questions_per_group=max_questions_per_group
+                    input_questions, context, top_k=4, max_questions_per_group=max_questions_per_group, max_section_length=500
                 )
             except Exception as e:
                 print(f"Error finding grouped sections for index {index}: {e}")
@@ -680,19 +680,13 @@ class ModelCardToSchemaParser:
             results_data[index] = {}
             group_counter = 0 # For more informative extraction method string
             
-            print(f"Processing groups for index {index}")
-            print(groups_for_index)
-            print("KEYS: ", groups_for_index.keys())
 
             for group_info in groups_for_index:
-                print(f"Processing group {group_counter} of {len(groups_for_index)} for index {index}")
                 group_questions = group_info["questions"]
                 group_properties = group_info["properties"]
                 group_context = group_info["context"]
                 avg_group_score = group_info["avg_score"] # Confidence derived from section matching
                 group_counter += 1
-                
-                print(group_questions)
                 
                 try:
                     # Get results for this batch of questions using the shared group context
@@ -705,16 +699,11 @@ class ModelCardToSchemaParser:
                         if j < len(group_properties): # Safety check
                             original_property = group_properties[j]
 
-                            # Debug: Log if we are about to overwrite an existing result
-                            if original_property in results_data[index]:
-                                print(f"DEBUG: Overwriting result for index={index}, property='{original_property}'")
-                            
                             # Assign confidence based on the relevance of the context found for the group
                             result.confidence = avg_group_score
                             # Update extraction method to be more descriptive
                             result.extraction_method = (
-                                f"GroupedSimilarityQA "
-                                f"Q: {j+1}/{len(group_questions)}, "
+                                f"GroupedSimilarityQA"
                                 f"CtxMatch: {self.matching_engine.model_name}, "
                                 f"QA: {self.qa_engine.model_name})"
                             )
