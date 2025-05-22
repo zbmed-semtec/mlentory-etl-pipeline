@@ -10,7 +10,7 @@ setup(
         "transformers",
         "datasets",
         "torch",
-        "flash_attn",
+        # "flash_attn",
         "huggingface-hub",
         "tqdm",
         "openml",
