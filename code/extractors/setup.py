@@ -10,10 +10,11 @@ setup(
         "transformers",
         "datasets",
         "torch",
-        "flash_attn",
+        # "flash_attn",
         "huggingface-hub",
         "tqdm",
         "openml",
+        "selenium",
         "arxiv"
     ],
     python_requires=">=3.8.10",
