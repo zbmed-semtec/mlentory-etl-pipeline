@@ -1,1 +1,5 @@
 https://huggingface.co/pritamdeka/BioBERT-mnli-snli-scinli-scitail-mednli-stsb
+https://huggingface.co/nvidia/parakeet-tdt-0.6b-v2
+https://huggingface.co/nari-labs/Dia-1.6B
+https://huggingface.co/lodestones/Chroma
+https://huggingface.co/Wan-AI/Wan2.1-VACE-14B
