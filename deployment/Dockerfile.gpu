@@ -14,8 +14,9 @@ RUN apt-get update && apt-get install -y \
 
 RUN nvcc --version
 
-# Install PyTorch with CUDA support
-RUN pip3 install torch -f https://download.pytorch.org/whl/cu113
+# Install PyTorch with CUDA support - using a specific, compatible version
+#RUN pip3 install torch -f https://download.pytorch.org/whl/cu113
+RUN pip3 install torch==2.3.0 -f https://download.pytorch.org/whl/cu118
 
 RUN pip3 install packaging
 

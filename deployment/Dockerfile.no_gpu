@@ -1,7 +1,7 @@
 FROM python:3.11 AS no_gpu_base
 
-# Additional dependencies for HF ETL
-RUN pip3 install torch -f https://download.pytorch.org/whl/cu113
+# Install PyTorch with a specific, compatible version
+RUN pip3 install torch==2.3.0 
 
 RUN pip3 install packaging
 
