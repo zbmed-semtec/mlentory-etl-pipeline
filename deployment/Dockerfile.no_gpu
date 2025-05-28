@@ -1,7 +1,7 @@
 FROM python:3.11 AS no_gpu_base
 
 # Install PyTorch with a specific, compatible version
-RUN pip3 install torch==2.3.0 
+# RUN pip3 install torch==2.3.0
 
 RUN pip3 install packaging
 
