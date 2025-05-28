@@ -195,7 +195,7 @@ class QAMatchingEngine:
         
         print(f"\n \n Printing all sections!!!!!!!! \n \n", len(sections))
         for s in sections:
-            print(f"Section: {s.title} \n {s.content} \n")
+            print(f"Section:{s.content} \n")
         
         # print(f"\n \n Sections: {sections} \n \n")
         if not sections:
