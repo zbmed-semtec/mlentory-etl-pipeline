@@ -14,10 +14,6 @@ RUN apt-get update && apt-get install -y \
 
 RUN nvcc --version
 
-# Install PyTorch with CUDA support - using a specific, compatible version
-#RUN pip3 install torch -f https://download.pytorch.org/whl/cu113
-RUN pip3 install torch==2.3.0 -f https://download.pytorch.org/whl/cu118
-
 RUN pip3 install packaging
 
 # Create working directory
@@ -33,9 +29,12 @@ RUN pip3 install -e /app/transform
 COPY code/load /app/load
 RUN pip3 install -e /app/load
 
+# Add shell functions for common commands
+RUN echo 'run-hf-tests() { pytest -v extractors/mlentory_extract/tests/hf_extract/ "$@"; }' >> ~/.bashrc && \
+    echo 'run-hf-etl() { python3 hf_etl/run_extract_transform_load.py "$@"; }' >> ~/.bashrc
+
 FROM gpu_base AS gpu_openml
 RUN echo "Building OpenML ETL image for GPU..."
 
 FROM gpu_base AS gpu_hf
 RUN echo "Building HF ETL image for GPU..."
-
