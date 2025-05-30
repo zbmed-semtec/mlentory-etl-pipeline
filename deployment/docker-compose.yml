@@ -8,6 +8,7 @@ services:
     profiles:
       # - gpu
       - no_gpu
+      - openml_no_gpu
       - airflow_test
     image: apache/airflow:2.10.1  # Use the latest stable Airflow image
     command: >
@@ -41,6 +42,7 @@ services:
     profiles:
       # - gpu
       - no_gpu
+      - openml_no_gpu
       - airflow_test
     image: apache/airflow:2.10.1
     command: "webserver"
@@ -71,6 +73,7 @@ services:
     profiles:
       # - gpu
       - no_gpu
+      - openml_no_gpu
       - airflow_test
     image: postgres:13-alpine
     container_name: airflow_postgres
@@ -154,6 +157,7 @@ services:
       - ../code/transform:/app/transform
       - ../code/load:/app/load
       - ./openml_etl:/app/openml_etl
+      - /var/run/docker.sock:/var/run/docker.sock 
     dns:
       - 1.1.1.1
     command: ["tail", "-f", "/dev/null"]
@@ -223,6 +227,7 @@ services:
     profiles:
         - gpu
         - no_gpu
+        - openml_no_gpu
     image: postgres:14.1-alpine
     container_name: postgres_db
     environment:
@@ -242,6 +247,7 @@ services:
     profiles:
       - gpu
       - no_gpu
+      - openml_no_gpu
     container_name: pgadmin
     image: dpage/pgadmin4:latest
     environment:
@@ -264,6 +270,7 @@ services:
     profiles:
       - gpu
       - no_gpu
+      - openml_no_gpu
     image: openlink/virtuoso-opensource-7:latest
     hostname: virtuoso
     container_name: virtuoso_db
@@ -282,6 +289,7 @@ services:
     profiles:
       - gpu
       - no_gpu
+      - openml_no_gpu
     image: docker.elastic.co/elasticsearch/elasticsearch:7.10.0
     container_name: elastic_db
     hostname: elastic

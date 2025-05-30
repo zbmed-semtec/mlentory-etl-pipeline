@@ -30,6 +30,9 @@ RUN pip3 install -e /app/extractors
 COPY code/transform /app/transform
 RUN pip3 install -e /app/transform
 
+COPY code/load /app/load
+RUN pip3 install -e /app/load
+
 FROM no_gpu_base AS no_gpu_openml
 RUN echo "Building OpenML ETL image without GPU..."
 
