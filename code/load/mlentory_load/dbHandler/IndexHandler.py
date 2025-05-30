@@ -23,7 +23,7 @@ from elasticsearch_dsl import (
 )
 import inspect
 
-from mlentory_load.core.Entities import HFModel, Model
+from mlentory_load.core.Entities import HFModel, OpenMLRun
 
 
 class IndexHandler:
@@ -69,6 +69,16 @@ class IndexHandler:
         #     self.es.indices.close(index=index_name)
         #     HFModel.init(index=index_name, using=self.es)
         #     self.es.indices.open(index=index_name)
+
+    def initialize_OpenML_index(self, index_name: str = "openml_models"):
+        """
+        Initialize the OpenML run index.
+        Args:
+            index_name (str): Name for the index
+        """
+        self.openml_index = index_name
+        if not self.es.indices.exists(index=index_name):
+            OpenMLRun.init(index=index_name, using=self.es)
 
     def create_hf_model_index_entity(self, row: pd.Series, model_uri: str):
         """

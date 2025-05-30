@@ -82,3 +82,46 @@ class HFModel(Model):
 
     def props(self):
         return [i for i in self.__dict__.keys() if i[:1] != "_"]
+    
+class Run(Document):
+    """
+    This class represents a run with all the FAIR4ML properties.
+    """
+
+    db_identifier = Text()
+
+    name = Text(
+        analyzer=analyzer(
+            "title_analyzer",
+            filter="lowercase",
+            tokenizer=tokenizer("edge_ngram", "edge_ngram", min_gram=3, max_gram=30),
+        ),
+    )
+    license = Keyword()
+    mlTask = Keyword(multi=True)
+    sharedBy = Text(multi=True)
+    modelCategory = Keyword(multi=True)
+    trainedOn = Text(multi=True)
+
+class OpenMLRun(Run):
+    """
+    This class represents a run from OpenML platform with its properties.
+    """
+
+    class Meta:
+        index = "openml_models"
+        doc_type = "_doc"
+
+    def __init__(self, **kwargs):
+        super(OpenMLRun, self).__init__(**kwargs)
+
+    def save(self, **kwargs):
+        return super(OpenMLRun, self).save(**kwargs)
+
+    def upsert(self):
+        dict_ = self.to_dict()
+        dict_["_index"] = self.meta.index
+        return dict_
+
+    def props(self):
+        return [i for i in self.__dict__.keys() if i[:1] != "_"]

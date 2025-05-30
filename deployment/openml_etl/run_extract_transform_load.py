@@ -13,26 +13,28 @@ from rdflib import Graph
 import sys
 import os
 
-# # Base path to the root of your project
-# BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../code'))
-# TEMP_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../data'))
-
-# # Add paths for both extractors and transform modules
-# sys.path.append(os.path.join(BASE_DIR, 'extractors/mlentory_extract/openml_extract'))
-# sys.path.append(os.path.join(BASE_DIR, 'transform/mlentory_transform/core'))
-# sys.path.append(os.path.join(BASE_DIR, 'load/mlentory_load/core'))
-# sys.path.append(os.path.join(BASE_DIR, 'load/mlentory_load/dbHandler'))
-
-# # Now you can import directly by filename
-# from OpenMLExtractor import OpenMLExtractor
-# from MlentoryTransform import MlentoryTransform, KnowledgeGraphHandler
-
-
 from mlentory_extract.openml_extract import OpenMLExtractor
 from mlentory_transform.core.MlentoryTransform import (
     MlentoryTransform,
     KnowledgeGraphHandler,
 )
+from mlentory_load.core import LoadProcessor, GraphHandlerForKG
+from mlentory_load.dbHandler import SQLHandler, RDFHandler, IndexHandler
+
+# Load environment variables with defaults
+POSTGRES_HOST = os.getenv("POSTGRES_HOST", "postgres_db")
+POSTGRES_USER = os.getenv("POSTGRES_USER", "user")
+POSTGRES_PASSWORD = os.getenv("POSTGRES_PASSWORD", "password")
+POSTGRES_DB = os.getenv("POSTGRES_DB", "history_DB")
+
+VIRTUOSO_HOST = os.getenv("VIRTUOSO_HOST", "virtuoso_db")
+VIRTUOSO_USER = os.getenv("VIRTUOSO_USER", "dba")
+VIRTUOSO_PASSWORD = os.getenv("VIRTUOSO_PASSWORD", "my_strong_password")
+VIRTUOSO_SPARQL_ENDPOINT = os.getenv("VIRTUOSO_SPARQL_ENDPOINT", f"http://{VIRTUOSO_HOST}:8890/sparql") # Default uses VIRTUOSO_HOST
+
+ELASTICSEARCH_HOST = os.getenv("ELASTICSEARCH_HOST", "elastic_db")
+ELASTICSEARCH_PORT = int(os.getenv("ELASTICSEARCH_PORT", "9200")) # Env vars are strings
+
 
 def load_tsv_file_to_list(path: str) -> List[str]:
     return [val[0] for val in pd.read_csv(path, sep="\t").values.tolist()]
@@ -74,7 +76,7 @@ def initialize_extractor(config_path: str, logger: logging.Logger) -> OpenMLExtr
 
     Args:
         config_path (str): The path to the configuration data.
-        logger : To log the code flow / Errors
+        logger (logging.Logger): Logger instance for logging events.
 
     Returns:
         OpenMLExtractor: The extractor instance.
@@ -96,7 +98,7 @@ def initialize_transformer(config_path: str, logger: logging.Logger) -> Mlentory
 
     Args:
         config_path (str): The path to the configuration data.
-        logger : To log the code flow / Errors
+        logger (logging.Logger): Logger instance for logging events.
 
     Returns:
         MlentoryTransform: The transformer instance.
@@ -120,6 +122,72 @@ def initialize_transformer(config_path: str, logger: logging.Logger) -> Mlentory
     except Exception as e:
         logger.error(f"Failed to initialize transformer: {str(e)}")
         raise
+
+def initialize_load_processor(kg_files_directory: str, logger: logging.Logger) -> LoadProcessor:
+    """
+    Initializes the load processor with the configuration data.
+
+    Args:
+        kg_files_directory (str): The path to the kg files directory.
+        logger (logging.Logger): Logger instance for logging events.
+
+    Returns:
+        LoadProcessor: The load processor instance.
+    """
+    logger.info("Initializing load processor components")
+
+    try:
+        logger.info("Connecting to PostgreSQL")
+        sqlHandler = SQLHandler(
+            host=POSTGRES_HOST,
+            user=POSTGRES_USER,
+            password=POSTGRES_PASSWORD,
+            database=POSTGRES_DB,
+        )
+        sqlHandler.connect()
+        logger.info("Successfully connected to PostgreSQL")
+
+        logger.info("Connecting to Virtuoso")
+        rdfHandler = RDFHandler(
+            container_name=VIRTUOSO_HOST,
+            kg_files_directory=kg_files_directory,
+            _user=VIRTUOSO_USER,
+            _password=VIRTUOSO_PASSWORD,
+            sparql_endpoint=VIRTUOSO_SPARQL_ENDPOINT,
+        )
+        logger.info("Successfully connected to Virtuoso")
+
+        logger.info("Connecting to Elasticsearch")
+        elasticsearchHandler = IndexHandler(
+            es_host=ELASTICSEARCH_HOST,
+            es_port=ELASTICSEARCH_PORT,
+        )
+        elasticsearchHandler.initialize_OpenML_index(index_name="openml_runs")
+        logger.info("Successfully connected to Elasticsearch and initialized index")
+
+        logger.info("Initializing GraphHandlerForKG")
+        graphHandler = GraphHandlerForKG(
+            SQLHandler=sqlHandler,
+            RDFHandler=rdfHandler,
+            IndexHandler=elasticsearchHandler,
+            kg_files_directory=kg_files_directory,
+            graph_identifier="http://mlentory.zbmed.de/mlentory_graph",
+            deprecated_graph_identifier="http://mlentory.zbmed.de/deprecated_mlentory_graph",
+        )
+
+        logger.info("LoadProcessor initialized successfully")
+        return LoadProcessor(
+            SQLHandler=sqlHandler,
+            RDFHandler=rdfHandler,
+            IndexHandler=elasticsearchHandler,
+            GraphHandler=graphHandler,
+            kg_files_directory=kg_files_directory,
+        )
+
+    except Exception as e:
+        logger.error(f"Failed to initialize load processor: {str(e)}")
+        raise
+
 
 def parse_args() -> argparse.Namespace:
     """
@@ -163,18 +231,12 @@ def main():
 
     args = parse_args()
     logger.info(f"Parsed arguments: {vars(args)}")
-    
-    logger.info("Checking output directory")
-    if not os.path.exists(args.output_dir):
-        os.makedirs(args.output_dir, mode=0o777)
-        logger.info(f"Created output directory: {args.output_dir}")
 
-    # Setup configuration data
-    # config_path = "./configuration/openml"  # Path to configuration folder #REAL ONE
-    # config_path = os.path.join(TEMP_DIR, 'configuration/openml')
     config_path = "configuration/openml"
     kg_files_directory = "./../kg_files" 
-    logger.info(f"Configuration path: {config_path}")
+    
+    os.makedirs(kg_files_directory, exist_ok=True, mode=0o777)
+    os.makedirs(args.output_dir, exist_ok=True, mode=0o777)
 
     # Extract
     logger.info("Starting extraction phase")
@@ -242,6 +304,18 @@ def main():
     end_time = time.time()
     logger.info("Extraction metadata unified successfully")
     logger.info(f"TIME TAKEN FOR UNIFYING METADATA:  {end_time - start_time} seconds")
+
+    # Load
+
+    logger.info("Starting transformation phase")
+    loader = initialize_load_processor(kg_files_directory, logger)
+
+    logger.info("Loading the knowledge graph to database")
+    start_time = time.time()
+    loader.update_dbs_with_kg(kg_integrated, extraction_metadata_integrated)
+    end_time = time.time()
+    logger.info("Loading data to db completed successfully")
+    logger.info(f"TIME TAKEN FOR LOADING METADATA:  {end_time - start_time} seconds")
 
 if __name__ == "__main__":
     main()
