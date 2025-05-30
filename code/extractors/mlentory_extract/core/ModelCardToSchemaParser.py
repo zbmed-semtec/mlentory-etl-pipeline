@@ -228,7 +228,6 @@ class ModelCardToSchemaParser:
             lambda x: x.isoformat() if hasattr(x, 'isoformat') else str(x)
         )
         
-        HF_df.loc[:, "schema.org:releaseNotes"] = HF_df.loc[:, "card"]
         HF_df.loc[:, "schema.org:description"] = HF_df.loc[:, "card"]
         HF_df.loc[:, "schema.org:name"] = HF_df.loc[:, "modelId"].apply(lambda x: x.split("/")[-1] if "/" in x else x)
         
@@ -267,7 +266,6 @@ class ModelCardToSchemaParser:
             "schema.org:dateCreated", 
             "schema.org:dateModified",
             "schema.org:datePublished",
-            "schema.org:releaseNotes",
             "schema.org:description",
             "schema.org:name", 
             "schema.org:url",
