@@ -321,21 +321,25 @@ class ModelCardToSchemaParser:
                 tag_for_task = tag.replace("-", " ").lower()
                 if tag_for_task in self.tags_task_names:
                     ml_tasks.append(tag_for_task)
+                    keywords.append(tag_for_task)
                 
                 # Extract datasets (fair4ml:trainedOn, fair4ml:evaluatedOn)
                 if "dataset:" in tag:
                     dataset_name = tag.replace("dataset:", "")
                     datasets.append(dataset_name)
+                    keywords.append(tag)
                 
                 # Extract arxiv IDs (citation)
                 if "arxiv:" in tag:
                     arxiv_id = tag.replace("arxiv:", "")
                     arxiv_ids.append(f"https://arxiv.org/abs/{arxiv_id}")
+                    keywords.append(tag)
                 
                 # Extract base models (fair4ml:baseModel)
                 if "base_model:" in tag:
                     base_model = tag.split(":")[-1]
                     base_models.add(base_model)
+                    keywords.append(tag)
                 
                 # Extract languages (inLanguage)
                 if tag_lower in self.tags_language:
@@ -344,9 +348,9 @@ class ModelCardToSchemaParser:
                 # Extract libraries (keywords)
                 if tag_lower in self.tags_libraries_names:
                     libraries.append(tag_lower)
+                    keywords.append(tag_lower)
                 
-                # Collect all tags as keywords
-                keywords.append(tag)
+                
             
             # Add pipeline tag to ML tasks if available
             if row["pipeline_tag"] is not None:
