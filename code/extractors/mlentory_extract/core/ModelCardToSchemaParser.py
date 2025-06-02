@@ -2,6 +2,7 @@ import json
 import pandas as pd
 import torch
 import yaml
+import spdx_lookup
 from typing import Any, Dict, List, Set, Tuple, Union, Optional
 from datetime import datetime
 from tqdm import tqdm
@@ -465,21 +466,62 @@ class ModelCardToSchemaParser:
             
         return gated_info
     
-    def get_model_licensed_info(self, yaml_dict: Dict) -> bool:
+    def get_model_licensed_info(self, yaml_dict: Dict) -> str:
         """
-        Check if the model is licensed based on the YAML dictionary.
+        Check if the model is licensed based on the YAML dictionary,
+        using SPDX lookup for license validation and details.
         """
         licensed_info = ""
-        if "license_name" in yaml_dict:
-            licensed_info = "Name: " + yaml_dict["license_name"]
-        elif "license" in yaml_dict:
-            licensed_info = "Name: " + yaml_dict["license"]
+        license_string = None
+
+        if "license" in yaml_dict and isinstance(yaml_dict["license"], str):
+            license_string = yaml_dict["license"]
+        elif "license_name" in yaml_dict and isinstance(yaml_dict["license_name"], str):
+            license_string = yaml_dict["license_name"]
+
+        if license_string:
+            
+            spdx_license_info = self.get_spdx_license_info(license_string)
+            if spdx_license_info:
+                licensed_info = spdx_license_info
+            else:
+                # If not a recognized SPDX ID, use the original string
+                licensed_info = f"Name: {license_string} (Custom or non-SPDX)"
+                
+            if "license_url" in yaml_dict:
+                licensed_info += "\nURL: " + yaml_dict["license_url"]
+            elif "license_link" in yaml_dict:
+                # Corrected to use license_link if license_url is not present
+                licensed_info += "\nURL: " + yaml_dict["license_link"] 
         
-        if "license_url" in yaml_dict:
-            licensed_info += "\nURL: " + yaml_dict["license_url"]
-        elif "license_link" in yaml_dict:
-            licensed_info += "\nURL: " + yaml_dict["license_url"]
+        else:
+            licensed_info = "Name: Not specified"
         
+        
+        return licensed_info
+    
+    def get_spdx_license_info(self, license_string: str) -> str:
+        """
+        Get the SPDX license information for a given license string.
+        """
+        licensed_info = ""
+        spdx_license = spdx_lookup.by_id(license_string)
+        if spdx_license:
+            # Start with the name
+            licensed_info = f"Name: {spdx_license.name}"
+            
+            # Add known attributes of SPDX license objects
+            if hasattr(spdx_license, 'id'):
+                licensed_info += f"\nIdentifier: {spdx_license.id}"
+            if hasattr(spdx_license, 'osi_approved'):
+                licensed_info += f"\nOSI Approved: {spdx_license.osi_approved}"
+            if hasattr(spdx_license, 'sources'):
+                licensed_info += f"\nDeprecated: {spdx_license.sources}"
+            if hasattr(spdx_license, 'notes'):
+                licensed_info += f"\nNotes: {spdx_license.notes}"
+            if hasattr(spdx_license, 'url'):
+                licensed_info += f"\nSPDX URL: {spdx_license.url}"
+                
         return licensed_info
     
     def _prepare_qa_inputs(self, HF_df: pd.DataFrame, schema_property_contexts: Dict[str, str]) -> Tuple[List[Dict], Set[str]]:
