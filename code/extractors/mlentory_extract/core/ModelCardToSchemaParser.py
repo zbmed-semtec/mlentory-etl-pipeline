@@ -228,7 +228,9 @@ class ModelCardToSchemaParser:
             lambda x: x.isoformat() if hasattr(x, 'isoformat') else str(x)
         )
         
-        HF_df.loc[:, "schema.org:description"] = HF_df.loc[:, "card"]
+        HF_df.loc[:, "schema.org:description"] = HF_df.loc[:, "card"].apply(
+            lambda x: re.sub(r'---.*?---', '', x, count=1, flags=re.DOTALL) if isinstance(x, str) else x
+        )
         HF_df.loc[:, "schema.org:name"] = HF_df.loc[:, "modelId"].apply(lambda x: x.split("/")[-1] if "/" in x else x)
         
         # Generate URLs for models
