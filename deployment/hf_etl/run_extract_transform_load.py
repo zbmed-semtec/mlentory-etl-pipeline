@@ -301,7 +301,7 @@ def main():
                 extracted_entities = {"models": pd.DataFrame()} # Ensure models key exists
             else:
                 # Call the new method in HFExtractor
-                entities_to_download_config = ["datasets", "articles", "keywords", "base_models"]
+                entities_to_download_config = ["datasets", "articles", "keywords", "base_models", "licenses"]
                 extracted_entities = extractor.download_specific_models_with_related_entities(
                     model_ids=model_ids_from_file,
                     output_dir=args.output_dir, # Pass the base output_dir
@@ -315,7 +315,7 @@ def main():
         else:
             # Existing logic: download models and related entities based on num_models/date
             logging.info(f"Downloading {args.num_models} models, last modified after {args.from_date.strftime('%Y-%m-%d')}")
-            entities_to_download_config = ["datasets", "articles", "keywords", "base_models"]
+            entities_to_download_config = ["datasets", "articles", "keywords", "base_models", "licenses"]
             extracted_entities = extractor.download_models_with_related_entities(
                 num_models=args.num_models,
                 from_date=args.from_date, # Use the parsed date
@@ -354,6 +354,9 @@ def main():
 
     # Load data
     loader.update_dbs_with_kg(kg_integrated, extraction_metadata_integrated)
+    
+    print("CHECKING LICENSES!!!!!!!!!!!!!!")
+    print(extracted_entities["licenses"])
 
 
 if __name__ == "__main__":
