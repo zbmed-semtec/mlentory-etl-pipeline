@@ -78,7 +78,7 @@ class GraphBuilderLicense(GraphBuilderBase):
             else:
                 entity_id_source = row[identifier_column]
 
-            entity_id = str(entity_id_source[0]).strip().lower()
+            entity_id = str(entity_id_source).strip().lower()
             print(f"Creating in License CreativeWork for {entity_id}")
             # Using "License" as a more specific type for hash generation within the platform context
             id_hash = self.generate_entity_hash(platform, "CreativeWork", entity_id) 
