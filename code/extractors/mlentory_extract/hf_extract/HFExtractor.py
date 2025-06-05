@@ -605,14 +605,14 @@ class HFExtractor:
         all_license_data = []
         for license_id in license_ids:
             license_data = {
-                "Name": [license_id],
-                "Identifier": [None],
-                "OSI Approved": [None],
-                "Deprecated": [None],
-                "Notes": [None],
-                "Text": [None],
-                "URL": [None],
-                "extraction_metadata": [{"extraction_method": "Extracted from SPDX API", "confidence": 1.0}]
+                "Name": license_id,
+                "Identifier": None,
+                "OSI Approved": None,
+                "Deprecated": None,
+                "Notes": None,
+                "Text": None,
+                "URL": None,
+                "extraction_metadata": {"extraction_method": "Extracted from SPDX API", "confidence": 1.0}
             }
             # search by id and by name
             spdx_license_from_id = spdx_lookup.by_id(license_id)
@@ -623,19 +623,19 @@ class HFExtractor:
             if spdx_license:
                 
                 if hasattr(spdx_license, 'id'):
-                    license_data["Identifier"] = [spdx_license.id]
+                    license_data["Identifier"] = spdx_license.id
                     url = f"https://spdx.org/licenses/{spdx_license.id}.html"
-                    license_data["URL"] = [url]
+                    license_data["URL"] = url
                 if hasattr(spdx_license, 'osi_approved'):
-                    license_data["OSI Approved"] = [spdx_license.osi_approved]
+                    license_data["OSI Approved"] = spdx_license.osi_approved
                 # Note: spdx_lookup might use 'sources' for deprecation info or other details
                 # User should verify if 'sources' attribute correctly maps to 'Deprecated'
                 if hasattr(spdx_license, 'sources'): 
-                    license_data["Deprecated"] = [spdx_license.sources]
+                    license_data["Deprecated"] = spdx_license.sources
                 if hasattr(spdx_license, 'notes'):
-                    license_data["Notes"] = [spdx_license.notes]
+                    license_data["Notes"] = spdx_license.notes
                 if hasattr(spdx_license, 'text'):
-                    license_data["Text"] = [spdx_license.text]
+                    license_data["Text"] = spdx_license.text
                         
                 all_license_data.append(license_data)
         
