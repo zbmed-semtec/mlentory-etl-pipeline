@@ -1,6 +1,8 @@
 import json
 import pandas as pd
 import torch
+import yaml
+import spdx_lookup
 from typing import Any, Dict, List, Set, Tuple, Union, Optional
 from datetime import datetime
 from tqdm import tqdm
@@ -103,7 +105,9 @@ class ModelCardToSchemaParser:
         self.matching_engine = QAMatchingEngine(matching_model_name)
         
         # Initialize QA engine for extractive QA
-        self.qa_engine = QAInferenceEngine(model_name=qa_model_name, batch_size=4)
+        # TODO: Uncomment this when the QA engine is ready
+        # self.qa_engine = QAInferenceEngine(model_name=qa_model_name, batch_size=4)
+        self.qa_engine = None
         
         # Load schema properties from file
         self.schema_properties = self.load_schema_properties(schema_file)
@@ -228,8 +232,9 @@ class ModelCardToSchemaParser:
             lambda x: x.isoformat() if hasattr(x, 'isoformat') else str(x)
         )
         
-        HF_df.loc[:, "schema.org:releaseNotes"] = HF_df.loc[:, "card"]
-        HF_df.loc[:, "schema.org:description"] = HF_df.loc[:, "card"]
+        HF_df.loc[:, "schema.org:description"] = HF_df.loc[:, "card"].apply(
+            lambda x: re.sub(r'---.*?---', '', x, count=1, flags=re.DOTALL) if isinstance(x, str) else x
+        )
         HF_df.loc[:, "schema.org:name"] = HF_df.loc[:, "modelId"].apply(lambda x: x.split("/")[-1] if "/" in x else x)
         
         # Generate URLs for models
@@ -267,7 +272,6 @@ class ModelCardToSchemaParser:
             "schema.org:dateCreated", 
             "schema.org:dateModified",
             "schema.org:datePublished",
-            "schema.org:releaseNotes",
             "schema.org:description",
             "schema.org:name", 
             "schema.org:url",
@@ -307,7 +311,6 @@ class ModelCardToSchemaParser:
             base_models = set()
             datasets = []
             arxiv_ids = []
-            licenses = []
             languages = []
             libraries = []
             keywords = []
@@ -321,26 +324,25 @@ class ModelCardToSchemaParser:
                 tag_for_task = tag.replace("-", " ").lower()
                 if tag_for_task in self.tags_task_names:
                     ml_tasks.append(tag_for_task)
+                    keywords.append(tag_for_task)
                 
                 # Extract datasets (fair4ml:trainedOn, fair4ml:evaluatedOn)
                 if "dataset:" in tag:
                     dataset_name = tag.replace("dataset:", "")
                     datasets.append(dataset_name)
+                    keywords.append(tag)
                 
                 # Extract arxiv IDs (citation)
                 if "arxiv:" in tag:
                     arxiv_id = tag.replace("arxiv:", "")
                     arxiv_ids.append(f"https://arxiv.org/abs/{arxiv_id}")
-                
-                # Extract license information (license)
-                if "license:" in tag:
-                    license_name = tag.replace("license:", "")
-                    licenses.append(license_name)
+                    keywords.append(tag)
                 
                 # Extract base models (fair4ml:baseModel)
                 if "base_model:" in tag:
                     base_model = tag.split(":")[-1]
                     base_models.add(base_model)
+                    keywords.append(tag)
                 
                 # Extract languages (inLanguage)
                 if tag_lower in self.tags_language:
@@ -349,9 +351,9 @@ class ModelCardToSchemaParser:
                 # Extract libraries (keywords)
                 if tag_lower in self.tags_libraries_names:
                     libraries.append(tag_lower)
+                    keywords.append(tag_lower)
                 
-                # Collect all tags as keywords
-                keywords.append(tag)
+                
             
             # Add pipeline tag to ML tasks if available
             if row["pipeline_tag"] is not None:
@@ -368,8 +370,6 @@ class ModelCardToSchemaParser:
             
             HF_df.at[index, "fair4ml:fineTunedFrom"] = list(base_models)
             
-            HF_df.at[index, "schema.org:license"] = licenses
-            
             HF_df.at[index, "schema.org:inLanguage"] = languages
             
             HF_df.at[index, "codemeta:referencePublication"] = arxiv_ids
@@ -384,7 +384,6 @@ class ModelCardToSchemaParser:
             "fair4ml:evaluatedOn",
             "fair4ml:testedOn",
             "fair4ml:fineTunedFrom",
-            "schema.org:license",
             "schema.org:inLanguage",
             "schema.org:keywords",
             "codemeta:referencePublication",
@@ -402,6 +401,100 @@ class ModelCardToSchemaParser:
         
         return HF_df
     
+    def parse_fields_from_yaml_HF(self, HF_df: pd.DataFrame) -> pd.DataFrame:
+        """
+        Extract information from YAML section of model card and map to FAIR4ML schema properties.
+        """
+        for index, row in tqdm(HF_df.iterrows(), total=len(HF_df), desc="Parsing YAML"):
+            card_text = row.get("card", "")
+            yaml_dict = None
+            
+            if isinstance(card_text, str):
+                # Regex to find the first YAML block (---...---)
+                match = re.search(r"^---\s*$(.*?)^---\s*$", card_text, re.MULTILINE | re.DOTALL)
+                if match:
+                    yaml_text = match.group(1)
+                    try:
+                        yaml_dict = yaml.safe_load(yaml_text)
+                    except yaml.YAMLError as e:
+                        print(f"Error parsing YAML for index {index}: {e}")
+                        yaml_dict = {"error": f"YAML parsing error: {e}"}
+                else:
+                    # print(f"No YAML block found for index {index}")
+                    yaml_dict = {"error": "No YAML block found"}
+            else:
+                yaml_dict = {"error": "Card text is not a string"}
+                
+            if "error" in yaml_dict:
+                continue
+            
+            # Check if the model is gated
+            gated_info = self.get_model_gated_info(yaml_dict)
+            
+            if gated_info != "":
+                HF_df.at[index, "schema.org:conditionsOfAccess"] = gated_info
+            
+            # Check if the model is licensed
+            licensed_info = self.get_model_licensed_info(yaml_dict)
+            
+            if licensed_info != "":
+                HF_df.at[index, "schema.org:license"] = licensed_info
+
+        properties = [
+            "schema.org:conditionsOfAccess",
+            "schema.org:license"
+        ]
+        
+        self.processed_properties.extend(properties)
+        
+        HF_df = self.add_extraction_metadata_to_fields(
+            df=HF_df,
+            properties=properties,
+            extraction_method="Parsed_from_HF_tags",
+            confidence=1.0,
+            description="Adding tag extraction metadata"
+        )
+        
+        return HF_df
+    
+    def get_model_gated_info(self, yaml_dict: Dict) -> bool:
+        """
+        Check if the model is gated based on the YAML dictionary.
+        """
+        gated_info = ""
+        for key, value in yaml_dict.items():
+            if "extra_gated" in key and isinstance(value, str):
+                gated_info += value + "\n"
+            
+        return gated_info
+    
+    def get_model_licensed_info(self, yaml_dict: Dict) -> bool:
+        """
+        Check if the model is licensed based on the YAML dictionary.
+        """
+        licensed_info = ""
+        
+        if "license_name" in yaml_dict:
+            licensed_info = yaml_dict["license_name"]
+        elif "license" in yaml_dict:
+            licensed_info = yaml_dict["license"]
+        
+        # Check if the license is a SPDX license
+        spdx_license_from_id = spdx_lookup.by_id(licensed_info)
+        spdx_license_from_name = spdx_lookup.by_name(licensed_info)
+        
+        spdx_license = spdx_license_from_id or spdx_license_from_name
+        
+        if spdx_license:
+            licensed_info = spdx_license.id
+        else:
+            # Put everything that has license in the key
+            for key, value in yaml_dict.items():
+                if "license" in key:
+                    licensed_info += key + ": " + value + "\n"
+            
+        return licensed_info
+                
     def _prepare_qa_inputs(self, HF_df: pd.DataFrame, schema_property_contexts: Dict[str, str]) -> Tuple[List[Dict], Set[str]]:
         """Prepares inputs for the QA engine by finding relevant context sections and their scores."""
         qa_inputs_for_df = []
@@ -927,6 +1020,8 @@ class ModelCardToSchemaParser:
         HF_df = self.parse_known_fields_HF(HF_df)
         print("Step 2: Parsing fields from HF tags...")
         HF_df = self.parse_fields_from_tags_HF(HF_df)
+        print("Step 3: Parsing fields from YAML section of model card ...")
+        HF_df = self.parse_fields_from_yaml_HF(HF_df)
         
         # Step 3: Determine properties for SchemaPropertyExtractor to process
         properties_for_extractor = [
@@ -934,19 +1029,16 @@ class ModelCardToSchemaParser:
         ]
         
         if properties_for_extractor:
-            print(f"Step 3: Extracting schema properties from model cards using {unstructured_text_strategy} strategy for properties: {properties_for_extractor}")
+            print(f"Step 4: Extracting schema properties from model cards using {unstructured_text_strategy} strategy for properties: {properties_for_extractor}")
             HF_df = self.schema_property_extractor.extract_dataframe_schema_properties(
                 df=HF_df,
                 strategy=unstructured_text_strategy,
                 max_questions_per_group=max_questions_per_group,
                 properties_to_process=properties_for_extractor
             )
-            # After extraction, update the processed_properties list
-            # We assume that if extract_dataframe_schema_properties was called for a set of properties,
-            # they are now considered processed, regardless of whether data was found for all of them.
             self.processed_properties.extend(properties_for_extractor)
         else:
-            print("Step 3: No remaining properties for model card text extraction.")
+            print("Step 4: No remaining properties for model card text extraction.")
         
         # Clean up columns if requested
         if clean_columns:
