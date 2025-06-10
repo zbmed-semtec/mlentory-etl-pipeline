@@ -99,7 +99,7 @@ class Run(Document):
     )
     license = Keyword()
     mlTask = Keyword(multi=True)
-    sharedBy = Text(multi=True)
+    sharedBy = Text()
     modelCategory = Keyword(multi=True)
     trainedOn = Text(multi=True)
 
