@@ -22,7 +22,7 @@ from mlentory_load.core import LoadProcessor, GraphHandlerForKG
 from mlentory_load.dbHandler import SQLHandler, RDFHandler, IndexHandler
 
 # Load environment variables with defaults
-POSTGRES_HOST = os.getenv("POSTGRES_HOST", "postgres_db")
+POSTGRES_HOST = os.getenv("POSTGRES_HOST", "postgres")
 POSTGRES_USER = os.getenv("POSTGRES_USER", "user")
 POSTGRES_PASSWORD = os.getenv("POSTGRES_PASSWORD", "password")
 POSTGRES_DB = os.getenv("POSTGRES_DB", "history_DB")
@@ -162,7 +162,7 @@ def initialize_load_processor(kg_files_directory: str, logger: logging.Logger) -
             es_host=ELASTICSEARCH_HOST,
             es_port=ELASTICSEARCH_PORT,
         )
-        elasticsearchHandler.initialize_OpenML_index(index_name="openml_runs")
+        elasticsearchHandler.initialize_OpenML_index(index_name="openml_models")
         logger.info("Successfully connected to Elasticsearch and initialized index")
 
         logger.info("Initializing GraphHandlerForKG")
