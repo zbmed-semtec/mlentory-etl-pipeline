@@ -75,18 +75,17 @@ class ModelCardToSchemaParser:
         """
         # Check for GPU availability
         try:
-            import torch
-            
             if torch.cuda.is_available():
                 self.device = 0
                 print("\nUSING GPU\n")
             else:
                 self.device = None
                 print("\nNOT USING GPU\n")
-        except ModuleNotFoundError:
+        except Exception as e:
             # If torch is not available, assume no GPU
             self.device = None
             print("\nNOT USING GPU\n")
+            print(f"Error: {e}")
             
         # Store configuration data
         self.tags_language = set(tag.lower() for tag in tags_language) if tags_language else set()
