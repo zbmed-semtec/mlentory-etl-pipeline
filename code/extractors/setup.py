@@ -10,6 +10,7 @@ setup(
         "transformers>=4.48.0",
         "datasets~=2.19.0",
         # "torch==2.1.2",
+        "spdx-lookup>=0.1.0",
         "huggingface-hub>=0.22.0",
         "tqdm>=4.62.1",
         "openml>=0.14.0",
