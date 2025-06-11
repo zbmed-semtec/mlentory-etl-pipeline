@@ -1,6 +1,8 @@
 import json
 import pandas as pd
 import torch
+import yaml
+import spdx_lookup
 from typing import Any, Dict, List, Set, Tuple, Union, Optional
 from datetime import datetime
 from tqdm import tqdm
@@ -8,13 +10,14 @@ import math
 import os
 import logging
 import pprint
+import re
 
 from huggingface_hub import HfApi
 from huggingface_hub.hf_api import RepoFile, RepoFolder
 
-from mlentory_extract.core.QAMatchingEngine import QAMatchingEngine
+from mlentory_extract.core.QAMatchingEngine import QAMatchingEngine, RelevantSectionMatch
 from mlentory_extract.core.QAInferenceEngine import QAInferenceEngine, QAResult
-from .MarkdownParser import Section # Assuming Section is importable
+from mlentory_extract.core.SchemaPropertyExtractor import SchemaPropertyExtractor
 
 # Define the structure for prepared grouped inputs
 # {index: [{"questions": List[str], "properties": List[str], "context": str, "avg_score": float}, ...]}
@@ -102,13 +105,22 @@ class ModelCardToSchemaParser:
         self.matching_engine = QAMatchingEngine(matching_model_name)
         
         # Initialize QA engine for extractive QA
-        self.qa_engine = QAInferenceEngine(model_name=qa_model_name, batch_size=4)
+        # TODO: Uncomment this when the QA engine is ready
+        # self.qa_engine = QAInferenceEngine(model_name=qa_model_name, batch_size=4)
+        self.qa_engine = None
         
         # Load schema properties from file
         self.schema_properties = self.load_schema_properties(schema_file)
         
         # Initialize list to store processed properties
         self.processed_properties = []
+        
+        # Initialize schema property extractor
+        self.schema_property_extractor = SchemaPropertyExtractor(
+            qa_matching_engine=self.matching_engine,
+            qa_inference_engine=self.qa_engine,
+            schema_properties=self.schema_properties
+        )
     
     def load_schema_properties(self, schema_file: str) -> Dict[str, Dict[str, str]]:
         """
@@ -220,8 +232,9 @@ class ModelCardToSchemaParser:
             lambda x: x.isoformat() if hasattr(x, 'isoformat') else str(x)
         )
         
-        HF_df.loc[:, "schema.org:releaseNotes"] = HF_df.loc[:, "card"]
-        HF_df.loc[:, "schema.org:description"] = HF_df.loc[:, "card"]
+        HF_df.loc[:, "schema.org:description"] = HF_df.loc[:, "card"].apply(
+            lambda x: re.sub(r'---.*?---', '', x, count=1, flags=re.DOTALL) if isinstance(x, str) else x
+        )
         HF_df.loc[:, "schema.org:name"] = HF_df.loc[:, "modelId"].apply(lambda x: x.split("/")[-1] if "/" in x else x)
         
         # Generate URLs for models
@@ -259,7 +272,6 @@ class ModelCardToSchemaParser:
             "schema.org:dateCreated", 
             "schema.org:dateModified",
             "schema.org:datePublished",
-            "schema.org:releaseNotes",
             "schema.org:description",
             "schema.org:name", 
             "schema.org:url",
@@ -299,7 +311,6 @@ class ModelCardToSchemaParser:
             base_models = set()
             datasets = []
             arxiv_ids = []
-            licenses = []
             languages = []
             libraries = []
             keywords = []
@@ -313,26 +324,25 @@ class ModelCardToSchemaParser:
                 tag_for_task = tag.replace("-", " ").lower()
                 if tag_for_task in self.tags_task_names:
                     ml_tasks.append(tag_for_task)
+                    keywords.append(tag_for_task)
                 
                 # Extract datasets (fair4ml:trainedOn, fair4ml:evaluatedOn)
                 if "dataset:" in tag:
                     dataset_name = tag.replace("dataset:", "")
                     datasets.append(dataset_name)
+                    keywords.append(tag)
                 
                 # Extract arxiv IDs (citation)
                 if "arxiv:" in tag:
                     arxiv_id = tag.replace("arxiv:", "")
                     arxiv_ids.append(f"https://arxiv.org/abs/{arxiv_id}")
-                
-                # Extract license information (license)
-                if "license:" in tag:
-                    license_name = tag.replace("license:", "")
-                    licenses.append(license_name)
+                    keywords.append(tag)
                 
                 # Extract base models (fair4ml:baseModel)
                 if "base_model:" in tag:
                     base_model = tag.split(":")[-1]
                     base_models.add(base_model)
+                    keywords.append(tag)
                 
                 # Extract languages (inLanguage)
                 if tag_lower in self.tags_language:
@@ -341,9 +351,9 @@ class ModelCardToSchemaParser:
                 # Extract libraries (keywords)
                 if tag_lower in self.tags_libraries_names:
                     libraries.append(tag_lower)
+                    keywords.append(tag_lower)
                 
-                # Collect all tags as keywords
-                keywords.append(tag)
+                
             
             # Add pipeline tag to ML tasks if available
             if row["pipeline_tag"] is not None:
@@ -360,8 +370,6 @@ class ModelCardToSchemaParser:
             
             HF_df.at[index, "fair4ml:fineTunedFrom"] = list(base_models)
             
-            HF_df.at[index, "schema.org:license"] = licenses
-            
             HF_df.at[index, "schema.org:inLanguage"] = languages
             
             HF_df.at[index, "codemeta:referencePublication"] = arxiv_ids
@@ -376,7 +384,6 @@ class ModelCardToSchemaParser:
             "fair4ml:evaluatedOn",
             "fair4ml:testedOn",
             "fair4ml:fineTunedFrom",
-            "schema.org:license",
             "schema.org:inLanguage",
             "schema.org:keywords",
             "codemeta:referencePublication",
@@ -394,7 +401,101 @@ class ModelCardToSchemaParser:
         
         return HF_df
     
-    def _prepare_qa_inputs(self, HF_df: pd.DataFrame, schema_property_questions: Dict[str, str]) -> Tuple[List[Dict], Set[str]]:
+    def parse_fields_from_yaml_HF(self, HF_df: pd.DataFrame) -> pd.DataFrame:
+        """
+        Extract information from YAML section of model card and map to FAIR4ML schema properties.
+        """
+        for index, row in tqdm(HF_df.iterrows(), total=len(HF_df), desc="Parsing YAML"):
+            card_text = row.get("card", "")
+            yaml_dict = None
+            
+            if isinstance(card_text, str):
+                # Regex to find the first YAML block (---...---)
+                match = re.search(r"^---\s*$(.*?)^---\s*$", card_text, re.MULTILINE | re.DOTALL)
+                if match:
+                    yaml_text = match.group(1)
+                    try:
+                        yaml_dict = yaml.safe_load(yaml_text)
+                    except yaml.YAMLError as e:
+                        print(f"Error parsing YAML for index {index}: {e}")
+                        yaml_dict = {"error": f"YAML parsing error: {e}"}
+                else:
+                    # print(f"No YAML block found for index {index}")
+                    yaml_dict = {"error": "No YAML block found"}
+            else:
+                yaml_dict = {"error": "Card text is not a string"}
+                
+            if "error" in yaml_dict:
+                continue
+            
+            # Check if the model is gated
+            gated_info = self.get_model_gated_info(yaml_dict)
+            
+            if gated_info != "":
+                HF_df.at[index, "schema.org:conditionsOfAccess"] = gated_info
+            
+            # Check if the model is licensed
+            licensed_info = self.get_model_licensed_info(yaml_dict)
+            
+            if licensed_info != "":
+                HF_df.at[index, "schema.org:license"] = licensed_info
+
+        properties = [
+            "schema.org:conditionsOfAccess",
+            "schema.org:license"
+        ]
+        
+        self.processed_properties.extend(properties)
+        
+        HF_df = self.add_extraction_metadata_to_fields(
+            df=HF_df,
+            properties=properties,
+            extraction_method="Parsed_from_HF_tags",
+            confidence=1.0,
+            description="Adding tag extraction metadata"
+        )
+        
+        return HF_df
+    
+    def get_model_gated_info(self, yaml_dict: Dict) -> bool:
+        """
+        Check if the model is gated based on the YAML dictionary.
+        """
+        gated_info = ""
+        for key, value in yaml_dict.items():
+            if "extra_gated" in key and isinstance(value, str):
+                gated_info += value + "\n"
+            
+        return gated_info
+    
+    def get_model_licensed_info(self, yaml_dict: Dict) -> bool:
+        """
+        Check if the model is licensed based on the YAML dictionary.
+        """
+        licensed_info = ""
+        
+        if "license_name" in yaml_dict:
+            licensed_info = yaml_dict["license_name"]
+        elif "license" in yaml_dict:
+            licensed_info = yaml_dict["license"]
+        
+        # Check if the license is a SPDX license
+        spdx_license_from_id = spdx_lookup.by_id(licensed_info)
+        spdx_license_from_name = spdx_lookup.by_name(licensed_info)
+        
+        spdx_license = spdx_license_from_id or spdx_license_from_name
+        
+        if spdx_license:
+            licensed_info = spdx_license.id
+        else:
+            # Put everything that has license in the key
+            for key, value in yaml_dict.items():
+                if "license" in key:
+                    licensed_info += key + ": " + value + "\n"
+            
+        return licensed_info
+                
+    def _prepare_qa_inputs(self, HF_df: pd.DataFrame, schema_property_contexts: Dict[str, str]) -> Tuple[List[Dict], Set[str]]:
         """Prepares inputs for the QA engine by finding relevant context sections and their scores."""
         qa_inputs_for_df = []
         properties_to_process = set()
@@ -408,7 +509,7 @@ class ModelCardToSchemaParser:
             if not context or not isinstance(context, str):
                 continue # Skip if no valid context
             
-            question_items = schema_property_questions.items()
+            question_items = schema_property_contexts.items()
             questions = [question for question, _ in question_items]
             
             match_results_for_all_questions = self.matching_engine.find_relevant_sections(
@@ -489,7 +590,64 @@ class ModelCardToSchemaParser:
                 HF_df.loc[index, property] = [extraction_info]
                 
         return HF_df
+    
+    def _populate_dataframe_with_context_matching_results(self, HF_df: pd.DataFrame, matching_results: List[List[RelevantSectionMatch]]) -> pd.DataFrame:
+        """Populates the DataFrame with context matching results."""
+        print("Populating DataFrame with context matching results...")
+        for index, row in tqdm(HF_df.iterrows(), total=len(HF_df), desc="Updating DataFrame"):
+            for property_name, context in matching_results.items():
+                matching_section = context[0]
+                row[property_name] = self.add_default_extraction_info(
+                    data=matching_section.section.content,
+                    extraction_method=f"Context Matching (Context: {self.matching_engine.model_name})",
+                    confidence=matching_section.score
+                )
+        
+        return HF_df
+                
 
+    def create_schema_property_contexts(self) -> Dict[str, str]:
+        """
+        Build a text‐context for each schema property that you can use
+        to match against a list of markdown sections.
+
+        Returns:
+            Dict[str, str]: 
+                property_name → formatted context block
+        """
+        contexts: Dict[str, str] = {}
+
+        for prop, meta in self.schema_properties.items():
+            # skip ones we've already extracted
+            if prop in self.processed_properties:
+                continue
+
+            description = meta.get("description", "").strip()
+            raw_sections = meta.get("HF_Readme_Section", "").strip()
+
+            # skip if no description
+            if not description:
+                continue
+
+            # turn "Uses > Direct Use ; Uses > Downstream Use" into a Python list
+            sections = [s.strip() for s in raw_sections.split(";") if s.strip()]
+
+            # humanize the property name: "fair4ml:intendedUse" → "Intended Use"
+            base = prop.split(":", 1)[-1]
+            # insert spaces before internal caps, replace underscores
+            human = re.sub(r"(?<=[a-z])([A-Z])", r" \1", base).replace("_", " ").title()
+
+            # build the context block
+            context = (
+                f"Property: **{human}**\n"
+                f"Description: {description}\n"
+                f"Likely HF Sections: {', '.join(sections)}"
+            )
+
+            contexts[prop] = context
+
+        return contexts
+    
     def parse_fields_from_text_HF(self, HF_df: pd.DataFrame) -> pd.DataFrame:
         """
         Extract information from model card text using semantic matching and QA.
@@ -503,14 +661,14 @@ class ModelCardToSchemaParser:
             pd.DataFrame: DataFrame with extracted information from text fields using QA
         """
         # Generate queries for each schema property based on their descriptions
-        schema_property_questions = self.create_schema_property_questions()
-        print(f"Schema property questions: {schema_property_questions}")
-        if len(schema_property_questions) == 0:
+        schema_property_contexts = self.create_schema_property_contexts()
+        print(f"Schema property contexts: {schema_property_contexts}")
+        if len(schema_property_contexts) == 0:
             print("No properties identified for text extraction. Skipping.")
             return HF_df
 
         # 1. Prepare QA inputs
-        qa_inputs_for_df, properties_to_process = self._prepare_qa_inputs(HF_df, schema_property_questions)
+        qa_inputs_for_df, properties_to_process = self._prepare_qa_inputs(HF_df, schema_property_contexts)
 
         if not qa_inputs_for_df:
             print("No valid question-context pairs found for QA. Skipping QA step.")
@@ -534,44 +692,50 @@ class ModelCardToSchemaParser:
 
         return HF_df
     
-    def create_schema_property_questions(self) -> Dict[str, str]:
+    def parse_fields_from_text_by_context_matching(self, HF_df: pd.DataFrame) -> pd.DataFrame:
         """
-        Generate a dictionary of questions for each schema property based on their descriptions.
-        
+        Extract information from model card text by finding the best-matching section
+        for each schema property using semantic context matching.
+
+        For each property needing extraction, this method identifies the single
+        markdown section in the model card that best matches the property's
+        description and known relevant HF Readme sections. The content of this
+        best-matching section is directly used as the extracted value.
+
+        Args:
+            HF_df (pd.DataFrame): DataFrame containing HuggingFace model information,
+                including a 'card' column with the model card text.
+
         Returns:
-            Dict[str, str]: Dictionary of questions for each schema property
+            pd.DataFrame: DataFrame with extracted information populated into
+                columns corresponding to schema properties.
         """
-        context_queries = {}
+        logging.info("Starting 'parse_fields_from_text_by_context_matching'")
+        # 1. Create the context for each schema property
+        schema_property_contexts = self.create_schema_property_contexts()
         
-        # Generate a question for each property based on its description
-        for property_name, metadata in self.schema_properties.items():
-            # Skip properties that are not suitable for text extraction
-            if property_name in self.processed_properties:
-                continue
-                
-            description = metadata.get("description", "")
-            posible_sections = metadata.get("HF_Readme_Section", "")
+        # 2. Find the best-matching section for each schema property
+        for index, row in tqdm(HF_df.iterrows(), total=len(HF_df), desc="Finding best-matching sections"):
+            model_card_text = row.get("card", "")
+            matching_results = self.matching_engine.find_relevant_sections(
+                list(schema_property_contexts.values()),
+                model_card_text,
+                top_k=2
+            )
             
-            if description:
-                # Format the property name for better readability
-                readable_prop = property_name.replace("fair4ml:", "").replace("codemeta:", "").replace("schema.org:", "")
-                readable_prop = readable_prop.replace("_", " ").replace(":", " ")
+            
+            for property_name, result in zip(schema_property_contexts.keys(), matching_results):
+                if property_name not in HF_df.columns:
+                    print(f"Warning: Property {property_name} not found in DataFrame.")
+                    continue
                 
-                # Put a space between each uppercase letter: ConditionsOfUse -> Conditions of Use
-                temp_readable_prop = ""
-                for i in range(len(readable_prop)):
-                    if readable_prop[i].isupper() and i != 0 and readable_prop[i-1].islower():
-                        temp_readable_prop += " " + readable_prop[i]
-                    else:
-                        temp_readable_prop += readable_prop[i]
-                        
-                readable_prop = temp_readable_prop
-                
-                question = f"In the following text find {description}, here are some related sections that may contain information: {posible_sections}"
-                
-                context_queries[question] = property_name
-                
-        return context_queries
+                row[property_name] = self.add_default_extraction_info(
+                    data=result[0].section.content,
+                    extraction_method=f"Context Matching (Context: {self.matching_engine.model_name})",
+                    confidence=result[0].score
+                )
+            
+        return HF_df
     
     def _prepare_inputs_with_question_grouping(
         self, HF_df: pd.DataFrame, schema_property_questions: Dict[str, str], max_questions_per_group: int = 5
@@ -601,7 +765,6 @@ class ModelCardToSchemaParser:
                 continue
 
             # Find grouped relevant sections (questions grouped by similarity)
-            # Returns List[Tuple[List[int], List[Tuple[Section, float]]]]
             try:
                 grouped_sections_info = self.matching_engine.find_grouped_relevant_sections(
                     input_questions, context, top_k=4, max_questions_per_group=max_questions_per_group, max_section_length=500
@@ -765,15 +928,6 @@ class ModelCardToSchemaParser:
 
         return HF_df
 
-    # Renamed the original method slightly to avoid conflict if kept for comparison
-    def parse_fields_from_text_by_grouping_ORIGINAL_HF(self, HF_df: pd.DataFrame, max_questions_per_group: int = 15) -> pd.DataFrame:
-        """
-        [Original Implementation - Kept for reference]
-        Extract information from model card text using semantic matching and grouped QA.
-        This version grouped questions by ROW INDEX, not question similarity.
-        """
-        # ... (original implementation code) ...
-        pass # Placeholder to avoid syntax error
 
     def parse_fields_from_text_by_grouping_HF(self, HF_df: pd.DataFrame, max_questions_per_group: int = 10) -> pd.DataFrame:
         """
@@ -791,16 +945,16 @@ class ModelCardToSchemaParser:
             pd.DataFrame: DataFrame with extracted information from text fields using grouped QA.
         """
         # Generate queries for each schema property based on their descriptions
-        schema_property_questions = self.create_schema_property_questions()
-        print(f"Schema property questions for grouped QA: {len(schema_property_questions)}")
-        if not schema_property_questions:
+        schema_property_contexts = self.create_schema_property_contexts()
+        
+        if not schema_property_contexts:
             print("No properties identified for text extraction. Skipping.")
             return HF_df
 
         # 1. Prepare inputs: Group questions by similarity within each row's context
         #    and find relevant sections for each question group.
         prepared_data, properties_to_process = self._prepare_inputs_with_question_grouping(
-            HF_df, schema_property_questions, max_questions_per_group
+            HF_df, schema_property_contexts, max_questions_per_group
         )
 
         if not prepared_data:
@@ -829,7 +983,8 @@ class ModelCardToSchemaParser:
 
         return HF_df
     
-    def process_dataframe(self, HF_df: pd.DataFrame, clean_columns: bool = True, use_grouped_qa: bool = True, max_questions_per_group: int = 15) -> pd.DataFrame:
+    
+    def process_dataframe(self, HF_df: pd.DataFrame, clean_columns: bool = True, unstructured_text_strategy: str = "context_matching", max_questions_per_group: int = 15) -> pd.DataFrame:
         """
         Process a HuggingFace DataFrame by applying all parsing methods.
         
@@ -840,8 +995,8 @@ class ModelCardToSchemaParser:
             HF_df (pd.DataFrame): DataFrame containing HuggingFace model information
             clean_columns (bool, optional): Whether to remove original HF columns.
                 Defaults to True.
-            use_grouped_qa (bool, optional): Whether to use grouped QA for text extraction.
-                Defaults to True (uses similarity grouping).
+            unstructured_text_strategy (str, optional): Strategy to use for unstructured text extraction.
+                Options: "context_matching", "grouped", "individual". Defaults to "context_matching".
             max_questions_per_group (int, optional): Maximum questions per group when using
                 grouped QA. Defaults to 15.
                 
@@ -849,12 +1004,12 @@ class ModelCardToSchemaParser:
             pd.DataFrame: Processed DataFrame with FAIR4ML schema properties
         """
         # Initialize columns that will be populated
-        schema_columns = list(self.schema_properties.keys())
+        all_schema_properties = list(self.schema_properties.keys())
         
-        self.processed_properties = []
+        self.processed_properties = [] # Reset for each new dataframe processing call
         
         # Create columns if they don't exist, initializing with empty lists for consistency
-        for col in schema_columns:
+        for col in all_schema_properties:
             if col not in HF_df.columns:
                 # Initialize with empty lists stored as objects
                  HF_df[col] = pd.Series([[] for _ in range(len(HF_df))], dtype=object, index=HF_df.index)
@@ -865,15 +1020,25 @@ class ModelCardToSchemaParser:
         HF_df = self.parse_known_fields_HF(HF_df)
         print("Step 2: Parsing fields from HF tags...")
         HF_df = self.parse_fields_from_tags_HF(HF_df)
+        print("Step 3: Parsing fields from YAML section of model card ...")
+        HF_df = self.parse_fields_from_yaml_HF(HF_df)
         
-        # Step 3: Choose between regular or grouped QA
-        if use_grouped_qa:
-            print(f"Step 3: Parsing fields from model card text using Similarity Grouped Matching + QA (max {max_questions_per_group} questions per group)...")
-            HF_df = self.parse_fields_from_text_by_grouping_HF(HF_df, max_questions_per_group=max_questions_per_group) # Now uses the new similarity grouping method
+        # Step 3: Determine properties for SchemaPropertyExtractor to process
+        properties_for_extractor = [
+            prop for prop in all_schema_properties if prop not in self.processed_properties
+        ]
+        
+        if properties_for_extractor:
+            print(f"Step 4: Extracting schema properties from model cards using {unstructured_text_strategy} strategy for properties: {properties_for_extractor}")
+            HF_df = self.schema_property_extractor.extract_dataframe_schema_properties(
+                df=HF_df,
+                strategy=unstructured_text_strategy,
+                max_questions_per_group=max_questions_per_group,
+                properties_to_process=properties_for_extractor
+            )
+            self.processed_properties.extend(properties_for_extractor)
         else:
-            print("Step 3: Parsing fields from model card text using Matching + QA (individual questions)...")
-            HF_df = self.parse_fields_from_text_HF(HF_df) # Original individual QA method
-        
+            print("Step 4: No remaining properties for model card text extraction.")
         
         # Clean up columns if requested
         if clean_columns:

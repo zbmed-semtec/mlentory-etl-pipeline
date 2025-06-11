@@ -12,6 +12,7 @@ from .GraphBuilderFAIR4ML import GraphBuilderFAIR4ML
 from .GraphBuilderCroissant import GraphBuilderCroissant
 from .GraphBuilderArxiv import GraphBuilderArxiv
 from .GraphBuilderKeyWords import GraphBuilderKeyWords
+from .GraphBuilderLicense import GraphBuilderLicense
 
 class MlentoryTransformWithGraphBuilder:
     def __init__(self, base_namespace: str = "http://example.org/", FAIR4ML_schema_data: pd.DataFrame = None):
@@ -20,6 +21,7 @@ class MlentoryTransformWithGraphBuilder:
         self.graph_builder_croissant = GraphBuilderCroissant(base_namespace)
         self.graph_builder_arxiv = GraphBuilderArxiv(base_namespace)
         self.graph_builder_keywords = GraphBuilderKeyWords(base_namespace)
+        self.graph_builder_licenses = GraphBuilderLicense(base_namespace)
     
 
     def transform_HF_models_with_related_entities(
@@ -56,9 +58,15 @@ class MlentoryTransformWithGraphBuilder:
             save_output=save_intermediate_graphs,
             output_dir=kg_output_dir,
         )
+        
+        licenses_kg, licenses_extraction_metadata = self.transform_HF_licenses(
+            extracted_df=extracted_entities["licenses"],
+            save_output=save_intermediate_graphs,
+            output_dir=kg_output_dir,
+        )
 
         kg_integrated = self.unify_graphs(
-            [models_kg, datasets_kg, arxiv_kg, keywords_kg],
+            [models_kg, datasets_kg, arxiv_kg, keywords_kg, licenses_kg],
             save_output_in_json=save_output,
             output_dir=kg_output_dir,
         )
@@ -119,6 +127,21 @@ class MlentoryTransformWithGraphBuilder:
         if save_output:
             self.save_graph(knowledge_graph, "Transformed_HF_kg", output_dir)
             self.save_graph(extraction_metadata_graph, "Transformed_HF_kg_metadata", output_dir)
+
+        return knowledge_graph, extraction_metadata_graph
+
+    def transform_HF_licenses(
+        self,
+        extracted_df: pd.DataFrame,
+        save_output: bool = False,
+        output_dir: str = None,
+    ) -> Tuple[rdflib.Graph, rdflib.Graph]:
+        
+        knowledge_graph, extraction_metadata_graph = self.graph_builder_licenses.hf_dataframe_to_graph(extracted_df, identifier_column="Name", platform=Platform.HUGGING_FACE.value)
+        
+        if save_output:
+            self.save_graph(knowledge_graph, "Transformed_HF_licenses_kg", output_dir)
+            self.save_graph(extraction_metadata_graph, "Transformed_HF_licenses_kg_metadata", output_dir)
 
         return knowledge_graph, extraction_metadata_graph
     

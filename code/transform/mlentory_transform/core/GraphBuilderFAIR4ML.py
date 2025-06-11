@@ -87,7 +87,7 @@ class GraphBuilderFAIR4ML(GraphBuilderBase):
                 entity_uri,
                 RDF.type,
                 self.namespaces["fair4ml"]["ML_Model"],
-                {"extraction_method": "System", "confidence": 1.0},
+                {"extraction_method": "MLentory ETL", "confidence": 1.0},
             )
 
             # Go through the properties of the model
@@ -234,30 +234,30 @@ class GraphBuilderFAIR4ML(GraphBuilderBase):
                         dataset_uri,
                         RDF.type,
                         self.namespaces["fair4ml"]["Dataset"],
-                        {"extraction_method": "System", "confidence": 1.0})
+                        {"extraction_method": "MLentory ETL", "confidence": 1.0})
                     if( len(item_value_str) < 100):
                         self.add_triple_with_metadata(
                             dataset_uri,
                             self.namespaces["schema"]["name"],
                             Literal(item_value_str, datatype=XSD.string),
-                            {"extraction_method": "System", "confidence": 1.0})
+                            {"extraction_method": "MLentory ETL", "confidence": 1.0})
                         if platform == Platform.HUGGING_FACE.value:
                              self.add_triple_with_metadata(
                                 dataset_uri,
                                 self.namespaces["schema"]["url"],
                                 Literal("https://huggingface.co/datasets/"+item_value_str, datatype=XSD.anyURI),
-                                {"extraction_method": "System", "confidence": 1.0})
+                                {"extraction_method": "MLentory ETL", "confidence": 1.0})
                     else:
                         self.add_triple_with_metadata(
                             dataset_uri,
                             self.namespaces["schema"]["description"],
                             Literal(item_value_str, datatype=XSD.string),
-                            {"extraction_method": "System", "confidence": 1.0})
+                            {"extraction_method": "MLentory ETL", "confidence": 1.0})
                         self.add_triple_with_metadata(
                             dataset_uri,
                             self.namespaces["schema"]["name"],
                             Literal("Extracted model info: "+item_value_str[:50]+"...", datatype=XSD.string),
-                            {"extraction_method": "System", "confidence": 1.0})
+                            {"extraction_method": "MLentory ETL", "confidence": 1.0})
 
                     objects.append(dataset_uri)
 
@@ -274,12 +274,12 @@ class GraphBuilderFAIR4ML(GraphBuilderBase):
                         scholarly_article_uri,
                         RDF.type,
                         self.namespaces["schema"]["ScholarlyArticle"],
-                        {"extraction_method": "System", "confidence": 1.0})
+                        {"extraction_method": "MLentory ETL", "confidence": 1.0})
                     self.add_triple_with_metadata(
                         scholarly_article_uri,
                         self.namespaces["schema"]["url"],
                         Literal("https://arxiv.org/abs/"+article_id, datatype=XSD.anyURI),
-                        {"extraction_method": "System", "confidence": 1.0})
+                        {"extraction_method": "MLentory ETL", "confidence": 1.0})
                     objects.append(scholarly_article_uri)
 
                 elif "Boolean" in range_value:
@@ -301,18 +301,18 @@ class GraphBuilderFAIR4ML(GraphBuilderBase):
                         person_uri,
                         RDF.type,
                         self.namespaces["schema"]["Person"],
-                        {"extraction_method": "System", "confidence": 1.0})
+                        {"extraction_method": "MLentory ETL", "confidence": 1.0})
                     self.add_triple_with_metadata(
                         person_uri,
                         self.namespaces["schema"]["name"],
                         Literal(item_value_str, datatype=XSD.string),
-                        {"extraction_method": "System", "confidence": 1.0})
+                        {"extraction_method": "MLentory ETL", "confidence": 1.0})
                     if platform == Platform.HUGGING_FACE.value:
                         self.add_triple_with_metadata(
                             person_uri,
                             self.namespaces["schema"]["url"],
                             Literal("https://huggingface.co/"+item_value_str, datatype=XSD.anyURI),
-                            {"extraction_method": "System", "confidence": 1.0})
+                            {"extraction_method": "MLentory ETL", "confidence": 1.0})
                     objects.append(person_uri)
 
                 elif "Organization" in range_value:
@@ -322,18 +322,18 @@ class GraphBuilderFAIR4ML(GraphBuilderBase):
                         organization_uri,
                         RDF.type,
                         self.namespaces["schema"]["Organization"],
-                        {"extraction_method": "System", "confidence": 1.0})
+                        {"extraction_method": "MLentory ETL", "confidence": 1.0})
                     self.add_triple_with_metadata(
                         organization_uri,
                         self.namespaces["schema"]["name"],
                         Literal(item_value_str, datatype=XSD.string),
-                        {"extraction_method": "System", "confidence": 1.0})
+                        {"extraction_method": "MLentory ETL", "confidence": 1.0})
                     if platform == Platform.HUGGING_FACE.value:
                         self.add_triple_with_metadata(
                             organization_uri,
                             self.namespaces["schema"]["url"],
                             URIRef("https://huggingface.co/"+item_value_str),
-                            {"extraction_method": "System", "confidence": 1.0})
+                            {"extraction_method": "MLentory ETL", "confidence": 1.0})
                     objects.append(organization_uri)
 
                 elif "DefinedTerm" in range_value:
@@ -347,14 +347,33 @@ class GraphBuilderFAIR4ML(GraphBuilderBase):
                             defined_term_uri,
                             RDF.type,
                             self.namespaces["schema"]["DefinedTerm"],
-                            {"extraction_method": "System", "confidence": 1.0})
+                            {"extraction_method": "MLentory ETL", "confidence": 1.0})
                         self.add_triple_with_metadata(
                             defined_term_uri,
                             self.namespaces["schema"]["name"],
                             Literal(item_value_str, datatype=XSD.string),
-                            {"extraction_method": "System", "confidence": 1.0})
+                            {"extraction_method": "MLentory ETL", "confidence": 1.0})
                         objects.append(defined_term_uri)
 
+                elif "CreativeWork" in range_value:
+                    if platform == Platform.HUGGING_FACE.value and ":" in item_value_str:
+                        objects.append(Literal(item_value_str, datatype=XSD.string))
+                    else:
+                        print(f"Creating in FAIR4ML CreativeWork for {item_value_str}")
+                        id_hash = self.generate_entity_hash(platform, "CreativeWork", item_value_str.strip().lower())
+                        creative_work_uri = self.base_namespace[id_hash]
+                        self.add_triple_with_metadata(
+                            creative_work_uri,
+                            RDF.type,
+                            self.namespaces["schema"]["CreativeWork"],
+                            {"extraction_method": "MLentory ETL", "confidence": 1.0})
+                        self.add_triple_with_metadata(
+                            creative_work_uri,
+                            self.namespaces["schema"]["name"],
+                            Literal(item_value_str, datatype=XSD.string),
+                            {"extraction_method": "MLentory ETL", "confidence": 1.0})
+                        objects.append(creative_work_uri)
+                    
                 elif "fair4ml:MLModel" in range_value:
                     id_hash = self.generate_entity_hash(platform, "MLModel", item_value_str)
                     ml_model_uri = self.base_namespace[id_hash]
@@ -362,18 +381,18 @@ class GraphBuilderFAIR4ML(GraphBuilderBase):
                         ml_model_uri,
                         RDF.type,
                         self.namespaces["fair4ml"]["MLModel"],
-                        {"extraction_method": "System", "confidence": 1.0})
+                        {"extraction_method": "MLentory ETL", "confidence": 1.0})
                     self.add_triple_with_metadata(
                         ml_model_uri,
                         self.namespaces["schema"]["name"],
                         Literal(item_value_str, datatype=XSD.string),
-                        {"extraction_method": "System", "confidence": 1.0})
+                        {"extraction_method": "MLentory ETL", "confidence": 1.0})
                     if platform == Platform.HUGGING_FACE.value:
                         self.add_triple_with_metadata(
                             ml_model_uri,
                             self.namespaces["schema"]["url"],
                             URIRef("https://huggingface.co/"+item_value_str),
-                            {"extraction_method": "System", "confidence": 1.0})
+                            {"extraction_method": "MLentory ETL", "confidence": 1.0})
                     objects.append(ml_model_uri)
                 else:
                     # Fallback for unhandled range types - treat as string
