@@ -176,7 +176,7 @@ class QAMatchingEngine:
         self, questions: List[str], context: str, top_k: int = 2, max_section_length: int = 2000
     ) -> List[List[RelevantSectionMatch]]:
         """
-        Find the most relevant sections for each question.
+        This method creates a list of sections found in the context and then finds the most relevant sections for each question.
 
         Args:
             questions (List[str]): List of questions
@@ -193,9 +193,9 @@ class QAMatchingEngine:
             context, max_section_length
         )
         
-        print(f"\n \n Printing all sections!!!!!!!! \n \n", len(sections))
-        for s in sections:
-            print(f"Section:{s.content} \n")
+        # print(f"\n \n Printing all sections!!!!!!!! \n \n", len(sections))
+        # for s in sections:
+        #     print(f"Section:{s.content} \n")
         
         # print(f"\n \n Sections: {sections} \n \n")
         if not sections:
