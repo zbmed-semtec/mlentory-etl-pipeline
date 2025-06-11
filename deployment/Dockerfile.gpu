@@ -30,7 +30,7 @@ COPY code/load /app/load
 RUN pip3 install -e /app/load
 
 # Add shell functions for common commands
-RUN echo 'run-hf-tests() { pytest -v extractors/mlentory_extract/tests/hf_extract/ "$@"; }' >> ~/.bashrc && \
+RUN echo 'run-hf-tests() { pytest -v  extractors/mlentory_extract/tests/hf_extract/ "$@"; }' >> ~/.bashrc && \
     echo 'run-hf-etl() { python3 hf_etl/run_extract_transform_load.py "$@"; }' >> ~/.bashrc
 
 FROM gpu_base AS gpu_openml
