@@ -24,7 +24,7 @@ from mlentory_transform.core import (
 )
 
 # Load environment variables with defaults
-POSTGRES_HOST = os.getenv("POSTGRES_HOST", "postgres_db")
+POSTGRES_HOST = os.getenv("POSTGRES_HOST", "postgres")
 POSTGRES_USER = os.getenv("POSTGRES_USER", "user")
 POSTGRES_PASSWORD = os.getenv("POSTGRES_PASSWORD", "password")
 POSTGRES_DB = os.getenv("POSTGRES_DB", "history_DB")
