@@ -5,36 +5,62 @@ ARG DEBIAN_FRONTEND=noninteractive
 
 # Install system dependencies
 RUN apt-get update && apt-get install -y \
-    wget \
-    curl \
-    git \
     python3.10 \
     python3-pip \
     && rm -rf /var/lib/apt/lists/*
 
-RUN nvcc --version
+# RUN nvcc --version
 
 RUN pip3 install packaging
 
 # Create working directory
 WORKDIR /app
 
-# Copy the package files
-COPY code/extractors /app/extractors
-RUN pip3 install -e /app/extractors
+# Add shell scripts for common commands
+RUN echo '#!/bin/bash' > /usr/local/bin/run-hf-tests && \
+    echo 'pytest -v extractors/mlentory_extract/tests/hf_extract/ "$@"' >> /usr/local/bin/run-hf-tests && \
+    chmod +x /usr/local/bin/run-hf-tests && \
+    echo '#!/bin/bash' > /usr/local/bin/run-hf-etl && \
+    echo 'python3 hf_etl/run_extract_transform_load.py "$@"' >> /usr/local/bin/run-hf-etl && \
+    chmod +x /usr/local/bin/run-hf-etl
 
-COPY code/transform /app/transform
-RUN pip3 install -e /app/transform
 
-COPY code/load /app/load
-RUN pip3 install -e /app/load
+# Upgrade pip
+RUN pip install --upgrade pip
 
-# Add shell functions for common commands
-RUN echo 'run-hf-tests() { pytest -v extractors/mlentory_extract/tests/hf_extract/ "$@"; }' >> ~/.bashrc && \
-    echo 'run-hf-etl() { python3 hf_etl/run_extract_transform_load.py "$@"; }' >> ~/.bashrc
+COPY deployment/requirements/ /app/requirements/
+
+
+########################################################################################
 
 FROM gpu_base AS gpu_openml
 RUN echo "Building OpenML ETL image for GPU..."
 
+RUN pip install --no-cache-dir -r /app/requirements/openml_requirements.txt
+
+# Copy the package files
+COPY code/extractors /app/extractors
+RUN pip3 install --no-deps -e /app/extractors
+
+COPY code/transform /app/transform
+RUN pip3 install --no-deps -e /app/transform
+
+COPY code/load /app/load
+RUN pip3 install --no-deps -e /app/load
+
+########################################################################################
+
 FROM gpu_base AS gpu_hf
 RUN echo "Building HF ETL image for GPU..."
+
+RUN pip install --no-cache-dir -r /app/requirements/hf_requirements.txt
+
+# Copy the package files
+COPY code/extractors /app/extractors
+RUN pip3 install --no-deps -e /app/extractors
+
+COPY code/transform /app/transform
+RUN pip3 install --no-deps -e /app/transform
+
+COPY code/load /app/load
+RUN pip3 install --no-deps -e /app/load
