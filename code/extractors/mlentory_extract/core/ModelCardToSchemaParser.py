@@ -518,7 +518,7 @@ class ModelCardToSchemaParser:
             HF_df.iterrows(), total=len(HF_df), desc="Matching questions to contexts"
         ):
             context = row.get("card", "") # Use .get for safety
-            print(f"\n \n Context: {context} \n \n")
+            # print(f"\n \n Context: {context} \n \n")
             if not context or not isinstance(context, str):
                 continue # Skip if no valid context
             
