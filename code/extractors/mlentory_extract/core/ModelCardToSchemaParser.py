@@ -425,7 +425,7 @@ class ModelCardToSchemaParser:
             else:
                 yaml_dict = {"error": "Card text is not a string"}
                 
-            if "error" in yaml_dict:
+            if (yaml_dict is None) or (type(yaml_dict) != dict) or ("error" in yaml_dict):
                 continue
             
             # Check if the model is gated
@@ -462,9 +462,11 @@ class ModelCardToSchemaParser:
         Check if the model is gated based on the YAML dictionary.
         """
         gated_info = ""
-        for key, value in yaml_dict.items():
-            if "extra_gated" in key and isinstance(value, str):
-                gated_info += value + "\n"
+        
+        if isinstance(yaml_dict, dict):
+            for key, value in yaml_dict.items():
+                if "extra_gated" in key and isinstance(value, str):
+                    gated_info += value + "\n"
             
         return gated_info
     
@@ -475,9 +477,15 @@ class ModelCardToSchemaParser:
         licensed_info = ""
         
         if "license_name" in yaml_dict:
-            licensed_info = yaml_dict["license_name"]
+            if isinstance(yaml_dict["license_name"], str):
+                licensed_info = yaml_dict["license_name"]
+            elif isinstance(yaml_dict["license_name"], list):
+                licensed_info = yaml_dict["license_name"][0]
         elif "license" in yaml_dict:
-            licensed_info = yaml_dict["license"]
+            if isinstance(yaml_dict["license"], str):
+                licensed_info = yaml_dict["license"]
+            elif isinstance(yaml_dict["license"], list):
+                licensed_info = yaml_dict["license"][0]
         
         # Check if the license is a SPDX license
         spdx_license_from_id = spdx_lookup.by_id(licensed_info)
@@ -489,9 +497,14 @@ class ModelCardToSchemaParser:
             licensed_info = spdx_license.id
         else:
             # Put everything that has license in the key
-            for key, value in yaml_dict.items():
-                if "license" in key:
-                    licensed_info += key + ": " + value + "\n"
+            if isinstance(yaml_dict, dict):
+                for key, value in yaml_dict.items():
+                    if "license" in key:
+                        if isinstance(value, str):
+                            licensed_info += key + ": " + value + "\n"
+                        elif isinstance(value, list):
+                            for item in value:
+                                licensed_info += key + ": " + item + "\n"
             
         return licensed_info
                 
@@ -505,7 +518,7 @@ class ModelCardToSchemaParser:
             HF_df.iterrows(), total=len(HF_df), desc="Matching questions to contexts"
         ):
             context = row.get("card", "") # Use .get for safety
-            print(f"\n \n Context: {context} \n \n")
+            # print(f"\n \n Context: {context} \n \n")
             if not context or not isinstance(context, str):
                 continue # Skip if no valid context
             

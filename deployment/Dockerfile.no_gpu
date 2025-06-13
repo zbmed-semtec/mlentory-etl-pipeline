@@ -1,25 +1,53 @@
-FROM python:3.11 AS no_gpu_base
-
-# Install PyTorch with a specific, compatible version
-# RUN pip3 install torch==2.3.0
-
-RUN pip3 install packaging
+FROM python:3.11-slim AS no_gpu_base
 
 WORKDIR /app
 
-# Copy the package files
-COPY code/extractors /app/extractors
-RUN pip3 install -e /app/extractors
+# Add shell scripts for common commands to the PATH
+RUN echo '#!/bin/bash' > /usr/local/bin/run-hf-tests && \
+    echo 'pytest -v /app/code/extractors/mlentory_extract/tests/hf_extract/ "$@"' >> /usr/local/bin/run-hf-tests && \
+    chmod +x /usr/local/bin/run-hf-tests && \
+    echo '#!/bin/bash' > /usr/local/bin/run-hf-etl && \
+    echo 'python3 /app/code/hf_etl/run_extract_transform_load.py "$@"' >> /usr/local/bin/run-hf-etl && \
+    chmod +x /usr/local/bin/run-hf-etl
 
-COPY code/transform /app/transform
-RUN pip3 install -e /app/transform
+# Upgrade pip and install packaging
+RUN pip install --upgrade pip && pip install packaging
 
-COPY code/load /app/load
-RUN pip3 install -e /app/load
+COPY deployment/requirements/ /app/requirements/
+
+
+########################################################################################
 
 FROM no_gpu_base AS no_gpu_openml
 RUN echo "Building OpenML ETL image without GPU..."
 
+RUN pip install --no-cache-dir -r /app/requirements/openml_requirements.txt
+
+# Copy and install local packages
+COPY code/extractors /app/extractors
+RUN pip3 install --no-deps -e /app/extractors
+
+COPY code/transform /app/transform
+RUN pip3 install --no-deps -e /app/transform
+
+COPY code/load /app/load
+RUN pip3 install --no-deps -e /app/load
+
+
+########################################################################################
+
 FROM no_gpu_base AS no_gpu_hf
 RUN echo "Building HF ETL image without GPU..."
+
+RUN pip install --no-cache-dir -r /app/requirements/hf_requirements.txt
+
+# Copy and install local packages
+COPY code/extractors /app/extractors
+RUN pip3 install --no-deps -e /app/extractors
+
+COPY code/transform /app/transform
+RUN pip3 install --no-deps -e /app/transform
+
+COPY code/load /app/load
+RUN pip3 install --no-deps -e /app/load
 
