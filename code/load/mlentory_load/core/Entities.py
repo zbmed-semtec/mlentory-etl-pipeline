@@ -102,6 +102,7 @@ class Run(Document):
     sharedBy = Text()
     modelCategory = Keyword(multi=True)
     trainedOn = Text(multi=True)
+    keywords = Keyword(multi=True) 
 
 class OpenMLRun(Run):
     """
