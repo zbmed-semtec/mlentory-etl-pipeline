@@ -233,6 +233,44 @@ class OpenMLExtractor:
                                 nested_data[sub_key] = getattr(obj, attr) 
 
                     metadata[key] = self._wrap_metadata(nested_data)  # Store as a dictionary
+
+                elif isinstance(path, list):
+                    print(key, " is a list")
+                    # Handle list of commands case
+                    combined_result = None
+                    for command in path:
+                        print(command)
+                        if "{" in command and "}" in command:  # Handle formatted strings
+                            result = command.format(run=run)
+                        else:
+                            obj_name, attr = command.split(".")
+                            obj = obj_map.get(obj_name)
+                            if obj:
+                                result = getattr(obj, attr)
+                            else:
+                                result = None
+                        
+                        # Combine results
+                        if result is not None:
+                            if combined_result is None:
+                                combined_result = result
+                            else:
+                                # If both are strings, combine with space
+                                if isinstance(combined_result, str) and isinstance(result, str):
+                                    combined_result = f"{combined_result} {result}"
+                                # If both are lists, combine the lists
+                                elif isinstance(combined_result, list) and isinstance(result, list):
+                                    combined_result.extend(result)
+                                # If one is list and other is string, convert string to list and combine
+                                elif isinstance(combined_result, list) and isinstance(result, str):
+                                    combined_result.append(result)
+                                elif isinstance(combined_result, str) and isinstance(result, list):
+                                    combined_result = [combined_result] + result
+                                # For other types, convert to string and combine
+                                else:
+                                    combined_result = f"{str(combined_result)} {str(result)}"
+                    
+                    metadata[key] = self._wrap_metadata(combined_result)
                 else:
                     if "{" in path and "}" in path: 
                         metadata[key] = self._wrap_metadata(path.format(run=run))
