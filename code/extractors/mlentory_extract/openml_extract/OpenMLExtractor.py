@@ -235,11 +235,9 @@ class OpenMLExtractor:
                     metadata[key] = self._wrap_metadata(nested_data)  # Store as a dictionary
 
                 elif isinstance(path, list):
-                    print(key, " is a list")
                     # Handle list of commands case
                     combined_result = None
                     for command in path:
-                        print(command)
                         if "{" in command and "}" in command:  # Handle formatted strings
                             result = command.format(run=run)
                         else:
