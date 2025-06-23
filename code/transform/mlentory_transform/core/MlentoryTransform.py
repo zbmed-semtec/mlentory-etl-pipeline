@@ -346,8 +346,8 @@ class MlentoryTransform:
 
         if save_output_in_json:
             current_date = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-            kg_output_path = os.path.join(output_dir, f"{current_date}_unified_kg.ttl")
-            unified_graph.serialize(destination=kg_output_path, format="turtle")
+            kg_output_path = os.path.join(output_dir, f"{current_date}_unified_kg.nt")
+            unified_graph.serialize(destination=kg_output_path, format="nt")
 
         return unified_graph
 
@@ -466,7 +466,7 @@ class MlentoryTransform:
                 raise ValueError("output_dir must be provided if save_output_in_json is True")
                 
             current_date = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-            kg_output_path = os.path.join(output_dir, f"{current_date}_disambiguated_kg.ttl")
+            kg_output_path = os.path.join(output_dir, f"{current_date}_disambiguated_kg.nt")
             disambiguated_graph.serialize(destination=kg_output_path, format="turtle")
         
         return disambiguated_graph
@@ -523,8 +523,8 @@ class MlentoryTransform:
             
         Example:
             >>> MlentoryTransform.disambiguate_unified_graph(
-            ...     "path/to/unified_kg.ttl", 
-            ...     "path/to/disambiguated_kg.ttl"
+            ...     "path/to/unified_kg.nt", 
+            ...     "path/to/disambiguated_kg.nt"
             ... )
         """
         # Check if input file exists
