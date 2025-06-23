@@ -3,6 +3,7 @@ import json
 import os
 import hashlib
 import pprint
+import time
 import pandas as pd
 from rdflib import Graph, URIRef, Literal, BNode, Namespace
 from rdflib.namespace import RDF, XSD, FOAF, RDFS, SKOS
@@ -52,6 +53,7 @@ class GraphHandlerForKG(GraphHandler):
         platform: str = "hugging_face",
         graph_identifier: str = "http://mlentory.zbmed.de/mlentory_graph",
         deprecated_graph_identifier: str = "http://mlentory.zbmed.de/deprecated_mlentory_graph",
+        logger=None,
     ):
 
         super().__init__(
@@ -62,6 +64,7 @@ class GraphHandlerForKG(GraphHandler):
             platform,
             graph_identifier,
             deprecated_graph_identifier,
+            logger,
         )
         
         self.models_to_index = []
@@ -94,9 +97,20 @@ class GraphHandlerForKG(GraphHandler):
         2. Updates current graph
         3. Updates search indices
         """
+        start_time = time.time()
         self.update_extraction_metadata_graph_with_kg()
+        end_time = time.time()
+        self.logger.info(f"update_extraction_metadata_graph_with_kg took {end_time - start_time:.2f} seconds")
+
+        start_time = time.time()
         self.update_current_graph()
+        end_time = time.time()
+        self.logger.info(f"update_current_graph took {end_time - start_time:.2f} seconds")
+
+        start_time = time.time()
         self.update_indexes_with_kg()
+        end_time = time.time()
+        self.logger.info(f"update_indexes_with_kg took {end_time - start_time:.2f} seconds")
 
     def update_extraction_metadata_graph_with_kg(self):
         """
@@ -115,7 +129,7 @@ class GraphHandlerForKG(GraphHandler):
 
         triplets_metadata = {}
 
-        print("Processing extraction metadata...")
+        self.logger.info("Processing extraction metadata...")
         for triplet in tqdm(
             self.extraction_metadata, desc="Creating triples dictionaries"
         ):
@@ -124,7 +138,7 @@ class GraphHandlerForKG(GraphHandler):
             else:
                 triplets_metadata[triplet[0]][triplet[1]] = triplet[2]
 
-        batch_size = 100
+        batch_size = 50000
         batch_triplets = []
 
         # Get all nodes of type StatementMetadata
@@ -238,7 +252,7 @@ class GraphHandlerForKG(GraphHandler):
 
         # Get all the nodes in the KG that are of type MLModel
         entities_in_kg = {}
-        print("Updating search indices...")
+        self.logger.info("Updating search indices...")
         for triplet in tqdm(self.kg, desc="Processing current KG triplets"):
             entity_uri = str(triplet[0].n3())
             if entity_uri not in entities_in_kg:
@@ -249,7 +263,7 @@ class GraphHandlerForKG(GraphHandler):
                 else:
                     entities_in_kg[entity_uri][triplet[1].n3()].append(str(triplet[2]))
 
-        print("Updating search indices...")
+        self.logger.info("Updating search indices...")
         for entity_uri, entity_dict in tqdm(
             entities_in_kg.items(), desc="Processing entities"
         ):
@@ -337,5 +351,5 @@ class GraphHandlerForKG(GraphHandler):
                     )
 
         if len(new_models) > 0:
-            print(f"Adding {len(new_models)} new models to search index...")
+            self.logger.info(f"Adding {len(new_models)} new models to search index...")
             self.IndexHandler.add_documents(new_models)
