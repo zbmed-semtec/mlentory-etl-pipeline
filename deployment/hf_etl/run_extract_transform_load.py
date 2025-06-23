@@ -91,13 +91,17 @@ def setup_logging() -> logging.Logger:
     logging_filename = f"{base_log_path}/transform_{timestamp}.log"
 
     logging.basicConfig(
-        filename=logging_filename,
-        filemode="w",
+        level=logging.INFO,
         format="%(asctime)s %(name)s - %(levelname)s - %(message)s",
         datefmt="%d-%b-%y %H:%M:%S",
+        handlers=[
+            logging.FileHandler(logging_filename, mode="w"),
+            logging.StreamHandler(),
+        ],
     )
     logger = logging.getLogger(__name__)
     logger.setLevel(logging.INFO)
+    return logger
 
 
 def initialize_extractor(config_path: str) -> HFExtractor:
@@ -156,12 +160,15 @@ def initialize_transform_hf(config_path: str) -> MlentoryTransform:
     return transformer
 
 
-def initialize_load_processor(kg_files_directory: str) -> LoadProcessor:
+def initialize_load_processor(
+    kg_files_directory: str, logger: logging.Logger
+) -> LoadProcessor:
     """
     Initializes the load processor with the configuration data.
 
     Args:
         kg_files_directory (str): The path to the kg files directory.
+        logger (logging.Logger): The logger instance.
 
     Returns:
         LoadProcessor: The load processor instance.
@@ -197,6 +204,7 @@ def initialize_load_processor(kg_files_directory: str) -> LoadProcessor:
         kg_files_directory=kg_files_directory,
         graph_identifier="http://mlentory.zbmed.de/mlentory_graph",
         deprecated_graph_identifier="http://mlentory.zbmed.de/deprecated_mlentory_graph",
+        logger=logger,
     )
 
     # Initializing the load processor
@@ -265,31 +273,43 @@ def parse_args() -> argparse.Namespace:
         # default="./hf_etl/inputs/models_to_download.txt",
         help="Path to a text file containing a list of Hugging Face model IDs (one per line). If provided, --num-models and --from-date are ignored.",
     )
+    parser.add_argument(
+        "--use-dummy-data",
+        "-ud",
+        # action="store_true",
+        default=False,
+        help="Use dummy data for testing purposes.",
+    )
     return parser.parse_args()
 
 
 def main():
     args = parse_args()
-    setup_logging()
+    logger = setup_logging()
 
     # Setup configuration data
     config_path = "./configuration/hf"  # Path to configuration folder
     kg_files_directory = "./../kg_files"  # Path to kg files directory
     intialize_folder_structure(args.output_dir,clean_folders=False)
     
-    use_dummy_data = False
+    use_dummy_data = args.use_dummy_data
     kg_integrated = Graph()  
     extraction_metadata_integrated = Graph()
     
     if not use_dummy_data:
 
         # Initialize extractor
+        logger.info("Initializing extractor...")
+        start_time = time.time()
         extractor = initialize_extractor(config_path)
+        end_time = time.time()
+        logger.info(f"Extractor initialization took {end_time - start_time:.2f} seconds")
+        
         extracted_entities = {}
         models_df = pd.DataFrame()
 
         if args.model_list_file :
-            logging.info(f"Processing models from file: {args.model_list_file}")
+            logger.info(f"Processing models from file: {args.model_list_file}")
             try:
                 model_ids_from_file = load_models_from_file(args.model_list_file)
             except FileNotFoundError as e:
@@ -302,6 +322,9 @@ def main():
             else:
                 # Call the new method in HFExtractor
                 entities_to_download_config = ["datasets", "articles", "keywords", "base_models", "licenses"]
+                
+                logger.info("Starting model extraction from file...")
+                start_time = time.time()
                 extracted_entities = extractor.download_specific_models_with_related_entities(
                     model_ids=model_ids_from_file,
                     output_dir=args.output_dir, # Pass the base output_dir
@@ -309,6 +332,9 @@ def main():
                     threads=4, # TODO: Consider making threads an arg
                     related_entities_to_download=entities_to_download_config
                 )
+                end_time = time.time()
+                logger.info(f"Model extraction from file took {end_time - start_time:.2f} seconds")
+                
                 if "models" not in extracted_entities or extracted_entities["models"].empty:
                     logging.warning("No models were extracted using the model list file.")
 
@@ -316,6 +342,9 @@ def main():
             # Existing logic: download models and related entities based on num_models/date
             logging.info(f"Downloading {args.num_models} models, last modified after {args.from_date.strftime('%Y-%m-%d')}")
             entities_to_download_config = ["datasets", "articles", "keywords", "base_models", "licenses"]
+            
+            logger.info("Starting model extraction with default parameters...")
+            start_time = time.time()
             extracted_entities = extractor.download_models_with_related_entities(
                 num_models=args.num_models,
                 from_date=args.from_date, # Use the parsed date
@@ -327,6 +356,9 @@ def main():
                 threads=4, # Reuse threads
                 depth=2, # Default behavior
             )
+            end_time = time.time()
+            logger.info(f"Model extraction with default parameters took {end_time - start_time:.2f} seconds")
+            
             # 'models' key in extracted_entities already contains the combined models here
             if "models" not in extracted_entities or extracted_entities["models"].empty:
                 logging.warning("No models were extracted using the default method. Check parameters or HF connection.")
@@ -334,29 +366,73 @@ def main():
                 # return
 
         # Initialize transformer (outside the if/else)
+        logger.info("Initializing transformer...")
+        start_time = time.time()
         transformer = initialize_transform_hf(config_path)
+        end_time = time.time()
+        logger.info(f"Transformer initialization took {end_time - start_time:.2f} seconds")
 
+        logger.info("Starting transformation process...")
+        start_time = time.time()
         kg_integrated, extraction_metadata_integrated = transformer.transform_HF_models_with_related_entities(
             extracted_entities=extracted_entities,
             save_output=True,
             kg_output_dir=args.output_dir+"/kg",
             extraction_metadata_output_dir=args.output_dir+"/extraction_metadata",
         )
+        end_time = time.time()
+        logger.info(f"Transformation process took {end_time - start_time:.2f} seconds")
     else:
-        # load kg with rdflib   
-        kg_integrated.parse(args.output_dir + "/../../copy_examples/files/kg/2025-04-29_09-57-26_unified_kg.ttl", format="turtle")
-        extraction_metadata_integrated.parse(args.output_dir + "/../../copy_examples/files/extraction_metadata/2025-04-29_09-57-27_unified_kg.ttl", format="turtle")
+        # load kg with rdflib
+        logger.info("Loading dummy KG TTL file...")
+        start_time = time.time()
+        kg_integrated.parse(
+            args.output_dir
+            + "/../../copy_examples/files/kg/10000_HF_models_kg.ttl",
+            format="turtle",
+        )
+        end_time = time.time()
+        logger.info(
+            f"Loading dummy KG TTL file took {end_time - start_time:.2f} seconds"
+        )
+
+        logger.info("Loading dummy extraction metadata TTL file...")
+        start_time = time.time()
+        extraction_metadata_integrated.parse(
+            args.output_dir
+            + "/../../copy_examples/files/extraction_metadata/10000_HF_models_extraction_metadata_kg.ttl",
+            format="turtle",
+        )
+        end_time = time.time()
+        logger.info(
+            f"Loading dummy extraction metadata TTL file took {end_time - start_time:.2f} seconds"
+        )
 
     # Initialize loader
-    loader = initialize_load_processor(kg_files_directory)
+    logger.info("Initializing loader...")
+    start_time = time.time()
+    loader = initialize_load_processor(kg_files_directory, logger)
+    end_time = time.time()
+    logger.info(f"Loader initialization took {end_time - start_time:.2f} seconds")
 
+    logger.info("Cleaning databases...")
+    start_time = time.time()
     # loader.clean_DBs()
+    end_time = time.time()
+    logger.info(f"Database cleaning took {end_time - start_time:.2f} seconds")
 
     # Load data
+    logger.info("Starting database update with KG...")
+    start_time = time.time()
     loader.update_dbs_with_kg(kg_integrated, extraction_metadata_integrated)
+    end_time = time.time()
+    logger.info(f"Database update with KG took {end_time - start_time:.2f} seconds")
     
-    print("CHECKING LICENSES!!!!!!!!!!!!!!")
-    print(extracted_entities["licenses"])
+    # print("CHECKING QUERY STATS!!!!!!!!!!!!!!")
+    # print(loader.GraphHandler.SQLHandler.query_stats["queries"])
+    
+    # print("CHECKING LICENSES!!!!!!!!!!!!!!")
+    # print(extracted_entities["licenses"])
 
 
 if __name__ == "__main__":
