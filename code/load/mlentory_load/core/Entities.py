@@ -26,7 +26,7 @@ class Model(Document):
             tokenizer=tokenizer("edge_ngram", "edge_ngram", min_gram=3, max_gram=30),
         ),
     )
-    releaseNotes = Text()
+    description = Text()
     license = Keyword()
     sharedBy = Text()
     mlTask = Keyword(multi=True)
