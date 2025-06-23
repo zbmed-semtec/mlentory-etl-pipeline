@@ -214,11 +214,6 @@ class ModelCardToSchemaParser:
         Returns:
             pd.DataFrame: DataFrame with parsed fields mapped to FAIR4ML schema
         """
-        print(f"HF_df.columns!!!!!!!!!!!!!!!!!\n\n\n: {HF_df.columns}")
-        
-        # raise ValueError("Throwing error for testing")
-        # Map known fields directly
-        # HF_df.loc[:, "schema.org:author"] = HF_df.loc[:, "author"]
         HF_df.loc[:, "fair4ml:sharedBy"] = HF_df.loc[:, "author"]
         
         # Format dates properly to ensure ISO format
