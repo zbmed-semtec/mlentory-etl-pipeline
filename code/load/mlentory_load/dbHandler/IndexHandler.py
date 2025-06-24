@@ -178,8 +178,8 @@ class IndexHandler:
                 index_model_entity.name = (
                     value[0].split("/")[-2] + "/" + value[0].split("/")[-1]
                 )
-            elif "releaseNotes" in key:
-                index_model_entity.releaseNotes = value[0]
+            elif "description" in key:
+                index_model_entity.description = value[0]
             elif "sharedBy" in key:
                 index_model_entity.sharedBy = value[0]
             elif "license" in key:
@@ -263,7 +263,7 @@ class IndexHandler:
         """
         try:
             self.es.update(index=index_name, id=document_id, body={"doc": document})
-            print("Document updated successfully.")
+            # print("Document updated successfully.")
         except Exception as e:
             print(f"Error updating document: {str(e)}")
 

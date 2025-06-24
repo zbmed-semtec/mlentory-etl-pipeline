@@ -198,7 +198,7 @@ class MlentoryTransformWithGraphBuilder:
 
         if save_output_in_json:
             current_date = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-            kg_output_path = os.path.join(output_dir, f"{current_date}_unified_kg.ttl")
+            kg_output_path = os.path.join(output_dir, f"{current_date}_unified_kg.nt")
             unified_graph.serialize(destination=kg_output_path, format="turtle")
 
         return unified_graph
@@ -318,7 +318,7 @@ class MlentoryTransformWithGraphBuilder:
                 raise ValueError("output_dir must be provided if save_output_in_json is True")
                 
             current_date = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-            kg_output_path = os.path.join(output_dir, f"{current_date}_disambiguated_kg.ttl")
+            kg_output_path = os.path.join(output_dir, f"{current_date}_disambiguated_kg.nt")
             disambiguated_graph.serialize(destination=kg_output_path, format="turtle")
         
         return disambiguated_graph
@@ -328,8 +328,8 @@ class MlentoryTransformWithGraphBuilder:
         Save the graph to a file.
         """
         current_date = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-        kg_output_path = os.path.join(output_dir, f"{current_date}_{name}.ttl")
-        graph.serialize(destination=kg_output_path, format="turtle")
+        kg_output_path = os.path.join(output_dir, f"{current_date}_{name}.nt")
+        graph.serialize(destination=kg_output_path, format="nt")
         
     def print_detailed_dataframe(self, df: pd.DataFrame):
         """

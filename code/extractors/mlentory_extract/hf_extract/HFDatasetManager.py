@@ -397,7 +397,7 @@ class HFDatasetManager:
     def get_specific_arxiv_metadata_dataset(
         self,
         arxiv_ids: List[str],
-        batch_size: int = 5000,
+        batch_size: int = 200,
     ) -> pd.DataFrame:
         """
         Retrieve metadata for specific arXiv IDs using the arXiv API.
@@ -436,7 +436,7 @@ class HFDatasetManager:
         arxiv_ids = temp_arxiv_ids
         
         # Use the arXiv API to search for the specific IDs in batches
-        client = arxiv.Client()
+        client = arxiv.Client(page_size = batch_size)
         arxiv_data = []
         
         # Process arXiv IDs in batches
@@ -447,7 +447,7 @@ class HFDatasetManager:
             
             search = arxiv.Search(
                 id_list=batch_ids,
-                max_results=len(batch_ids)
+                max_results=batch_size
             )
             
             results = list(client.results(search))
@@ -532,7 +532,7 @@ class HFDatasetManager:
             # Wait 4 seconds between batches (except for the last batch)
             if i + batch_size < len(arxiv_ids):
                 print(f"Waiting 4 seconds before processing next batch...")
-                time.sleep(4)
+                time.sleep(5)
         
         if not arxiv_data:
             print("No arXiv papers could be successfully retrieved")
