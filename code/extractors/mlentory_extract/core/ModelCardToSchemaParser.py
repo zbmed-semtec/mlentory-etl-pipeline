@@ -302,13 +302,13 @@ class ModelCardToSchemaParser:
         
         for index, row in tqdm(HF_df.iterrows(), total=len(HF_df), desc="Parsing tags"):
             # Initialize lists for collecting tag-based information
-            ml_tasks = []
+            ml_tasks = set()
             base_models = set()
-            datasets = []
-            arxiv_ids = []
-            languages = []
-            libraries = []
-            keywords = []
+            datasets = set()
+            arxiv_ids = set()
+            languages = set()
+            libraries = set()
+            keywords = set()
             
             # Process each tag
             for tag in row["tags"]:
@@ -318,59 +318,56 @@ class ModelCardToSchemaParser:
                 # Extract ML tasks (fair4ml:mlTask)
                 tag_for_task = tag.replace("-", " ").lower()
                 if tag_for_task in self.tags_task_names:
-                    ml_tasks.append(tag_for_task)
-                    keywords.append(tag_for_task)
+                    ml_tasks.add(tag_for_task)
+                    keywords.add(tag_for_task)
                 
                 # Extract datasets (fair4ml:trainedOn, fair4ml:evaluatedOn)
                 if "dataset:" in tag:
                     dataset_name = tag.replace("dataset:", "")
-                    datasets.append(dataset_name)
-                    keywords.append(tag)
+                    datasets.add(dataset_name)
+                    # keywords.add(tag)
                 
                 # Extract arxiv IDs (citation)
                 if "arxiv:" in tag:
                     arxiv_id = tag.replace("arxiv:", "")
-                    arxiv_ids.append(f"https://arxiv.org/abs/{arxiv_id}")
-                    keywords.append(tag)
+                    arxiv_ids.add(f"https://arxiv.org/abs/{arxiv_id}")
+                    # keywords.add(tag)
                 
                 # Extract base models (fair4ml:baseModel)
                 if "base_model:" in tag:
                     base_model = tag.split(":")[-1]
                     base_models.add(base_model)
-                    keywords.append(tag)
+                    # keywords.add(tag)
                 
                 # Extract languages (inLanguage)
                 if tag_lower in self.tags_language:
-                    languages.append(tag)
+                    languages.add(tag)
                 
                 # Extract libraries (keywords)
                 if tag_lower in self.tags_libraries_names:
-                    libraries.append(tag_lower)
-                    keywords.append(tag_lower)
+                    libraries.add(tag_lower)
+                    keywords.add(tag_lower)
                 
+                if ":" not in tag_lower:
+                    keywords.add(tag_lower)
                 
             
             # Add pipeline tag to ML tasks if available
             if row["pipeline_tag"] is not None:
                 pipeline_task = row["pipeline_tag"].replace("-", " ").lower()
                 if pipeline_task not in ml_tasks:
-                    ml_tasks.append(pipeline_task)
+                    ml_tasks.add(pipeline_task)
+                    keywords.add(pipeline_task.lower())
             
             # Assign collected information to schema properties
-            HF_df.at[index, "fair4ml:mlTask"] = ml_tasks
-            
-            HF_df.at[index, "fair4ml:trainedOn"] = datasets
-            HF_df.at[index, "fair4ml:evaluatedOn"] = datasets
-            HF_df.at[index, "fair4ml:testedOn"] = datasets
-            
+            HF_df.at[index, "fair4ml:mlTask"] = list(ml_tasks)
+            HF_df.at[index, "fair4ml:trainedOn"] = list(datasets)
+            HF_df.at[index, "fair4ml:evaluatedOn"] = list(datasets)
+            HF_df.at[index, "fair4ml:testedOn"] = list(datasets)
             HF_df.at[index, "fair4ml:fineTunedFrom"] = list(base_models)
-            
-            HF_df.at[index, "schema.org:inLanguage"] = languages
-            
-            HF_df.at[index, "codemeta:referencePublication"] = arxiv_ids
-            
-            all_keywords = keywords + libraries
-            HF_df.at[index, "schema.org:keywords"] = all_keywords
+            HF_df.at[index, "schema.org:inLanguage"] = list(languages)
+            HF_df.at[index, "codemeta:referencePublication"] = list(arxiv_ids)
+            HF_df.at[index, "schema.org:keywords"] = list(keywords)
         
         # Add extraction metadata
         properties = [
