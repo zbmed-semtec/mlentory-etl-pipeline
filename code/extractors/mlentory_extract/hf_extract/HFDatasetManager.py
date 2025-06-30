@@ -69,7 +69,7 @@ class HFDatasetManager:
             # Load base dataset
             dataset = load_dataset(
                 "librarian-bots/model_cards_with_metadata",
-                # revision="0b3e7a79eae8a5dd28080f06065a988ca1fbf050",
+                revision="4e7edd391342ee5c182afd08a6f62bff38f44535",
             )["train"].to_pandas()
             
 
@@ -163,7 +163,7 @@ class HFDatasetManager:
         return pd.DataFrame(model_data)
     
     def get_specific_models_metadata(
-        self, model_ids: List[str], threads: int = 4
+        self, model_ids: List[str], threads: int = 2
     ) -> pd.DataFrame:
         """
         Retrieve metadata for specific HuggingFace models by ID.
@@ -200,6 +200,12 @@ class HFDatasetManager:
                 # model_id = model.id
                 # if model_id is None:
                 #     model_id = 
+                
+                print("\n\n\n =================== \n\n\n")
+                print(f"Model ID: {model.id}")
+                print(f"Model card: {card.content}")
+                print("\n\n\n =================== \n\n\n")
+                
                 
                 model_info = {
                     "modelId": model.id,
