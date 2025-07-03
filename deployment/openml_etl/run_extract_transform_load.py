@@ -112,7 +112,7 @@ def initialize_transformer(config_path: str, logger: logging.Logger) -> Mlentory
         
         kg_handler = KnowledgeGraphHandler(
             FAIR4ML_schema_data=new_schema, 
-            base_namespace="http://mlentory.zbmed.de/mlentory_graph/"
+            base_namespace="https://mlentory.zbmed.de/mlentory_graph/"
         )
         logger.info("KnowledgeGraphHandler initialized")
         
@@ -171,8 +171,8 @@ def initialize_load_processor(kg_files_directory: str, logger: logging.Logger) -
             RDFHandler=rdfHandler,
             IndexHandler=elasticsearchHandler,
             kg_files_directory=kg_files_directory,
-            graph_identifier="http://mlentory.zbmed.de/mlentory_graph",
-            deprecated_graph_identifier="http://mlentory.zbmed.de/deprecated_mlentory_graph",
+            graph_identifier="https://mlentory.zbmed.de/mlentory_graph",
+            deprecated_graph_identifier="https://mlentory.zbmed.de/deprecated_mlentory_graph",
         )
 
         logger.info("LoadProcessor initialized successfully")
