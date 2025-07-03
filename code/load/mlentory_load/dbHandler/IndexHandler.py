@@ -133,6 +133,7 @@ class IndexHandler:
         index_run_entity.sharedBy = ""
         index_run_entity.modelCategory = []
         index_run_entity.trainedOn = set()
+        index_run_entity.keywords = []
 
         for key, value in info.items():
             if "identifier" in key:
@@ -153,6 +154,8 @@ class IndexHandler:
                 index_run_entity.modelCategory.extend(value)
             elif "trainedOn" in key:
                 index_run_entity.trainedOn.update(value)
+            elif "keywords" in key:
+                index_run_entity.keywords.extend(value)
 
         index_run_entity.trainedOn = list(index_run_entity.trainedOn)
 
