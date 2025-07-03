@@ -507,6 +507,26 @@ class KnowledgeGraphHandler:
             elif "DefinedTerm" in range_value:
                 if platform == Platform.HUGGING_FACE.value and (":" in value or len(value) <= 2):
                     objects.append(Literal(value, datatype=XSD.string))
+                elif platform == Platform.OPEN_ML.value and isinstance(value, list):
+                    unique_keywords = {str(item).strip() for item in value if str(item).strip()}
+                    for keyword in unique_keywords:
+                        id_hash = self.generate_entity_hash(platform, "DefinedTerm", keyword.lower())
+                        defined_term_uri = self.base_namespace[id_hash]
+                        
+                        self.add_triple_with_metadata(
+                            defined_term_uri,
+                            RDF.type,
+                            self.namespaces["schema"]["DefinedTerm"],
+                            {"extraction_method": "System", "confidence": 1.0}
+                        )
+                        self.add_triple_with_metadata(
+                            defined_term_uri,
+                            self.namespaces["schema"]["name"],
+                            Literal(keyword),
+                            {"extraction_method": "System", "confidence": 1.0}
+                        )
+                        
+                        objects.append(defined_term_uri)
                 else:
                     id_hash = self.generate_entity_hash(platform, "DefinedTerm", value.lower().strip())
                     defined_term_uri = self.base_namespace[id_hash]
