@@ -45,8 +45,8 @@ class GraphHandler:
         IndexHandler: IndexHandler,
         kg_files_directory: str = "./../kg_files",
         platform: str = "hugging_face",
-        graph_identifier: str = "http://example.com/data_1",
-        deprecated_graph_identifier: str = "http://example.com/data_2",
+        graph_identifier: str = "https://example.com/data_1",
+        deprecated_graph_identifier: str = "https://example.com/data_2",
         logger: Optional[logging.Logger] = None,
     ):
         """
@@ -87,20 +87,20 @@ class GraphHandler:
         new_triplets_graph = rdflib.Graph(
             identifier=self.graph_identifier
         )
-        new_triplets_graph.bind("fair4ml", URIRef("http://fair4ml.com/"))
-        new_triplets_graph.bind("codemeta", URIRef("http://codemeta.com/"))
+        new_triplets_graph.bind("fair4ml", URIRef("https://fair4ml.com/"))
+        new_triplets_graph.bind("codemeta", URIRef("https://codemeta.com/"))
         new_triplets_graph.bind("schema", URIRef("https://schema.org/"))
         new_triplets_graph.bind("mlentory", URIRef("https://mlentory.com/"))
-        new_triplets_graph.bind("prov", URIRef("http://www.w3.org/ns/prov#"))
+        new_triplets_graph.bind("prov", URIRef("https://www.w3.org/ns/prov#"))
 
         old_triplets_graph = rdflib.Graph(
             identifier=self.deprecated_graph_identifier
         )
-        old_triplets_graph.bind("fair4ml", URIRef("http://fair4ml.com/"))
-        old_triplets_graph.bind("codemeta", URIRef("http://codemeta.com/"))
+        old_triplets_graph.bind("fair4ml", URIRef("https://fair4ml.com/"))
+        old_triplets_graph.bind("codemeta", URIRef("https://codemeta.com/"))
         old_triplets_graph.bind("schema", URIRef("https://schema.org/"))
         old_triplets_graph.bind("mlentory", URIRef("https://mlentory.com/"))
-        old_triplets_graph.bind("prov", URIRef("http://www.w3.org/ns/prov#"))
+        old_triplets_graph.bind("prov", URIRef("https://www.w3.org/ns/prov#"))
 
         self.logger.info("Adding new triplets...")
         for new_triplet in tqdm(self.new_triplets, desc="Processing new triplets"):
@@ -364,11 +364,11 @@ class GraphHandler:
             Graph: Current active graph with all valid triplets
         """
         current_graph = rdflib.Graph(identifier=self.graph_identifier)
-        current_graph.bind("fair4ml", URIRef("http://fair4ml.com/"))
-        current_graph.bind("codemeta", URIRef("http://codemeta.com/"))
+        current_graph.bind("fair4ml", URIRef("https://fair4ml.com/"))
+        current_graph.bind("codemeta", URIRef("https://codemeta.com/"))
         current_graph.bind("schema", URIRef("https://schema.org/"))
         current_graph.bind("mlentory", URIRef("https://mlentory.com/"))
-        current_graph.bind("prov", URIRef("http://www.w3.org/ns/prov#"))
+        current_graph.bind("prov", URIRef("https://www.w3.org/ns/prov#"))
 
         query = f"""
         CONSTRUCT {{ ?s ?p ?o }}

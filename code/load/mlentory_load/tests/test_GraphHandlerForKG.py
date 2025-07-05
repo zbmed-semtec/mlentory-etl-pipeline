@@ -11,8 +11,8 @@ from mlentory_load.core.GraphHandlerForKG import GraphHandlerForKG, _NAME_PREDIC
 from mlentory_transform.utils.enums import SchemasURL # Import the enum
 
 # Define namespaces used in sample data
-NS2 = Namespace("http://mlentory.zbmed.de/mlentory_graph/ns2#") # Example namespace for ns2
-NS1 = Namespace("http://mlentory.zbmed.de/mlentory_graph/ns1#") # Example namespace for ns1
+NS2 = Namespace("https://w3id.org/mlentory/mlentory_graph/ns2#") # Example namespace for ns2
+NS1 = Namespace("https://w3id.org/mlentory/mlentory_graph/ns1#") # Example namespace for ns1
 SCHEMA = Namespace(SchemasURL.SCHEMA.value) # Define SCHEMA namespace using enum
 
 
@@ -21,66 +21,66 @@ def sample_entities_lookup():
     """Provides a pre-populated entities_in_kg dictionary for testing."""
     entities = {
         # Keys should be N3 URIs
-        '<http://mlentory.zbmed.de/mlentory_graph/model1>': {
+        '<https://w3id.org/mlentory/mlentory_graph/model1>': {
             RDF.type.n3(): [NS2.ML_Model.n3()],
-            SCHEMA.name.n3(): ['"Test Model One"^^<http://www.w3.org/2001/XMLSchema#string>'],
+            SCHEMA.name.n3(): ['"Test Model One"^^<https://www.w3.org/2001/XMLSchema#string>'],
             SCHEMA.keywords.n3(): [
                 # Values should be N3 URIs or literals
-                '<http://mlentory.zbmed.de/mlentory_graph/keyword1>',
-                '<http://mlentory.zbmed.de/mlentory_graph/keyword_no_name>',
-                '"literal_keyword"^^<http://www.w3.org/2001/XMLSchema#string>'
+                '<https://w3id.org/mlentory/mlentory_graph/keyword1>',
+                '<https://w3id.org/mlentory/mlentory_graph/keyword_no_name>',
+                '"literal_keyword"^^<https://www.w3.org/2001/XMLSchema#string>'
             ],
             SCHEMA.mlTask.n3(): [
-                '<http://mlentory.zbmed.de/mlentory_graph/task1>',
-                '<http://mlentory.zbmed.de/mlentory_graph/task_no_name>',
+                '<https://w3id.org/mlentory/mlentory_graph/task1>',
+                '<https://w3id.org/mlentory/mlentory_graph/task_no_name>',
             ],
             SCHEMA.fineTunedFrom.n3(): [
-                '<http://mlentory.zbmed.de/mlentory_graph/base_model1>',
-                '"Unknown Base Model"^^<http://www.w3.org/2001/XMLSchema#string>',
-                '<http://mlentory.zbmed.de/mlentory_graph/base_model_no_name>'
+                '<https://w3id.org/mlentory/mlentory_graph/base_model1>',
+                '"Unknown Base Model"^^<https://www.w3.org/2001/XMLSchema#string>',
+                '<https://w3id.org/mlentory/mlentory_graph/base_model_no_name>'
             ],
             SCHEMA.trainedOn.n3(): [
-                '<http://mlentory.zbmed.de/mlentory_graph/dataset1>',
-                '<http://mlentory.zbmed.de/mlentory_graph/dataset_no_name>',
+                '<https://w3id.org/mlentory/mlentory_graph/dataset1>',
+                '<https://w3id.org/mlentory/mlentory_graph/dataset_no_name>',
             ],
             SCHEMA.testedOn.n3(): [
-                 '<http://mlentory.zbmed.de/mlentory_graph/dataset1>',
-                 '<http://mlentory.zbmed.de/mlentory_graph/dataset2>',
-                 '<http://mlentory.zbmed.de/mlentory_graph/dataset_not_in_lookup>'
+                 '<https://w3id.org/mlentory/mlentory_graph/dataset1>',
+                 '<https://w3id.org/mlentory/mlentory_graph/dataset2>',
+                 '<https://w3id.org/mlentory/mlentory_graph/dataset_not_in_lookup>'
             ],
         },
         # --- Resolvable Entities ---
-        '<http://mlentory.zbmed.de/mlentory_graph/dataset1>': {
+        '<https://w3id.org/mlentory/mlentory_graph/dataset1>': {
             RDF.type.n3(): [SCHEMA.Dataset.n3()],
-            SCHEMA.name.n3(): ['"Awesome Dataset One"^^<http://www.w3.org/2001/XMLSchema#string>'],
+            SCHEMA.name.n3(): ['"Awesome Dataset One"^^<https://www.w3.org/2001/XMLSchema#string>'],
         },
-         '<http://mlentory.zbmed.de/mlentory_graph/dataset2>': {
+         '<https://w3id.org/mlentory/mlentory_graph/dataset2>': {
             RDF.type.n3(): [SCHEMA.Dataset.n3()],
-            SCHEMA.name.n3(): ['"Spectacular Dataset Two"^^<http://www.w3.org/2001/XMLSchema#string>'],
+            SCHEMA.name.n3(): ['"Spectacular Dataset Two"^^<https://www.w3.org/2001/XMLSchema#string>'],
         },
-         '<http://mlentory.zbmed.de/mlentory_graph/keyword1>': {
+         '<https://w3id.org/mlentory/mlentory_graph/keyword1>': {
              RDF.type.n3(): [SCHEMA.DefinedTerm.n3()],
-             SCHEMA.name.n3(): ['"Cool Keyword"^^<http://www.w3.org/2001/XMLSchema#string>']
+             SCHEMA.name.n3(): ['"Cool Keyword"^^<https://www.w3.org/2001/XMLSchema#string>']
          },
-         '<http://mlentory.zbmed.de/mlentory_graph/task1>': {
+         '<https://w3id.org/mlentory/mlentory_graph/task1>': {
              RDF.type.n3(): [SCHEMA.DefinedTerm.n3()],
-             SCHEMA.name.n3(): ['"Text Generation"^^<http://www.w3.org/2001/XMLSchema#string>']
+             SCHEMA.name.n3(): ['"Text Generation"^^<https://www.w3.org/2001/XMLSchema#string>']
          },
-         '<http://mlentory.zbmed.de/mlentory_graph/base_model1>': {
+         '<https://w3id.org/mlentory/mlentory_graph/base_model1>': {
              RDF.type.n3(): [NS2.ML_Model.n3()],
-             SCHEMA.name.n3(): ['"Solid Foundation Model"^^<http://www.w3.org/2001/XMLSchema#string>']
+             SCHEMA.name.n3(): ['"Solid Foundation Model"^^<https://www.w3.org/2001/XMLSchema#string>']
          },
          # --- Entities Existing but Without Names in this Sample ---
-         '<http://mlentory.zbmed.de/mlentory_graph/keyword_no_name>': {
+         '<https://w3id.org/mlentory/mlentory_graph/keyword_no_name>': {
             RDF.type.n3(): [SCHEMA.DefinedTerm.n3()]
          },
-         '<http://mlentory.zbmed.de/mlentory_graph/task_no_name>': {
+         '<https://w3id.org/mlentory/mlentory_graph/task_no_name>': {
             RDF.type.n3(): [SCHEMA.DefinedTerm.n3()]
          },
-        '<http://mlentory.zbmed.de/mlentory_graph/base_model_no_name>': {
+        '<https://w3id.org/mlentory/mlentory_graph/base_model_no_name>': {
             RDF.type.n3(): [NS2.ML_Model.n3()]
          },
-        '<http://mlentory.zbmed.de/mlentory_graph/dataset_no_name>': {
+        '<https://w3id.org/mlentory/mlentory_graph/dataset_no_name>': {
              RDF.type.n3(): [SCHEMA.Dataset.n3()]
          },
     }
@@ -108,25 +108,25 @@ def graph_handler_instance():
 def test_resolve_identifier_success(graph_handler_instance, sample_entities_lookup):
     """Test resolving a known identifier with a name."""
     # Pass plain URI to the function
-    identifier_plain = 'http://mlentory.zbmed.de/mlentory_graph/dataset1'
+    identifier_plain = 'https://w3id.org/mlentory/mlentory_graph/dataset1'
     # Expect resolved name (literal)
-    expected_name = '"Awesome Dataset One"^^<http://www.w3.org/2001/XMLSchema#string>'
+    expected_name = '"Awesome Dataset One"^^<https://www.w3.org/2001/XMLSchema#string>'
     resolved_name = graph_handler_instance._resolve_identifier(identifier_plain, sample_entities_lookup)
     assert resolved_name == expected_name
 
 def test_resolve_identifier_defined_term(graph_handler_instance, sample_entities_lookup):
     """Test resolving an identifier that represents a defined term (keyword)."""
     # Pass plain URI
-    identifier_plain = 'http://mlentory.zbmed.de/mlentory_graph/keyword1'
+    identifier_plain = 'https://w3id.org/mlentory/mlentory_graph/keyword1'
     # Expect resolved name
-    expected_name = '"Cool Keyword"^^<http://www.w3.org/2001/XMLSchema#string>'
+    expected_name = '"Cool Keyword"^^<https://www.w3.org/2001/XMLSchema#string>'
     resolved_name = graph_handler_instance._resolve_identifier(identifier_plain, sample_entities_lookup)
     assert resolved_name == expected_name
 
 def test_resolve_identifier_no_name(graph_handler_instance, sample_entities_lookup):
     """Test resolving an identifier that exists but has no matching name predicate."""
     # Pass plain URI
-    identifier_plain = 'http://mlentory.zbmed.de/mlentory_graph/keyword_no_name'
+    identifier_plain = 'https://w3id.org/mlentory/mlentory_graph/keyword_no_name'
     # Expect plain URI back (function adds <> for lookup, fails, returns stripped URI)
     expected_output = identifier_plain
     resolved_output = graph_handler_instance._resolve_identifier(identifier_plain, sample_entities_lookup)
@@ -135,7 +135,7 @@ def test_resolve_identifier_no_name(graph_handler_instance, sample_entities_look
 def test_resolve_identifier_not_found(graph_handler_instance, sample_entities_lookup):
     """Test resolving an identifier that does not exist in the lookup."""
     # Pass plain URI
-    identifier_plain = 'http://example.com/non_existent_uri'
+    identifier_plain = 'https://example.com/non_existent_uri'
     # Expect plain URI back
     expected_output = identifier_plain
     resolved_output = graph_handler_instance._resolve_identifier(identifier_plain, sample_entities_lookup)
@@ -144,7 +144,7 @@ def test_resolve_identifier_not_found(graph_handler_instance, sample_entities_lo
 def test_resolve_identifier_literal(graph_handler_instance, sample_entities_lookup):
     """Test resolving something that is not a URI (a literal string)."""
     # Pass literal
-    identifier_literal = '"literal_keyword"^^<http://www.w3.org/2001/XMLSchema#string>'
+    identifier_literal = '"literal_keyword"^^<https://www.w3.org/2001/XMLSchema#string>'
     # Expect literal back (adding <> makes it invalid for lookup, returns stripped original)
     # Note: Stripping <> from a literal does nothing.
     expected_output = identifier_literal
@@ -157,21 +157,21 @@ def test_resolve_identifier_list_mixed(graph_handler_instance, sample_entities_l
     """Test resolving a list with a mix of resolvable, unresolvable, and literal identifiers."""
     # Pass list of plain URIs and literals
     identifiers_list = [
-        'http://mlentory.zbmed.de/mlentory_graph/dataset1',
-        'http://mlentory.zbmed.de/mlentory_graph/keyword_no_name',
-        'http://example.com/non_existent_uri',
-        '"literal_keyword"^^<http://www.w3.org/2001/XMLSchema#string>',
-        'http://mlentory.zbmed.de/mlentory_graph/keyword1',
-        'http://mlentory.zbmed.de/mlentory_graph/dataset_not_in_lookup'
+        'https://w3id.org/mlentory/mlentory_graph/dataset1',
+        'https://w3id.org/mlentory/mlentory_graph/keyword_no_name',
+        'https://example.com/non_existent_uri',
+        '"literal_keyword"^^<https://www.w3.org/2001/XMLSchema#string>',
+        'https://w3id.org/mlentory/mlentory_graph/keyword1',
+        'https://w3id.org/mlentory/mlentory_graph/dataset_not_in_lookup'
     ]
     # Expect resolved names (literals) or plain URIs/literals
     expected_list = [
-        '"Awesome Dataset One"^^<http://www.w3.org/2001/XMLSchema#string>',
-        'http://mlentory.zbmed.de/mlentory_graph/keyword_no_name',
-        'http://example.com/non_existent_uri',
-        '"literal_keyword"^^<http://www.w3.org/2001/XMLSchema#string>',
-        '"Cool Keyword"^^<http://www.w3.org/2001/XMLSchema#string>',
-        'http://mlentory.zbmed.de/mlentory_graph/dataset_not_in_lookup'
+        '"Awesome Dataset One"^^<https://www.w3.org/2001/XMLSchema#string>',
+        'https://w3id.org/mlentory/mlentory_graph/keyword_no_name',
+        'https://example.com/non_existent_uri',
+        '"literal_keyword"^^<https://www.w3.org/2001/XMLSchema#string>',
+        '"Cool Keyword"^^<https://www.w3.org/2001/XMLSchema#string>',
+        'https://w3id.org/mlentory/mlentory_graph/dataset_not_in_lookup'
     ]
     resolved_list = graph_handler_instance._resolve_identifier_list(identifiers_list, sample_entities_lookup)
     assert resolved_list == expected_list
@@ -189,13 +189,13 @@ def test_resolve_identifier_list_all_resolvable(graph_handler_instance, sample_e
     """Test resolving a list where all identifiers have names."""
     # Pass list of plain URIs
     identifiers_list = [
-        'http://mlentory.zbmed.de/mlentory_graph/dataset1',
-        'http://mlentory.zbmed.de/mlentory_graph/base_model1',
+        'https://w3id.org/mlentory/mlentory_graph/dataset1',
+        'https://w3id.org/mlentory/mlentory_graph/base_model1',
     ]
     # Expect list of resolved names (literals)
     expected_list = [
-        '"Awesome Dataset One"^^<http://www.w3.org/2001/XMLSchema#string>',
-        '"Solid Foundation Model"^^<http://www.w3.org/2001/XMLSchema#string>',
+        '"Awesome Dataset One"^^<https://www.w3.org/2001/XMLSchema#string>',
+        '"Solid Foundation Model"^^<https://www.w3.org/2001/XMLSchema#string>',
     ]
     resolved_list = graph_handler_instance._resolve_identifier_list(identifiers_list, sample_entities_lookup)
     assert resolved_list == expected_list
@@ -204,15 +204,15 @@ def test_resolve_identifier_list_none_resolvable(graph_handler_instance, sample_
     """Test resolving a list where no identifiers can be resolved to names."""
     # Pass list of plain URIs and literals
     identifiers_list = [
-        'http://mlentory.zbmed.de/mlentory_graph/keyword_no_name',
-        'http://example.com/non_existent_uri',
-        '"literal_keyword"^^<http://www.w3.org/2001/XMLSchema#string>',
+        'https://w3id.org/mlentory/mlentory_graph/keyword_no_name',
+        'https://example.com/non_existent_uri',
+        '"literal_keyword"^^<https://www.w3.org/2001/XMLSchema#string>',
     ]
     # Expect list of plain URIs and literals
     expected_list = [
-        'http://mlentory.zbmed.de/mlentory_graph/keyword_no_name',
-        'http://example.com/non_existent_uri',
-        '"literal_keyword"^^<http://www.w3.org/2001/XMLSchema#string>',
+        'https://w3id.org/mlentory/mlentory_graph/keyword_no_name',
+        'https://example.com/non_existent_uri',
+        '"literal_keyword"^^<https://www.w3.org/2001/XMLSchema#string>',
     ]
     resolved_list = graph_handler_instance._resolve_identifier_list(identifiers_list, sample_entities_lookup)
     assert resolved_list == expected_list
@@ -220,21 +220,21 @@ def test_resolve_identifier_list_none_resolvable(graph_handler_instance, sample_
 def test_resolve_identifier_list_specific_predicates(graph_handler_instance, sample_entities_lookup):
     """Test resolving lists associated with the specific predicates added."""
     # Use N3 URI key for lookup in fixture
-    model_data = sample_entities_lookup['<http://mlentory.zbmed.de/mlentory_graph/model1>']
+    model_data = sample_entities_lookup['<https://w3id.org/mlentory/mlentory_graph/model1>']
 
     # Test keywords (list contains N3 URIs/literals from fixture)
     keywords_list_from_fixture = model_data[SCHEMA.keywords.n3()]
     # Pass plain URIs/literals to resolver
     keywords_input = [
-        'http://mlentory.zbmed.de/mlentory_graph/keyword1',
-        'http://mlentory.zbmed.de/mlentory_graph/keyword_no_name',
-        '"literal_keyword"^^<http://www.w3.org/2001/XMLSchema#string>'
+        'https://w3id.org/mlentory/mlentory_graph/keyword1',
+        'https://w3id.org/mlentory/mlentory_graph/keyword_no_name',
+        '"literal_keyword"^^<https://www.w3.org/2001/XMLSchema#string>'
     ]
     # Expect resolved names (literals) or plain URIs/literals
     expected_keywords = [
-        '"Cool Keyword"^^<http://www.w3.org/2001/XMLSchema#string>',
-        'http://mlentory.zbmed.de/mlentory_graph/keyword_no_name',
-        '"literal_keyword"^^<http://www.w3.org/2001/XMLSchema#string>'
+        '"Cool Keyword"^^<https://www.w3.org/2001/XMLSchema#string>',
+        'https://w3id.org/mlentory/mlentory_graph/keyword_no_name',
+        '"literal_keyword"^^<https://www.w3.org/2001/XMLSchema#string>'
     ]
     resolved_keywords = graph_handler_instance._resolve_identifier_list(keywords_input, sample_entities_lookup)
     assert resolved_keywords == expected_keywords
@@ -242,12 +242,12 @@ def test_resolve_identifier_list_specific_predicates(graph_handler_instance, sam
     # Test mlTask
     mltask_list_from_fixture = model_data[SCHEMA.mlTask.n3()]
     mltask_input = [
-        'http://mlentory.zbmed.de/mlentory_graph/task1',
-        'http://mlentory.zbmed.de/mlentory_graph/task_no_name'
+        'https://w3id.org/mlentory/mlentory_graph/task1',
+        'https://w3id.org/mlentory/mlentory_graph/task_no_name'
     ]
     expected_mltask = [
-        '"Text Generation"^^<http://www.w3.org/2001/XMLSchema#string>',
-        'http://mlentory.zbmed.de/mlentory_graph/task_no_name'
+        '"Text Generation"^^<https://www.w3.org/2001/XMLSchema#string>',
+        'https://w3id.org/mlentory/mlentory_graph/task_no_name'
     ]
     resolved_mltask = graph_handler_instance._resolve_identifier_list(mltask_input, sample_entities_lookup)
     assert resolved_mltask == expected_mltask
@@ -255,14 +255,14 @@ def test_resolve_identifier_list_specific_predicates(graph_handler_instance, sam
     # Test fineTunedFrom
     finetuned_list_from_fixture = model_data[SCHEMA.fineTunedFrom.n3()]
     finetuned_input = [
-        'http://mlentory.zbmed.de/mlentory_graph/base_model1',
-        '"Unknown Base Model"^^<http://www.w3.org/2001/XMLSchema#string>',
-        'http://mlentory.zbmed.de/mlentory_graph/base_model_no_name'
+        'https://w3id.org/mlentory/mlentory_graph/base_model1',
+        '"Unknown Base Model"^^<https://www.w3.org/2001/XMLSchema#string>',
+        'https://w3id.org/mlentory/mlentory_graph/base_model_no_name'
     ]
     expected_finetuned = [
-        '"Solid Foundation Model"^^<http://www.w3.org/2001/XMLSchema#string>',
-        '"Unknown Base Model"^^<http://www.w3.org/2001/XMLSchema#string>',
-        'http://mlentory.zbmed.de/mlentory_graph/base_model_no_name'
+        '"Solid Foundation Model"^^<https://www.w3.org/2001/XMLSchema#string>',
+        '"Unknown Base Model"^^<https://www.w3.org/2001/XMLSchema#string>',
+        'https://w3id.org/mlentory/mlentory_graph/base_model_no_name'
     ]
     resolved_finetuned = graph_handler_instance._resolve_identifier_list(finetuned_input, sample_entities_lookup)
     assert resolved_finetuned == expected_finetuned
@@ -270,12 +270,12 @@ def test_resolve_identifier_list_specific_predicates(graph_handler_instance, sam
     # Test trainedOn
     trainedon_list_from_fixture = model_data[SCHEMA.trainedOn.n3()]
     trainedon_input = [
-        'http://mlentory.zbmed.de/mlentory_graph/dataset1',
-        'http://mlentory.zbmed.de/mlentory_graph/dataset_no_name'
+        'https://w3id.org/mlentory/mlentory_graph/dataset1',
+        'https://w3id.org/mlentory/mlentory_graph/dataset_no_name'
     ]
     expected_trainedon = [
-        '"Awesome Dataset One"^^<http://www.w3.org/2001/XMLSchema#string>',
-        'http://mlentory.zbmed.de/mlentory_graph/dataset_no_name'
+        '"Awesome Dataset One"^^<https://www.w3.org/2001/XMLSchema#string>',
+        'https://w3id.org/mlentory/mlentory_graph/dataset_no_name'
     ]
     resolved_trainedon = graph_handler_instance._resolve_identifier_list(trainedon_input, sample_entities_lookup)
     assert resolved_trainedon == expected_trainedon
@@ -283,14 +283,14 @@ def test_resolve_identifier_list_specific_predicates(graph_handler_instance, sam
     # Test testedOn
     testedon_list_from_fixture = model_data[SCHEMA.testedOn.n3()]
     testedon_input = [
-         'http://mlentory.zbmed.de/mlentory_graph/dataset1',
-         'http://mlentory.zbmed.de/mlentory_graph/dataset2',
-         'http://mlentory.zbmed.de/mlentory_graph/dataset_not_in_lookup'
+         'https://w3id.org/mlentory/mlentory_graph/dataset1',
+         'https://w3id.org/mlentory/mlentory_graph/dataset2',
+         'https://w3id.org/mlentory/mlentory_graph/dataset_not_in_lookup'
     ]
     expected_testedon = [
-        '"Awesome Dataset One"^^<http://www.w3.org/2001/XMLSchema#string>',
-        '"Spectacular Dataset Two"^^<http://www.w3.org/2001/XMLSchema#string>',
-        'http://mlentory.zbmed.de/mlentory_graph/dataset_not_in_lookup'
+        '"Awesome Dataset One"^^<https://www.w3.org/2001/XMLSchema#string>',
+        '"Spectacular Dataset Two"^^<https://www.w3.org/2001/XMLSchema#string>',
+        'https://w3id.org/mlentory/mlentory_graph/dataset_not_in_lookup'
     ]
     resolved_testedon = graph_handler_instance._resolve_identifier_list(testedon_input, sample_entities_lookup)
     assert resolved_testedon == expected_testedon

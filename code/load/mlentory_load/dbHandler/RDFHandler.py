@@ -165,7 +165,7 @@ class RDFHandler:
         sparql.setHTTPAuth(DIGEST)
         sparql.setCredentials(self._user, self._password)
         sparql.setMethod(POST)
-        # query = "DELETE { ?s ?p ?o } WHERE {GRAPH <http://example.com/data_1> {?s ?p ?o}}".format(subject=subject, predicate=predicate, object=object, graph_iri=graph_iri)
+        # query = "DELETE { ?s ?p ?o } WHERE {GRAPH <https://example.com/data_1> {?s ?p ?o}}".format(subject=subject, predicate=predicate, object=object, graph_iri=graph_iri)
         # query = f"DELETE {{ ?s ?p ?o }} WHERE {{GRAPH <{graph_iri}> {{{subject} {predicate} {object}}}}}"
         query = f"WITH <{graph_iri}> DELETE {{ {subject._value} {predicate._value} {object._value} }}"
         sparql.setQuery(query)

@@ -18,7 +18,7 @@ class GraphBuilderBase:
 
     Args:
         base_namespace (str): The base URI namespace for the knowledge graph entities.
-            Default: "http://example.org/"
+            Default: "https://example.org/"
 
     Raises:
         ValueError: If the base_namespace is not a valid URI string.
@@ -26,14 +26,14 @@ class GraphBuilderBase:
 
     def __init__(
         self,
-        base_namespace: str = "http://example.org/",
+        base_namespace: str = "https://example.org/",
     ) -> None:
         """
         Initialize the GraphBuilderBase.
 
         Args:
             base_namespace (str): The base URI namespace for the knowledge graph entities.
-                Default: "http://example.org/"
+                Default: "https://example.org/"
 
         Raises:
             ValueError: If the base_namespace is not a valid URI string.
@@ -77,7 +77,7 @@ class GraphBuilderBase:
         Example:
             >>> uri = kg_handler.get_predicate_uri("schema.org:name")
             >>> print(uri)
-            http://schema.org/name
+            https://schema.org/name
         """
         if ":" not in predicate:
             return self.base_namespace[predicate]
@@ -273,7 +273,7 @@ class GraphBuilderBase:
                 old_uri = URIRef(old_id)
 
         if new_uri is None and isinstance(new_id, str):
-            if not new_id.startswith("http"):
+            if not new_id.startswith("https"):
                 new_id = new_id.replace(' ', '_')
                 entity_type = type.split('/')[-1]
                 # Generate hash for the entity

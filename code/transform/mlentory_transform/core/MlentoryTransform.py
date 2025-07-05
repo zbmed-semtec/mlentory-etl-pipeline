@@ -385,8 +385,8 @@ class MlentoryTransform:
         disambiguated_graph = rdflib.Graph()
         
         # Define the RDF types and properties we need
-        RDF = rdflib.Namespace("http://www.w3.org/1999/02/22-rdf-syntax-ns#")
-        NS1 = rdflib.Namespace("http://mlentory.de/ns1#")
+        RDF = rdflib.Namespace("https://www.w3.org/1999/02/22-rdf-syntax-ns#")
+        NS1 = rdflib.Namespace("https://mlentory.de/ns1#")
         TYPE = RDF.type
         STATEMENT_METADATA = NS1.StatementMetadata
         CONFIDENCE = NS1.confidence

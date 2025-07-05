@@ -24,7 +24,7 @@ class KnowledgeGraphHandler:
 
     Args:
         base_namespace (str): The base URI namespace for the knowledge graph entities.
-            Default: "http://example.org/"
+            Default: "https://example.org/"
 
     Raises:
         ValueError: If the base_namespace is not a valid URI string or if predicate_categories
@@ -35,13 +35,13 @@ class KnowledgeGraphHandler:
         ...     "name": ["Entity1", "Entity2"],
         ...     "property": ["value1", "value2"]
         ... })
-        >>> kg_handler = KnowledgeGraphHandler("http://myontology.org/")
+        >>> kg_handler = KnowledgeGraphHandler("https://myontology.org/")
         >>> graph = kg_handler.dataframe_to_graph(df, "TestEntity")
     """
 
     def __init__(
         self,
-        base_namespace: str = "http://example.org/",
+        base_namespace: str = "https://example.org/",
         FAIR4ML_schema_data: pd.DataFrame = None,
     ) -> None:
         """
@@ -49,7 +49,7 @@ class KnowledgeGraphHandler:
 
         Args:
             base_namespace (str): The base URI namespace for the knowledge graph entities.
-                Default: "http://example.org/"
+                Default: "https://example.org/"
             FAIR4ML_schema_data (pd.DataFrame): DataFrame containing the FAIR4ML schema with columns
                 'Source', 'Property', and 'Range'.
 
@@ -699,7 +699,7 @@ class KnowledgeGraphHandler:
         Example:
             >>> uri = kg_handler.get_predicate_uri("schema.org:name")
             >>> print(uri)
-            http://schema.org/name
+            https://schema.org/name
         """
         if ":" not in predicate:
             return self.base_namespace[predicate]
@@ -962,8 +962,8 @@ class KnowledgeGraphHandler:
             platform (str): Platform prefix (e.g., 'HF' for Hugging Face)
 
         Example:
-            Original ID: http://test_example.org/default/split
-            New ID: http://test_example.org/dataset_name/default/split
+            Original ID: https://test_example.org/default/split
+            New ID: https://test_example.org/dataset_name/default/split
         """
         # Find all Field nodes using SPARQL query
         field_types = [
@@ -1077,7 +1077,7 @@ class KnowledgeGraphHandler:
                 old_uri = URIRef(old_id)
 
         if new_uri is None and isinstance(new_id, str):
-            if not new_id.startswith("http"):
+            if not new_id.startswith("https"):
                 new_id = new_id.replace(' ', '_')
                 entity_type = type.split('/')[-1]
                 # Generate hash for the entity

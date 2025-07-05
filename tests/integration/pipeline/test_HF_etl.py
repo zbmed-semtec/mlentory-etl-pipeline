@@ -93,7 +93,7 @@ def initialize_transform() -> TransformHF:
     )
 
     kg_handler = KnowledgeGraphHandler(
-        FAIR4ML_schema=new_schema, base_namespace="http://mlentory.com/mlentory_graph/"
+        FAIR4ML_schema=new_schema, base_namespace="https://mlentory.com/mlentory_graph/"
     )
     transform_hf = TransformHF(new_schema, transformations)
     transformer = MlentoryTransform(kg_handler, transform_hf)
@@ -133,8 +133,8 @@ def initialize_loader() -> LoadProcessor:
         RDFHandler=rdfHandler,
         IndexHandler=elasticsearchHandler,
         kg_files_directory=kg_files_directory,
-        graph_identifier="http://mlentory.com/mlentory_graph",
-        deprecated_graph_identifier="http://mlentory.com/deprecated_mlentory_graph",
+        graph_identifier="https://mlentory.com/mlentory_graph",
+        deprecated_graph_identifier="https://mlentory.com/deprecated_mlentory_graph",
     )
 
     return LoadProcessor(
