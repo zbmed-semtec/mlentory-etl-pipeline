@@ -51,8 +51,8 @@ class GraphHandlerForKG(GraphHandler):
         IndexHandler,
         kg_files_directory: str = "./../kg_files",
         platform: str = "hugging_face",
-        graph_identifier: str = "https://mlentory.zbmed.de/mlentory_graph",
-        deprecated_graph_identifier: str = "https://mlentory.zbmed.de/deprecated_mlentory_graph",
+        graph_identifier: str = "https://w3id.org/mlentory/mlentory_graph",
+        deprecated_graph_identifier: str = "https://w3id.org/mlentory/deprecated_mlentory_graph",
         logger=None,
     ):
 
