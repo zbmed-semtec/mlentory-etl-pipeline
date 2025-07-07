@@ -21,10 +21,10 @@ class SchemasURL(str, Enum):
     Example:
         >>> schema = SchemasURL.SCHEMA
         >>> print(schema)
-        'http://schema.org/'
+        'https://schema.org/'
     """
     SCHEMA = "https://schema.org/"
-    FAIR4ML = "http://w3id.org/fair4ml/"
+    FAIR4ML = "https://w3id.org/fair4ml/"
     CODEMETA = "https://w3id.org/codemeta/"
     CROISSANT = "http://mlcommons.org/croissant/"
     OWL = "http://www.w3.org/2002/07/owl#"

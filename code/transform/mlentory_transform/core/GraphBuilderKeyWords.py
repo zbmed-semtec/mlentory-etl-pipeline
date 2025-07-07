@@ -15,9 +15,9 @@ class GraphBuilderKeyWords(GraphBuilderBase):
 
     Args:
         base_namespace (str): The base URI namespace for the knowledge graph entities.
-            Default: "http://example.org/"
+            Default: "https://example.org/"
     """
-    def __init__(self, base_namespace: str = "http://example.org/") -> None:
+    def __init__(self, base_namespace: str = "https://example.org/") -> None:
         """
         Initialize the KeywordsKnowledgeGraphHandler.
 
