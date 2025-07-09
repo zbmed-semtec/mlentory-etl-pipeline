@@ -490,6 +490,7 @@ class ModelCardToSchemaParser:
         else:
             # Put everything that has license in the key
             if isinstance(yaml_dict, dict):
+                licensed_info+="\n"
                 for key, value in yaml_dict.items():
                     if "license" in key:
                         if isinstance(value, str):
