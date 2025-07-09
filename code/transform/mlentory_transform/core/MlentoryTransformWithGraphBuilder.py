@@ -75,7 +75,8 @@ class MlentoryTransformWithGraphBuilder:
             [models_extraction_metadata,
              datasets_extraction_metadata,
              arxiv_extraction_metadata,
-             keywords_extraction_metadata],
+             keywords_extraction_metadata,
+             licenses_extraction_metadata],
             save_output_in_json=save_output,
             output_dir=extraction_metadata_output_dir,
         )
