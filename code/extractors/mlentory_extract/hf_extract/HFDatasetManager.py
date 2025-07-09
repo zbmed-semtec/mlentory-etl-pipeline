@@ -201,10 +201,10 @@ class HFDatasetManager:
                 # if model_id is None:
                 #     model_id = 
                 
-                print("\n\n\n =================== \n\n\n")
-                print(f"Model ID: {model.id}")
-                print(f"Model card: {card.content}")
-                print("\n\n\n =================== \n\n\n")
+                # print("\n\n\n =================== \n\n\n")
+                # print(f"Model ID: {model.id}")
+                # print(f"Model card: {card.content}")
+                # print("\n\n\n =================== \n\n\n")
                 
                 
                 model_info = {
@@ -232,7 +232,7 @@ class HFDatasetManager:
                     model_data.extend(results)
                 
         model_data = pd.DataFrame(model_data)
-        print(f"Model data!!!!!!!!: {model_data}")
+        # print(f"Model data!!!!!!!!: {model_data}")
         model_data = model_data.drop_duplicates(subset=["modelId"], keep="last")
         return model_data
                 
