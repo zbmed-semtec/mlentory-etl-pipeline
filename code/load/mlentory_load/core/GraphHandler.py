@@ -3,6 +3,7 @@ import json
 import os
 import hashlib
 import pprint
+import logging
 import pandas as pd
 from rdflib import Graph, URIRef, Literal, BNode
 from rdflib.namespace import RDF, XSD, FOAF
@@ -10,7 +11,7 @@ from rdflib.util import from_n3
 from pandas import Timestamp
 from tqdm import tqdm
 from datetime import datetime
-from typing import Callable, List, Dict, Set, Tuple
+from typing import Callable, List, Dict, Set, Tuple, Optional
 import pprint
 
 from mlentory_load.dbHandler import SQLHandler, RDFHandler, IndexHandler
@@ -44,8 +45,9 @@ class GraphHandler:
         IndexHandler: IndexHandler,
         kg_files_directory: str = "./../kg_files",
         platform: str = "hugging_face",
-        graph_identifier: str = "http://example.com/data_1",
-        deprecated_graph_identifier: str = "http://example.com/data_2",
+        graph_identifier: str = "https://example.com/data_1",
+        deprecated_graph_identifier: str = "https://example.com/data_2",
+        logger: Optional[logging.Logger] = None,
     ):
         """
         Initialize GraphHandler with handlers and configuration.
@@ -58,6 +60,7 @@ class GraphHandler:
             platform (str): Platform identifier
             graph_identifier (str): Main graph URI
             deprecated_graph_identifier (str): Deprecated graph
+            logger (Optional[logging.Logger]): Logger instance
         """
         self.SQLHandler = SQLHandler
         self.RDFHandler = RDFHandler
@@ -66,6 +69,7 @@ class GraphHandler:
         self.platform = platform
         self.graph_identifier = graph_identifier
         self.deprecated_graph_identifier = deprecated_graph_identifier
+        self.logger = logger if logger else logging.getLogger(__name__)
 
         self.new_triplets = []
         self.old_triplets = []
@@ -79,26 +83,30 @@ class GraphHandler:
         2. Creates deprecated triplets graph
         3. Updates the RDF store
         """
-        print("Updating current graph...")
-        new_triplets_graph = rdflib.Graph(identifier=self.graph_identifier)
-        new_triplets_graph.bind("fair4ml", URIRef("http://fair4ml.com/"))
-        new_triplets_graph.bind("codemeta", URIRef("http://codemeta.com/"))
+        self.logger.info("Updating current graph...")
+        new_triplets_graph = rdflib.Graph(
+            identifier=self.graph_identifier
+        )
+        new_triplets_graph.bind("fair4ml", URIRef("https://fair4ml.com/"))
+        new_triplets_graph.bind("codemeta", URIRef("https://codemeta.com/"))
         new_triplets_graph.bind("schema", URIRef("https://schema.org/"))
         new_triplets_graph.bind("mlentory", URIRef("https://mlentory.com/"))
-        new_triplets_graph.bind("prov", URIRef("http://www.w3.org/ns/prov#"))
+        new_triplets_graph.bind("prov", URIRef("https://www.w3.org/ns/prov#"))
 
-        old_triplets_graph = rdflib.Graph(identifier=self.deprecated_graph_identifier)
-        old_triplets_graph.bind("fair4ml", URIRef("http://fair4ml.com/"))
-        old_triplets_graph.bind("codemeta", URIRef("http://codemeta.com/"))
+        old_triplets_graph = rdflib.Graph(
+            identifier=self.deprecated_graph_identifier
+        )
+        old_triplets_graph.bind("fair4ml", URIRef("https://fair4ml.com/"))
+        old_triplets_graph.bind("codemeta", URIRef("https://codemeta.com/"))
         old_triplets_graph.bind("schema", URIRef("https://schema.org/"))
         old_triplets_graph.bind("mlentory", URIRef("https://mlentory.com/"))
-        old_triplets_graph.bind("prov", URIRef("http://www.w3.org/ns/prov#"))
+        old_triplets_graph.bind("prov", URIRef("https://www.w3.org/ns/prov#"))
 
-        print("Adding new triplets...")
+        self.logger.info("Adding new triplets...")
         for new_triplet in tqdm(self.new_triplets, desc="Processing new triplets"):
             new_triplets_graph.add(new_triplet)
 
-        print("Processing deprecated triplets...")
+        self.logger.info("Processing deprecated triplets...")
         for old_triplet in tqdm(
             self.old_triplets, desc="Processing deprecated triplets"
         ):
@@ -106,14 +114,14 @@ class GraphHandler:
 
         current_date = datetime.now().strftime("%Y-%m-%d")
         path_new_triplets_graph = os.path.join(
-            self.kg_files_directory, f"new_triplets_graph_{current_date}.ttl"
+            self.kg_files_directory, f"new_triplets_graph_{current_date}.nt"
         )
-        print(f"Serializing new triplets to {path_new_triplets_graph}")
+        self.logger.info(f"Serializing new triplets to {path_new_triplets_graph}")
         new_triplets_graph.serialize(
-            destination=path_new_triplets_graph, format="turtle"
+            destination=path_new_triplets_graph, format="nt"
         )
 
-        print("Loading new triplets into RDF store...")
+        self.logger.info("Loading new triplets into RDF store...")
         self.RDFHandler.load_graph(
             ttl_file_path=path_new_triplets_graph,
             graph_identifier=self.graph_identifier,
@@ -121,14 +129,16 @@ class GraphHandler:
 
         if len(old_triplets_graph) > 0:
             path_old_triplets_graph = os.path.join(
-                self.kg_files_directory, f"old_triplets_graph_{current_date}.ttl"
+                self.kg_files_directory, f"old_triplets_graph_{current_date}.nt"
             )
-            print(f"Serializing deprecated triplets to {path_old_triplets_graph}")
+            self.logger.info(
+                f"Serializing deprecated triplets to {path_old_triplets_graph}"
+            )
             old_triplets_graph.serialize(
-                destination=path_old_triplets_graph, format="turtle"
+                destination=path_old_triplets_graph, format="nt"
             )
 
-            print("Updating RDF store with deprecated triplets...")
+            self.logger.info("Updating RDF store with deprecated triplets...")
             self.RDFHandler.delete_graph(
                 ttl_file_path=path_old_triplets_graph,
                 graph_identifier=self.graph_identifier,
@@ -354,11 +364,11 @@ class GraphHandler:
             Graph: Current active graph with all valid triplets
         """
         current_graph = rdflib.Graph(identifier=self.graph_identifier)
-        current_graph.bind("fair4ml", URIRef("http://fair4ml.com/"))
-        current_graph.bind("codemeta", URIRef("http://codemeta.com/"))
+        current_graph.bind("fair4ml", URIRef("https://fair4ml.com/"))
+        current_graph.bind("codemeta", URIRef("https://codemeta.com/"))
         current_graph.bind("schema", URIRef("https://schema.org/"))
         current_graph.bind("mlentory", URIRef("https://mlentory.com/"))
-        current_graph.bind("prov", URIRef("http://www.w3.org/ns/prov#"))
+        current_graph.bind("prov", URIRef("https://www.w3.org/ns/prov#"))
 
         query = f"""
         CONSTRUCT {{ ?s ?p ?o }}
@@ -413,45 +423,45 @@ class GraphHandler:
             for subject, predicate, object_ in triplets
         ]
 
-        # Create a list to store query parts and parameters
-        query_parts = []
-        params = []
+        if not triplet_data:
+            return [], []
 
-        # Build batch query to find existing triplets by hash
-        for i, data in enumerate(triplet_data):
-            query_parts.append(
-                f"""SELECT id, %s as idx FROM "Triplet" 
-                WHERE triplet_hash = %s"""
-            )
-            params.extend([str(i), data["triplet_hash"]])
+        hashes = [d["triplet_hash"] for d in triplet_data]
 
-        # Join the query parts with UNION
-        query = " UNION ".join(query_parts)
+        # Use WHERE ... = ANY(...) for a more efficient query
+        query = """
+            SELECT id, triplet_hash FROM "Triplet"
+            WHERE triplet_hash = ANY(%s)
+        """
 
-        existing_triplets_df = (
-            self.SQLHandler.query(query, tuple(params))
-            if triplet_data
-            else pd.DataFrame()
-        )
+        existing_triplets_df = self.SQLHandler.query(query, (hashes,))
+
+        hash_to_id_map = {
+            row["triplet_hash"]: row["id"] for _, row in existing_triplets_df.iterrows()
+        }
 
         # Initialize results
         triplet_ids = [-1] * len(triplets)
         is_new = [True] * len(triplets)
 
+        new_triplets_data_map = {}
+
         # Process existing triplets
-        for _, row in existing_triplets_df.iterrows():
-            idx = int(row["idx"])
-            triplet_ids[idx] = row["id"]
-            is_new[idx] = False
+        for i, data in enumerate(triplet_data):
+            triplet_hash = data["triplet_hash"]
+            if triplet_hash in hash_to_id_map:
+                triplet_ids[i] = hash_to_id_map[triplet_hash]
+                is_new[i] = False
+            else:
+                new_triplets_data_map[triplet_hash] = (
+                    data["subject"],
+                    data["predicate"],
+                    data["object"],
+                    triplet_hash,
+                )
 
-        # Prepare batch insert for new triplets
-        new_triplets_data = [
-            (data["subject"], data["predicate"], data["object"], data["triplet_hash"])
-            for i, data in enumerate(triplet_data)
-            if is_new[i]
-        ]
-
-        if len(new_triplets_data) > 0:
+        if new_triplets_data_map:
+            new_triplets_data = list(new_triplets_data_map.values())
             new_ids = self.SQLHandler.batch_insert(
                 "Triplet",
                 ["subject", "predicate", "object", "triplet_hash"],
@@ -459,12 +469,16 @@ class GraphHandler:
                 batch_size=len(new_triplets_data),
             )
 
+            # Create a map of hash to new_id for the inserted triplets
+            new_hash_to_id_map = {
+                data[3]: new_id for data, new_id in zip(new_triplets_data, new_ids)
+            }
+
             # Update triplet_ids with new IDs
-            new_id_idx = 0
-            for i in range(len(triplets)):
+            for i, data in enumerate(triplet_data):
+                triplet_hash = data["triplet_hash"]
                 if is_new[i]:
-                    triplet_ids[i] = new_ids[new_id_idx]
-                    new_id_idx += 1
+                    triplet_ids[i] = new_hash_to_id_map[triplet_hash]
 
         return triplet_ids, is_new
 
@@ -486,57 +500,72 @@ class GraphHandler:
         if not extraction_infos:
             return []
 
-        # Create a list to store query parts and parameters
-        query_parts = []
-        params = []
+        # Separate infos into parallel lists for unnesting
+        info_tuples = []
+        extraction_methods = []
+        extraction_info_hashes = set()
 
-        # Build batch query to find existing extraction infos
-        for i, info in enumerate(extraction_infos):
-            query_parts.append(
-                f"""SELECT id, %s as idx FROM "Triplet_Extraction_Info" 
-                WHERE method_description = %s 
-                AND extraction_confidence = %s"""
-            )
-            params.extend([str(i), info["extraction_method"], info["confidence"]])
+        extraction_confidences = []
 
-        # Join the query parts with UNION
-        query = " UNION ".join(query_parts)
+        for info in extraction_infos:
+            method = info["extraction_method"]
+            confidence = round(info["confidence"], 5)
+            extraction_info_hash = hashlib.md5(
+                (str(method) + str(confidence)).encode()
+            ).hexdigest()
+            extraction_methods.append(method)
+            extraction_confidences.append(confidence)
+            extraction_info_hashes.add(extraction_info_hash)
+            info_tuples.append((method, confidence, extraction_info_hash))
 
-        existing_infos_df = (
-            self.SQLHandler.query(query, tuple(params))
-            if extraction_infos
-            else pd.DataFrame()
+        # Use unnest on parallel arrays for a more robust query
+        query = """
+            SELECT t.id, t.extraction_info_hash
+            FROM "Triplet_Extraction_Info" t
+            WHERE t.extraction_info_hash = ANY(%s)
+        """
+        existing_infos_df = self.SQLHandler.query(
+            query, (list(extraction_info_hashes),)
         )
+
+        # Create a map for existing infos
+        search_results_map_hash_to_id = {
+            row["extraction_info_hash"]: row["id"]
+            for _, row in existing_infos_df.iterrows()
+        }
 
         # Initialize results
         info_ids = [-1] * len(extraction_infos)
+        new_entries_map_hash_to_id = {}
 
-        # Process existing infos
-        for _, row in existing_infos_df.iterrows():
-            idx = int(row["idx"])
-            info_ids[idx] = row["id"]
+        # Process results
+        for i, info_tuple in enumerate(info_tuples):
+            # Check if the hash (info_tuple[2]) is in the map of existing infos
+            if info_tuple[2] in search_results_map_hash_to_id:
+                info_ids[i] = search_results_map_hash_to_id[info_tuple[2]]
+            else:
+                # Use a map to collect unique new infos
+                if info_tuple[2] not in new_entries_map_hash_to_id:
+                    new_entries_map_hash_to_id[info_tuple[2]] = info_tuple
 
-        # Prepare batch insert for new infos
-        new_infos_data = [
-            (info["extraction_method"], info["confidence"])
-            for i, info in enumerate(extraction_infos)
-            if info_ids[i] == -1
-        ]
-
-        if new_infos_data:
+        if new_entries_map_hash_to_id:
+            new_entries_to_insert = list(new_entries_map_hash_to_id.values())
             new_ids = self.SQLHandler.batch_insert(
                 "Triplet_Extraction_Info",
-                ["method_description", "extraction_confidence"],
-                new_infos_data,
-                batch_size=len(new_infos_data),
+                ["method_description", "extraction_confidence", "extraction_info_hash"],
+                new_entries_to_insert,
+                batch_size=len(new_entries_to_insert),
             )
 
+            # Create a map for newly inserted infos
+            new_info_to_id_map = {
+                data[2]: new_id for data, new_id in zip(new_entries_to_insert, new_ids)
+            }
+
             # Update info_ids with new IDs
-            new_id_idx = 0
-            for i in range(len(extraction_infos)):
+            for i, info_tuple in enumerate(info_tuples):
                 if info_ids[i] == -1:
-                    info_ids[i] = new_ids[new_id_idx]
-                    new_id_idx += 1
+                    info_ids[i] = new_info_to_id_map[info_tuple[2]]
 
         return info_ids
 
@@ -560,63 +589,52 @@ class GraphHandler:
         if not triplet_ids:
             return
 
-        # Create a list to store query parts and parameters
-        query_parts = []
-        params = []
-
-        # Build batch query to find existing version ranges
-        for i, (t_id, e_id) in enumerate(zip(triplet_ids, extraction_info_ids)):
-            query_parts.append(
-                f"""SELECT id, %s as idx FROM "Version_Range" 
-                WHERE triplet_id = %s 
-                AND extraction_info_id = %s 
-                AND deprecated = %s"""
-            )
-            params.extend([str(i), str(t_id), str(e_id), False])
-
-        # Join the query parts with UNION
-        query = " UNION ".join(query_parts)
-
-        existing_ranges_df = (
-            self.SQLHandler.query(query, tuple(params))
-            if triplet_ids
-            else pd.DataFrame()
+        # Use unnest on parallel arrays for a more robust query
+        query = """
+            SELECT t.id, u.t_id, u.e_id
+            FROM "Version_Range" t
+            JOIN (
+                SELECT tid.t_id, eid.e_id
+                FROM unnest(%s) WITH ORDINALITY AS tid(t_id, rn)
+                JOIN unnest(%s) WITH ORDINALITY AS eid(e_id, rn)
+                ON tid.rn = eid.rn
+            ) AS u ON t.triplet_id = u.t_id AND t.extraction_info_id = u.e_id
+            WHERE t.deprecated = %s
+        """
+        existing_ranges_df = self.SQLHandler.query(
+            query, (triplet_ids, extraction_info_ids, False)
         )
+
+        # Create a map for existing ranges
+        range_to_id_map = {
+            (row["t_id"], row["e_id"]): row["id"]
+            for _, row in existing_ranges_df.iterrows()
+        }
 
         # Prepare updates for existing ranges
         updates = []
-        conditions = []
-        for _, row in existing_ranges_df.iterrows():
-            idx = int(row["idx"])
-            updates.append({"use_end": extraction_times[idx]})
-            # Use parameterized condition instead of string interpolation
-            conditions.append(f"id = %s")
+        new_ranges_data = []
+
+        for i, (t_id, e_id, time) in enumerate(
+            zip(triplet_ids, extraction_info_ids, extraction_times)
+        ):
+            key = (t_id, e_id)
+            if key in range_to_id_map:
+                updates.append((time, range_to_id_map[key]))
+            else:
+                new_ranges_data.append((str(t_id), str(e_id), time, time, False))
 
         if updates:
-            # For each update, we need to add the condition parameter (row id)
-            condition_params = [row["id"] for _, row in existing_ranges_df.iterrows()]
-
             # Update each row individually with parameterized queries
-            for i, (update_dict, condition) in enumerate(zip(updates, conditions)):
-                # Use execute_sql instead of query for UPDATE statements
+            for time, range_id in updates:
                 self.SQLHandler.execute_sql(
-                    f"""UPDATE "Version_Range" SET use_end = %s WHERE {condition}""",
-                    (update_dict["use_end"], condition_params[i]),
+                    """UPDATE "Version_Range" SET use_end = %s WHERE id = %s""",
+                    (time, range_id),
                 )
 
-        # Prepare batch insert for new ranges
-        existing_indices = set(
-            int(row["idx"]) for _, row in existing_ranges_df.iterrows()
-        )
-        new_ranges_data = [
-            (str(t_id), str(e_id), time, time, False)
-            for i, (t_id, e_id, time) in enumerate(
-                zip(triplet_ids, extraction_info_ids, extraction_times)
-            )
-            if i not in existing_indices
-        ]
-
         if new_ranges_data:
+            # Deduplicate before inserting
+            unique_new_ranges = sorted(list(set(new_ranges_data)))
             self.SQLHandler.batch_insert(
                 "Version_Range",
                 [
@@ -626,9 +644,27 @@ class GraphHandler:
                     "use_end",
                     "deprecated",
                 ],
-                new_ranges_data,
-                batch_size=len(new_ranges_data),
+                unique_new_ranges,
+                batch_size=len(unique_new_ranges),
             )
+
+    def print_query_stats(self):
+        """Prints the query statistics."""
+        print("--- SQL Query Statistics ---")
+        stats = self.SQLHandler.query_stats["queries"]
+        if not stats:
+            print("No queries were tracked.")
+            return
+
+        for query, data in stats.items():
+            count = data["count"]
+            total_time = data["total_time"]
+            avg_time = total_time / count if count > 0 else 0
+            print(f"Query: {query}")
+            print(f"  Count: {count}")
+            print(f"  Total Time: {total_time:.4f} seconds")
+            print(f"  Average Time: {avg_time:.4f} seconds")
+            print("-" * 20)
 
     def process_triplet_batch(
         self, triplets_data: List[Tuple[URIRef, URIRef, URIRef, Dict]]
@@ -674,3 +710,5 @@ class GraphHandler:
         for i, (is_new_triplet, triplet) in enumerate(zip(is_new, triplets)):
             if is_new_triplet:
                 self.new_triplets.append(triplet)
+        
+        self.print_query_stats()
