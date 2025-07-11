@@ -54,7 +54,6 @@
       "schema.org:uploadDate": "dataset.upload_date",
       "schema.org:version": "dataset.version",
       "schema.org:distribution": "dataset.url",
-      "schema.org:sameAs": "dataset.paper_url",
       "schema.org:description": "dataset.description",
       "schema.org:status": "NA",
       "likes": "NA",
