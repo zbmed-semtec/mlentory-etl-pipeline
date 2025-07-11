@@ -3,6 +3,7 @@ import pandas as pd
 from rdflib import Graph, Literal, URIRef
 from rdflib.namespace import RDF, XSD
 
+from ..utils.enums import ExtractionMethod
 from .GraphBuilderBase import GraphBuilderBase
 
 class GraphBuilderKeyWords(GraphBuilderBase):
@@ -62,7 +63,7 @@ class GraphBuilderKeyWords(GraphBuilderBase):
 
         # Fixed metadata for keywords collected by the MLentory team
         metadata_dict = {
-             "extraction_method": "Collected by MLENTORY team",
+             "extraction_method": ExtractionMethod.ETL.value,
              "confidence": 1.0
         }
         extraction_time = None # Or set a fixed date if applicable
