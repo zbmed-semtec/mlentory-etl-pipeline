@@ -409,7 +409,7 @@ class GraphHandler:
             return [], []
 
         # Convert triplets to JSON format and calculate hashes
-        triplet_data = [
+        triplet_data_to_insert = [
             {
                 "subject": str(subject.n3()),
                 "predicate": str(predicate.n3()),
@@ -423,12 +423,11 @@ class GraphHandler:
             for subject, predicate, object_ in triplets
         ]
 
-        if not triplet_data:
+        if not triplet_data_to_insert:
             return [], []
 
-        hashes = [d["triplet_hash"] for d in triplet_data]
-
-        # Use WHERE ... = ANY(...) for a more efficient query
+        hashes = [d["triplet_hash"] for d in triplet_data_to_insert]
+        
         query = """
             SELECT id, triplet_hash FROM "Triplet"
             WHERE triplet_hash = ANY(%s)
@@ -439,27 +438,29 @@ class GraphHandler:
         hash_to_id_map = {
             row["triplet_hash"]: row["id"] for _, row in existing_triplets_df.iterrows()
         }
-
+        
         # Initialize results
         triplet_ids = [-1] * len(triplets)
         is_new = [True] * len(triplets)
 
         new_triplets_data_map = {}
+        
 
         # Process existing triplets
-        for i, data in enumerate(triplet_data):
+        for i, data in enumerate(triplet_data_to_insert):
             triplet_hash = data["triplet_hash"]
             if triplet_hash in hash_to_id_map:
                 triplet_ids[i] = hash_to_id_map[triplet_hash]
                 is_new[i] = False
             else:
+                # print("NEW TRIPLET::::::::::: ", data)
                 new_triplets_data_map[triplet_hash] = (
                     data["subject"],
                     data["predicate"],
                     data["object"],
                     triplet_hash,
                 )
-
+        
         if new_triplets_data_map:
             new_triplets_data = list(new_triplets_data_map.values())
             new_ids = self.SQLHandler.batch_insert(
@@ -475,7 +476,7 @@ class GraphHandler:
             }
 
             # Update triplet_ids with new IDs
-            for i, data in enumerate(triplet_data):
+            for i, data in enumerate(triplet_data_to_insert):
                 triplet_hash = data["triplet_hash"]
                 if is_new[i]:
                     triplet_ids[i] = new_hash_to_id_map[triplet_hash]
