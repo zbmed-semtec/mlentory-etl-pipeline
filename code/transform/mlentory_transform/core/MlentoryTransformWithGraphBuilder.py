@@ -4,9 +4,9 @@ import rdflib
 from datetime import datetime
 from tqdm import tqdm
 import os
+import hashlib
 
-
-from ..utils.enums import Platform
+from ..utils.enums import Platform, SchemasURL
 from .GraphBuilderBase import GraphBuilderBase
 from .GraphBuilderFAIR4ML import GraphBuilderFAIR4ML
 from .GraphBuilderCroissant import GraphBuilderCroissant
@@ -166,7 +166,7 @@ class MlentoryTransformWithGraphBuilder:
         graphs: List[rdflib.Graph],
         save_output_in_json: bool = False,
         output_dir: str = None,
-        disambiguate_extraction_metadata: bool = False,
+        disambiguate_extraction_metadata: bool = True,
     ) -> rdflib.Graph:
         """
         Unify the knowledge graph from the current sources.
@@ -237,9 +237,11 @@ class MlentoryTransformWithGraphBuilder:
         # Initialize a new graph for the disambiguated result
         disambiguated_graph = rdflib.Graph()
         
+        print("DISAMBIGUATE STATEMENT METADATA ::::::::::: ")
+        
         # Define the RDF types and properties we need
-        RDF = rdflib.Namespace("https://www.w3.org/1999/02/22-rdf-syntax-ns#")
-        NS1 = rdflib.Namespace("https://mlentory.de/ns1#")
+        RDF = rdflib.Namespace(SchemasURL.RDF.value)
+        NS1 = rdflib.Namespace(SchemasURL.MLENTORY.value+"meta/")
         TYPE = RDF.type
         STATEMENT_METADATA = NS1.StatementMetadata
         CONFIDENCE = NS1.confidence
@@ -250,6 +252,8 @@ class MlentoryTransformWithGraphBuilder:
         
         # Find all StatementMetadata instances
         metadata_nodes = list(graph.subjects(TYPE, STATEMENT_METADATA))
+        
+        print("NUMBER OF STATEMENT METADATA ::::::::::: ", len(metadata_nodes))
         
         # Group metadata by subject-predicate-object triple
         statement_groups = {}
@@ -263,10 +267,14 @@ class MlentoryTransformWithGraphBuilder:
             # Skip if any component is missing
             if not subjects or not predicates or not objects:
                 continue
-                
-            # Use the first value if there are multiple (should not happen)
-            statement_key = (str(subjects[0]), str(predicates[0]), str(objects[0]))
             
+            # Use the first value if there are multiple (should not happen)
+            statement_hash = hashlib.md5(
+                    (
+                        str(subjects[0].n3()) + str(predicates[0].n3()) + str(objects[0].n3())
+                    ).encode()
+                ).hexdigest()
+
             # Extract confidence and extraction time
             confidences = list(graph.objects(node, CONFIDENCE))
             extraction_times = list(graph.objects(node, EXTRACTION_TIME))
@@ -291,16 +299,26 @@ class MlentoryTransformWithGraphBuilder:
                 extraction_time = datetime.min
             
             # Add to group or replace if better
-            if statement_key not in statement_groups or (
-                (confidence > statement_groups[statement_key]["confidence"]) or
-                (confidence == statement_groups[statement_key]["confidence"] and
-                 extraction_time > statement_groups[statement_key]["extraction_time"])
+            if statement_hash not in statement_groups or (
+                (confidence > statement_groups[statement_hash]["confidence"]) or
+                (confidence == statement_groups[statement_hash]["confidence"] and
+                 extraction_time > statement_groups[statement_hash]["extraction_time"])
             ):
-                statement_groups[statement_key] = {
+                if statement_hash in statement_groups and (
+                (confidence > statement_groups[statement_hash]["confidence"]) or
+                (confidence == statement_groups[statement_hash]["confidence"] and
+                 extraction_time > statement_groups[statement_hash]["extraction_time"])
+                ):
+                    print("REPEATED TRIPLET ::::::::::: ", statement_hash)
+                    print(statement_groups[statement_hash])
+                    
+                    
+                statement_groups[statement_hash] = {
                     "node": node,
                     "confidence": confidence,
                     "extraction_time": extraction_time
                 }
+                
         
         # Add all triples from the original graph except StatementMetadata instances
         for s, p, o in graph:
