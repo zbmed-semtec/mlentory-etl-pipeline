@@ -280,6 +280,13 @@ def parse_args() -> argparse.Namespace:
         default=False,
         help="Use dummy data for testing purposes.",
     )
+    parser.add_argument(
+        "--unstructured-text-strategy",
+        "-uts",
+        type=str,
+        default="None",
+        help="Strategy to use for unstructured text extraction.",
+    )
     return parser.parse_args()
 
 
@@ -330,7 +337,8 @@ def main():
                     output_dir=args.output_dir, # Pass the base output_dir
                     save_result_in_json=args.save_extraction,
                     threads=4, # TODO: Consider making threads an arg
-                    related_entities_to_download=entities_to_download_config
+                    related_entities_to_download=entities_to_download_config,
+                    unstructured_text_strategy=args.unstructured_text_strategy,
                 )
                 end_time = time.time()
                 logger.info(f"Model extraction from file took {end_time - start_time:.2f} seconds")
@@ -353,11 +361,17 @@ def main():
                 save_result_in_json=args.save_extraction, # Reuse flag
                 update_recent=True, # Default behavior
                 related_entities_to_download=entities_to_download_config,
+                unstructured_text_strategy=args.unstructured_text_strategy,
                 threads=4, # Reuse threads
                 depth=2, # Default behavior
             )
             end_time = time.time()
             logger.info(f"Model extraction with default parameters took {end_time - start_time:.2f} seconds")
+            
+            for key, value in extracted_entities["models"].items():
+                logger.info(f"Key: {key}")
+                logger.info(f"Value: {value}")
+                logger.info(f"Value type: {type(value)}")
             
             # 'models' key in extracted_entities already contains the combined models here
             if "models" not in extracted_entities or extracted_entities["models"].empty:
@@ -417,7 +431,7 @@ def main():
 
     logger.info("Cleaning databases...")
     start_time = time.time()
-    loader.clean_DBs()
+    # loader.clean_DBs()
     end_time = time.time()
     logger.info(f"Database cleaning took {end_time - start_time:.2f} seconds")
 

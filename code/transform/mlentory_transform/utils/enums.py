@@ -116,6 +116,7 @@ class ExtractionMethod(str, Enum):
     ADDED_IN_TRANSFORM = "added_in_transform"
     NOT_EXTRACTED = "not_extracted"
     SYSTEM = "system"
+    ETL = "MLentory_ETL"
 
 
 class RelationType(str, Enum):

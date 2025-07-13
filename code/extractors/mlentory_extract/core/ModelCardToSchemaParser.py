@@ -315,11 +315,6 @@ class ModelCardToSchemaParser:
                 # Convert tag to lowercase for consistent matching
                 tag_lower = tag.lower()
                 
-                # Extract ML tasks (fair4ml:mlTask)
-                tag_for_task = tag.replace("-", " ").lower()
-                if tag_for_task in self.tags_task_names:
-                    ml_tasks.add(tag_for_task)
-                    keywords.add(tag_for_task)
                 
                 # Extract datasets (fair4ml:trainedOn, fair4ml:evaluatedOn)
                 if "dataset:" in tag:
@@ -346,9 +341,14 @@ class ModelCardToSchemaParser:
                 # Extract libraries (keywords)
                 if tag_lower in self.tags_libraries_names:
                     libraries.add(tag_lower)
-                    keywords.add(tag_lower)
                 
-                if ":" not in tag_lower:
+                # Extract ML tasks (fair4ml:mlTask)
+                tag_for_task = tag.replace("-", " ").lower()
+                if tag_for_task in self.tags_task_names:
+                    ml_tasks.add(tag_for_task)
+                
+                # Find a better way to ignore country tags
+                if ":" not in tag_lower and tag_lower not in self.tags_language:
                     keywords.add(tag_lower)
                 
             
@@ -490,6 +490,7 @@ class ModelCardToSchemaParser:
         else:
             # Put everything that has license in the key
             if isinstance(yaml_dict, dict):
+                licensed_info+="\n"
                 for key, value in yaml_dict.items():
                     if "license" in key:
                         if isinstance(value, str):
@@ -1035,13 +1036,16 @@ class ModelCardToSchemaParser:
         
         if properties_for_extractor:
             print(f"Step 4: Extracting schema properties from model cards using {unstructured_text_strategy} strategy for properties: {properties_for_extractor}")
-            HF_df = self.schema_property_extractor.extract_dataframe_schema_properties(
-                df=HF_df,
-                strategy=unstructured_text_strategy,
-                max_questions_per_group=max_questions_per_group,
-                properties_to_process=properties_for_extractor
-            )
-            self.processed_properties.extend(properties_for_extractor)
+            if unstructured_text_strategy != "None":
+                HF_df = self.schema_property_extractor.extract_dataframe_schema_properties(
+                    df=HF_df,
+                    strategy=unstructured_text_strategy,
+                    max_questions_per_group=max_questions_per_group,
+                    properties_to_process=properties_for_extractor
+                )
+                self.processed_properties.extend(properties_for_extractor)
+            else:
+                print("Step 4: No extraction for model card text.")
         else:
             print("Step 4: No remaining properties for model card text extraction.")
         

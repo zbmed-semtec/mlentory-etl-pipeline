@@ -49,6 +49,7 @@ class HFExtractor:
         save_initial_data: bool = False,
         save_result_in_json: bool = False,
         from_date: str = None,
+        unstructured_text_strategy: str = "None",
         threads: int = 4,
         depth: int = 1,
     ) -> pd.DataFrame:
@@ -76,12 +77,14 @@ class HFExtractor:
                     output_dir=output_dir,
                     save_raw_data=save_initial_data,
                     save_result_in_json=save_result_in_json,
+                    unstructured_text_strategy=unstructured_text_strategy,
                 )
             else:
                 current_models_df = self.download_specific_models(
                     model_ids=models_to_process,
                     output_dir=output_dir,
                     save_result_in_json=save_result_in_json,
+                    unstructured_text_strategy=unstructured_text_strategy,
                 )
                 
             processed_models.append(current_models_df)
@@ -131,6 +134,7 @@ class HFExtractor:
         output_dir: str = "./outputs",
         save_result_in_json: bool = False,
         threads: int = 4,
+        unstructured_text_strategy: str = "None",
     ) -> Dict[str, pd.DataFrame]:
         """
         Downloads specific models and their specified related entities.
@@ -162,6 +166,7 @@ class HFExtractor:
             output_dir=os.path.join(output_dir, "models"), # Save models in their subdir
             save_result_in_json=save_result_in_json,
             threads=threads,
+            unstructured_text_strategy=unstructured_text_strategy,
         )
         
         
@@ -253,6 +258,7 @@ class HFExtractor:
         save_raw_data: bool = False,
         save_result_in_json: bool = False,
         from_date: str = None,
+        unstructured_text_strategy: str = "None",
         threads: int = 4,
     ) -> pd.DataFrame:
         """
@@ -277,6 +283,8 @@ class HFExtractor:
                 Defaults to True.
             from_date (str, optional): Filter models by date.
                 Defaults to None.
+            unstructured_text_strategy (str, optional): Strategy to use for unstructured text extraction.
+                Options: "context_matching", "grouped", "individual". Defaults to "None".
 
         Returns:
             pd.DataFrame: Processed DataFrame containing extracted information
@@ -288,7 +296,7 @@ class HFExtractor:
         )
         
         # Parse fields
-        HF_df = self.parser.process_dataframe(original_HF_df)
+        HF_df = self.parser.process_dataframe(original_HF_df, unstructured_text_strategy=unstructured_text_strategy)
         
         # Save results
         if not os.path.exists(output_dir):
@@ -315,6 +323,7 @@ class HFExtractor:
         model_ids: List[str],
         output_dir: str = "./outputs",
         save_result_in_json: bool = False,
+        unstructured_text_strategy: str = "None",
         threads: int = 4,
     ) -> pd.DataFrame:
         """
@@ -328,7 +337,7 @@ class HFExtractor:
             print("No models found to download")
             return pd.DataFrame()
         
-        result_df = self.parser.process_dataframe(result_df)
+        result_df = self.parser.process_dataframe(result_df, unstructured_text_strategy=unstructured_text_strategy)
         
         if save_result_in_json:
             timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
@@ -385,6 +394,7 @@ class HFExtractor:
         output_dir: str = "./outputs",
         save_result_in_json: bool = False,
         threads: int = 4,
+        unstructured_text_strategy: str = "None",
     ) -> pd.DataFrame:
         
         extracted_entities = {}
@@ -397,6 +407,7 @@ class HFExtractor:
                 output_dir=output_dir,
                 save_result_in_json=False,
                 threads=threads,
+                unstructured_text_strategy=unstructured_text_strategy,
             )
             extracted_entities["models"] = extracted_base_models_df
             print(f"Downloaded {len(extracted_base_models_df)} base models")
