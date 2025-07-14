@@ -107,17 +107,18 @@ class ExtractionMethod(str, Enum):
         >>> print(method)
         'api'
     """
-    API = "api"
-    SCRAPING = "scraping"
-    FILE_SYSTEM = "file_system"
-    DATABASE = "database"
-    MANUAL = "manual"
-    PARSED_FROM_HF = "parsed_from_hf"
-    BUILT_IN_TRANSFORM = "built_in_transform"
-    ADDED_IN_TRANSFORM = "added_in_transform"
-    NOT_EXTRACTED = "not_extracted"
-    SYSTEM = "system"
-    ETL = "MLentory_ETL"
+    API = "API"
+    SCRAPING = "Scraping"
+    FILE_SYSTEM = "File System"
+    DATABASE = "Database"
+    MANUAL = "Manual"
+    PARSED_FROM_HF = "Parsed from HF"
+    BUILT_IN_TRANSFORM = "Built in Transform"
+    ADDED_IN_TRANSFORM = "Added in Transform"
+    NOT_EXTRACTED = "Not Extracted"
+    NOT_AVAILABLE = "Not Available"
+    SYSTEM = "System"
+    ETL = "MLentory ETL"
 
 
 class RelationType(str, Enum):
