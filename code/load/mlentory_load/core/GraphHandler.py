@@ -23,6 +23,7 @@ class GraphHandler:
     Handler for graph operations and version control across databases.
 
     This class manages:
+    - Uploading new triplets to the database
     - Graph construction and updates
     - Version control of triples
     - Synchronization between databases
@@ -290,8 +291,20 @@ class GraphHandler:
                 """UPDATE "Version_Range" SET use_end = %s WHERE id = %s""",
                 (extraction_time, version_range_id),
             )
-
-    def deprecate_old_triplets(self, model_uri):
+    
+    def deprecate_old_triplets_in_batch(self, min_extraction_time: datetime):
+        """
+        Deprecate triplets that are older than the minimum extraction time of the current update.
+        
+        Args:
+            min_extraction_time (datetime): The minimum extraction time
+        """
+        self.SQLHandler.execute_sql(
+            """UPDATE "Version_Range" SET deprecated = %s WHERE use_end < %s""",
+            (True, min_extraction_time),
+        )
+    
+    def deprecate_old_triplets_for_model(self, model_uri):
 
         model_uri_json = str(model_uri.n3())
 
@@ -627,6 +640,7 @@ class GraphHandler:
 
         if updates:
             # Update each row individually with parameterized queries
+            # TODO: Update in batch
             for time, range_id in updates:
                 self.SQLHandler.execute_sql(
                     """UPDATE "Version_Range" SET use_end = %s WHERE id = %s""",
@@ -701,11 +715,15 @@ class GraphHandler:
             datetime.strptime(info["extraction_time"], "%Y-%m-%d_%H-%M-%S")
             for info in extraction_infos
         ]
+        
+        min_extraction_time = min(extraction_times)
 
         # Manage version ranges in batch
         self._batch_manage_version_ranges(
             triplet_ids, extraction_info_ids, extraction_times
         )
+        
+        self.deprecate_old_triplets_in_batch(min_extraction_time)
 
         # Add new triplets to the list
         for i, (is_new_triplet, triplet) in enumerate(zip(is_new, triplets)):
