@@ -69,6 +69,7 @@ class MlentoryTransformWithGraphBuilder:
             [models_kg, datasets_kg, arxiv_kg, keywords_kg, licenses_kg],
             save_output_in_json=save_output,
             output_dir=kg_output_dir,
+            disambiguate_extraction_metadata=False
         )
 
         extraction_metadata_integrated = self.unify_graphs(
@@ -79,6 +80,7 @@ class MlentoryTransformWithGraphBuilder:
              licenses_extraction_metadata],
             save_output_in_json=save_output,
             output_dir=extraction_metadata_output_dir,
+            disambiguate_extraction_metadata=True
         )
         
         return kg_integrated, extraction_metadata_integrated
@@ -234,8 +236,7 @@ class MlentoryTransformWithGraphBuilder:
             >>> unified_graph = transformer.unify_graphs([graph1, graph2])
             >>> disambiguated_graph = transformer.disambiguate_statement_metadata(unified_graph)
         """
-        # Initialize a new graph for the disambiguated result
-        disambiguated_graph = rdflib.Graph()
+        
         
         print("DISAMBIGUATE STATEMENT METADATA ::::::::::: ")
         
@@ -251,12 +252,13 @@ class MlentoryTransformWithGraphBuilder:
         OBJECT = NS1.object
         
         # Find all StatementMetadata instances
-        metadata_nodes = list(graph.subjects(TYPE, STATEMENT_METADATA))
+        metadata_nodes = set(graph.subjects(TYPE, STATEMENT_METADATA))
         
         print("NUMBER OF STATEMENT METADATA ::::::::::: ", len(metadata_nodes))
         
         # Group metadata by subject-predicate-object triple
         statement_groups = {}
+        graph_nodes = list()
         
         for node in metadata_nodes:
             # Extract the statement this metadata is about
@@ -300,44 +302,53 @@ class MlentoryTransformWithGraphBuilder:
             
             # Add to group or replace if better
             if statement_hash not in statement_groups or (
-                (confidence > statement_groups[statement_hash]["confidence"]) or
-                (confidence == statement_groups[statement_hash]["confidence"] and
-                 extraction_time > statement_groups[statement_hash]["extraction_time"])
+                (confidence > statement_groups[statement_hash][CONFIDENCE]) or
+                (confidence == statement_groups[statement_hash][CONFIDENCE] and
+                 extraction_time > statement_groups[statement_hash][EXTRACTION_TIME])
             ):
-                if statement_hash in statement_groups and (
-                (confidence > statement_groups[statement_hash]["confidence"]) or
-                (confidence == statement_groups[statement_hash]["confidence"] and
-                 extraction_time > statement_groups[statement_hash]["extraction_time"])
+                if (statement_hash in statement_groups) and (
+                (confidence > statement_groups[statement_hash][CONFIDENCE]) or
+                (confidence == statement_groups[statement_hash][CONFIDENCE] and
+                 extraction_time > statement_groups[statement_hash][EXTRACTION_TIME])
                 ):
                     print("REPEATED TRIPLET ::::::::::: ", statement_hash)
+                    print("SUBJECTS", subjects)
+                    print("PREDICATES", predicates)
+                    print("OBJECTS", objects)
                     print(statement_groups[statement_hash])
                     
                     
                 statement_groups[statement_hash] = {
                     "node": node,
-                    "confidence": confidence,
-                    "extraction_time": extraction_time
+                    CONFIDENCE: confidence,
+                    EXTRACTION_TIME: extraction_time
                 }
                 
+        # Initialize a new graph for the disambiguated result
+        disambiguated_graph = rdflib.Graph()
         
         # Add all triples from the original graph except StatementMetadata instances
-        for s, p, o in graph:
-            if s not in metadata_nodes:
-                disambiguated_graph.add((s, p, o))
+        for node_info in statement_groups.values():
+            for p, o in graph.predicate_objects(node_info["node"]):
+                disambiguated_graph.add((node_info["node"], p, o))
+            
         
         # Add only the best StatementMetadata for each statement
-        for best_metadata in statement_groups.values():
-            node = best_metadata["node"]
-            for p, o in graph.predicate_objects(node):
-                disambiguated_graph.add((node, p, o))
+        # for best_metadata in statement_groups.values():
+        #     node = best_metadata["node"]
+        #     for p, o in graph.predicate_objects(node):
+        #         disambiguated_graph.add((node, p, o))
         
         # Save the disambiguated graph if requested
+        # save_output_in_json = True
         if save_output_in_json:
             if not output_dir:
                 raise ValueError("output_dir must be provided if save_output_in_json is True")
                 
             current_date = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
             kg_output_path = os.path.join(output_dir, f"{current_date}_disambiguated_kg.nt")
+            before_disambiguation_kg_output_path = os.path.join(output_dir, f"{current_date}_before_disambiguation_kg.nt")
+            graph.serialize(destination=before_disambiguation_kg_output_path, format="turtle")
             disambiguated_graph.serialize(destination=kg_output_path, format="turtle")
         
         return disambiguated_graph
