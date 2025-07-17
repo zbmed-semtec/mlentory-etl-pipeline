@@ -23,6 +23,7 @@ class GraphHandler:
     Handler for graph operations and version control across databases.
 
     This class manages:
+    - Uploading new triplets to the database
     - Graph construction and updates
     - Version control of triples
     - Synchronization between databases
@@ -290,8 +291,20 @@ class GraphHandler:
                 """UPDATE "Version_Range" SET use_end = %s WHERE id = %s""",
                 (extraction_time, version_range_id),
             )
-
-    def deprecate_old_triplets(self, model_uri):
+    
+    def deprecate_old_triplets_in_batch(self, min_extraction_time: datetime):
+        """
+        Deprecate triplets that are older than the minimum extraction time of the current update.
+        
+        Args:
+            min_extraction_time (datetime): The minimum extraction time
+        """
+        self.SQLHandler.execute_sql(
+            """UPDATE "Version_Range" SET deprecated = %s WHERE use_end < %s""",
+            (True, min_extraction_time),
+        )
+    
+    def deprecate_old_triplets_for_model(self, model_uri):
 
         model_uri_json = str(model_uri.n3())
 
@@ -409,7 +422,7 @@ class GraphHandler:
             return [], []
 
         # Convert triplets to JSON format and calculate hashes
-        triplet_data = [
+        triplet_data_to_insert = [
             {
                 "subject": str(subject.n3()),
                 "predicate": str(predicate.n3()),
@@ -423,12 +436,11 @@ class GraphHandler:
             for subject, predicate, object_ in triplets
         ]
 
-        if not triplet_data:
+        if not triplet_data_to_insert:
             return [], []
 
-        hashes = [d["triplet_hash"] for d in triplet_data]
-
-        # Use WHERE ... = ANY(...) for a more efficient query
+        hashes = [d["triplet_hash"] for d in triplet_data_to_insert]
+        
         query = """
             SELECT id, triplet_hash FROM "Triplet"
             WHERE triplet_hash = ANY(%s)
@@ -439,27 +451,29 @@ class GraphHandler:
         hash_to_id_map = {
             row["triplet_hash"]: row["id"] for _, row in existing_triplets_df.iterrows()
         }
-
+        
         # Initialize results
         triplet_ids = [-1] * len(triplets)
         is_new = [True] * len(triplets)
 
         new_triplets_data_map = {}
+        
 
         # Process existing triplets
-        for i, data in enumerate(triplet_data):
+        for i, data in enumerate(triplet_data_to_insert):
             triplet_hash = data["triplet_hash"]
             if triplet_hash in hash_to_id_map:
                 triplet_ids[i] = hash_to_id_map[triplet_hash]
                 is_new[i] = False
             else:
+                # print("NEW TRIPLET::::::::::: ", data)
                 new_triplets_data_map[triplet_hash] = (
                     data["subject"],
                     data["predicate"],
                     data["object"],
                     triplet_hash,
                 )
-
+        
         if new_triplets_data_map:
             new_triplets_data = list(new_triplets_data_map.values())
             new_ids = self.SQLHandler.batch_insert(
@@ -475,7 +489,7 @@ class GraphHandler:
             }
 
             # Update triplet_ids with new IDs
-            for i, data in enumerate(triplet_data):
+            for i, data in enumerate(triplet_data_to_insert):
                 triplet_hash = data["triplet_hash"]
                 if is_new[i]:
                     triplet_ids[i] = new_hash_to_id_map[triplet_hash]
@@ -626,6 +640,7 @@ class GraphHandler:
 
         if updates:
             # Update each row individually with parameterized queries
+            # TODO: Update in batch
             for time, range_id in updates:
                 self.SQLHandler.execute_sql(
                     """UPDATE "Version_Range" SET use_end = %s WHERE id = %s""",
@@ -700,11 +715,15 @@ class GraphHandler:
             datetime.strptime(info["extraction_time"], "%Y-%m-%d_%H-%M-%S")
             for info in extraction_infos
         ]
+        
+        min_extraction_time = min(extraction_times)
 
         # Manage version ranges in batch
         self._batch_manage_version_ranges(
             triplet_ids, extraction_info_ids, extraction_times
         )
+        
+        self.deprecate_old_triplets_in_batch(min_extraction_time)
 
         # Add new triplets to the list
         for i, (is_new_triplet, triplet) in enumerate(zip(is_new, triplets)):

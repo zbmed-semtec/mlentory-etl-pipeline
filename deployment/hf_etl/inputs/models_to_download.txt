@@ -1,3 +1,4 @@
+https://huggingface.co/lodestones/Chroma
 https://huggingface.co/openai/whisper-small
 https://huggingface.co/black-forest-labs/FLUX.1-Kontext-dev
 https://huggingface.co/pritamdeka/BioBERT-mnli-snli-scinli-scitail-mednli-stsb
