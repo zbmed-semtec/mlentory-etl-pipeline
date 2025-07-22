@@ -5,10 +5,13 @@ import pandas as pd
 import os
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import spdx_lookup
+import logging
 
 from mlentory_extract.core.ModelCardToSchemaParser import ModelCardToSchemaParser
 from mlentory_extract.hf_extract.HFDatasetManager import HFDatasetManager
 
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
 
 class HFExtractor:
     """
@@ -67,6 +70,8 @@ class HFExtractor:
         related_entities_names = {}
         related_entities = {}
         models_to_process = list()
+        
+        logger.info(f"Downloading models with related entities for depth {depth}")
         
         for current_depth in range(depth):
             current_models_df = pd.DataFrame()
@@ -290,10 +295,13 @@ class HFExtractor:
             pd.DataFrame: Processed DataFrame containing extracted information
 
         """
+        
         # Load dataset
         original_HF_df = self.dataset_manager.get_model_metadata_dataset(
             update_recent=update_recent, limit=num_models, threads=threads
         )
+        
+        logger.info(f"Downloaded {len(original_HF_df)} models from HuggingFace dataset")
         
         # Parse fields
         HF_df = self.parser.process_dataframe(original_HF_df, unstructured_text_strategy=unstructured_text_strategy)

@@ -668,21 +668,21 @@ class KnowledgeGraphHandler:
                 defined_term_uri,
                 RDF.type,
                 self.namespaces["schema"]["DefinedTerm"],
-                {"extraction_method": "Collected by MLENTORY team", "confidence": 1.0})
+                {"extraction_method": ExtractionMethod.ETL.value, "confidence": 1.0})
             
             if row["tag_name"] is not None:
                 self.add_triple_with_metadata(
                     defined_term_uri,
                     self.namespaces["schema"]["name"],
                     Literal(row["tag_name"], datatype=XSD.string),
-                    {"extraction_method": "Collected by MLENTORY team", "confidence": 1.0})
+                    {"extraction_method": ExtractionMethod.ETL.value, "confidence": 1.0})
             
             if row["description"] is not None:
                 self.add_triple_with_metadata(
                     defined_term_uri,
                     self.namespaces["schema"]["description"],
                     Literal(row["description"], datatype=XSD.string),
-                    {"extraction_method": "Collected by MLENTORY team", "confidence": 1.0})
+                    {"extraction_method": ExtractionMethod.ETL.value, "confidence": 1.0})
                 
         
         return self.graph, self.metadata_graph
