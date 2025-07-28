@@ -201,10 +201,10 @@ class HFDatasetManager:
                 # if model_id is None:
                 #     model_id = 
                 
-                print("\n\n\n =================== \n\n\n")
-                print(f"Model ID: {model.id}")
-                print(f"Model card: {card.content}")
-                print("\n\n\n =================== \n\n\n")
+                # print("\n\n\n =================== \n\n\n")
+                # print(f"Model ID: {model.id}")
+                # print(f"Model card: {card.content}")
+                # print("\n\n\n =================== \n\n\n")
                 
                 
                 model_info = {
@@ -232,7 +232,7 @@ class HFDatasetManager:
                     model_data.extend(results)
                 
         model_data = pd.DataFrame(model_data)
-        print(f"Model data!!!!!!!!: {model_data}")
+        # print(f"Model data!!!!!!!!: {model_data}")
         model_data = model_data.drop_duplicates(subset=["modelId"], keep="last")
         return model_data
                 
@@ -451,13 +451,20 @@ class HFDatasetManager:
             
             print(f"Processing batch {i//batch_size + 1}/{(len(arxiv_ids) + batch_size - 1)//batch_size} with {len(batch_ids)} arXiv IDs")
             
-            search = arxiv.Search(
-                id_list=batch_ids,
-                max_results=batch_size
-            )
-            
-            results = list(client.results(search))
+            try:
+                
+                search = arxiv.Search(
+                    id_list=batch_ids,
+                    max_results=batch_size
+                )
+                
+                results = list(client.results(search))
 
+            except Exception as e:
+                print(f"Error processing arXiv papers: {str(e)}")
+                time.sleep(5)
+                return pd.DataFrame()
+            
             # Process arXiv papers sequentially for this batch
             for paper in results:
                 try:
@@ -537,8 +544,8 @@ class HFDatasetManager:
             
             # Wait 4 seconds between batches (except for the last batch)
             if i + batch_size < len(arxiv_ids):
-                print(f"Waiting 4 seconds before processing next batch...")
-                time.sleep(5)
+                print(f"Waiting 6 seconds before processing next batch...")
+                time.sleep(6)
         
         if not arxiv_data:
             print("No arXiv papers could be successfully retrieved")
