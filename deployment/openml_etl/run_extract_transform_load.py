@@ -171,8 +171,8 @@ def initialize_load_processor(kg_files_directory: str, logger: logging.Logger) -
             RDFHandler=rdfHandler,
             IndexHandler=elasticsearchHandler,
             kg_files_directory=kg_files_directory,
-            graph_identifier="https://w3id.org/mlentory/mlentory_graph/",
-            deprecated_graph_identifier="https://w3id.org/mlentory/deprecated_mlentory_graph/",
+            graph_identifier="https://w3id.org/mlentory/mlentory_graph",
+            deprecated_graph_identifier="https://w3id.org/mlentory/deprecated_mlentory_graph",
         )
 
         logger.info("LoadProcessor initialized successfully")
@@ -309,6 +309,12 @@ def main():
 
     logger.info("Starting transformation phase")
     loader = initialize_load_processor(kg_files_directory, logger)
+    
+    logger.info("Cleaning databases...")
+    start_time = time.time()
+    # loader.clean_DBs()
+    end_time = time.time()
+    logger.info(f"Database cleaning took {end_time - start_time:.2f} seconds")
 
     logger.info("Loading the knowledge graph to database")
     start_time = time.time()
