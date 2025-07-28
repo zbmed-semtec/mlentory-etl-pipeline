@@ -306,16 +306,16 @@ class MlentoryTransformWithGraphBuilder:
                 (confidence == statement_groups[statement_hash][CONFIDENCE] and
                  extraction_time > statement_groups[statement_hash][EXTRACTION_TIME])
             ):
-                if (statement_hash in statement_groups) and (
-                (confidence > statement_groups[statement_hash][CONFIDENCE]) or
-                (confidence == statement_groups[statement_hash][CONFIDENCE] and
-                 extraction_time > statement_groups[statement_hash][EXTRACTION_TIME])
-                ):
-                    print("REPEATED TRIPLET ::::::::::: ", statement_hash)
-                    print("SUBJECTS", subjects)
-                    print("PREDICATES", predicates)
-                    print("OBJECTS", objects)
-                    print(statement_groups[statement_hash])
+                # if (statement_hash in statement_groups) and (
+                # (confidence > statement_groups[statement_hash][CONFIDENCE]) or
+                # (confidence == statement_groups[statement_hash][CONFIDENCE] and
+                #  extraction_time > statement_groups[statement_hash][EXTRACTION_TIME])
+                # ):
+                #     print("REPEATED TRIPLET ::::::::::: ", statement_hash)
+                #     print("SUBJECTS", subjects)
+                #     print("PREDICATES", predicates)
+                #     print("OBJECTS", objects)
+                #     print(statement_groups[statement_hash])
                     
                     
                 statement_groups[statement_hash] = {
