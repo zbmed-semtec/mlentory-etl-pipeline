@@ -70,13 +70,14 @@ def setup_logging() -> logging.Logger:
 
     return logger
 
-def initialize_extractor(config_path: str, logger: logging.Logger) -> OpenMLExtractor:
+def initialize_extractor(config_path: str, logger: logging.Logger, scraping_enabled: bool) -> OpenMLExtractor:
     """
     Initializes the extractor with the configuration data.
 
     Args:
         config_path (str): The path to the configuration data.
         logger (logging.Logger): Logger instance for logging events.
+        scraping_enabled (boolean) : Flag to enable/disable scraping.
 
     Returns:
         OpenMLExtractor: The extractor instance.
@@ -85,7 +86,7 @@ def initialize_extractor(config_path: str, logger: logging.Logger) -> OpenMLExtr
     schema_file = f"{config_path}/extract/metadata_schema.json"
     logger.info(f"Using schema file: {schema_file}")
     try:
-        extractor = OpenMLExtractor(schema_file=schema_file, logger=logger)
+        extractor = OpenMLExtractor(schema_file=schema_file, logger=logger, scraping_enabled=scraping_enabled)
         logger.info("Extractor initialized successfully")
         return extractor
     except Exception as e:
@@ -218,6 +219,10 @@ def parse_args() -> argparse.Namespace:
     )
 
     parser.add_argument(
+        "--enable-scraping", type=bool, default=False, help="Flag to enable webscraping at extraction step"
+    )
+
+    parser.add_argument(
         "--output-dir",
         default="./openml_etl/outputs",
         help="Directory to save results",
@@ -240,7 +245,7 @@ def main():
 
     # Extract
     logger.info("Starting extraction phase")
-    extractor = initialize_extractor(config_path, logger)
+    extractor = initialize_extractor(config_path, logger, args.enable_scraping)
 
     logger.info("Extracting run info with additional entities")
     start_time = time.time()
@@ -309,7 +314,7 @@ def main():
 
     logger.info("Starting transformation phase")
     loader = initialize_load_processor(kg_files_directory, logger)
-    
+
     logger.info("Cleaning databases...")
     start_time = time.time()
     # loader.clean_DBs()
