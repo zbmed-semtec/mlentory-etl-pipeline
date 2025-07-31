@@ -126,8 +126,6 @@ def initialize_load_processor(kg_files_directory: str) -> LoadProcessor:
     Returns:
         LoadProcessor: The load processor instance.
     """
-    import os
-    
     # Get database configuration from environment variables
     postgres_host = os.getenv("POSTGRES_HOST", "postgres")
     postgres_user = os.getenv("POSTGRES_USER", "user") 
