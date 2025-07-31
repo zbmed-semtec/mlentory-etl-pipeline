@@ -89,7 +89,9 @@ services:
 
   # Extractor service
   hf_etl_with_gpu:
-    profiles: [gpu]
+    profiles:
+      - gpu
+      - hf_etl_gpu
     container_name: hf_gpu
     build: 
       context: ../
