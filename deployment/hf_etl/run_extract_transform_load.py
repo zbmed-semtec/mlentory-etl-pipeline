@@ -126,25 +126,48 @@ def initialize_load_processor(kg_files_directory: str) -> LoadProcessor:
     Returns:
         LoadProcessor: The load processor instance.
     """
+    import os
+    
+    # Get database configuration from environment variables
+    postgres_host = os.getenv("POSTGRES_HOST", "postgres")
+    postgres_user = os.getenv("POSTGRES_USER", "user") 
+    postgres_password = os.getenv("POSTGRES_PASSWORD", "password")
+    postgres_db = os.getenv("POSTGRES_DB", "history_DB")
+    
+    virtuoso_host = os.getenv("VIRTUOSO_HOST", "virtuoso")
+    virtuoso_http_port = os.getenv("VIRTUOSO_HTTP_PORT", "8890")
+    virtuoso_password = os.getenv("VIRTUOSO_DBA_PASSWORD", "my_strong_password")
+    
+    elasticsearch_host = os.getenv("ELASTICSEARCH_HOST", "elastic")
+    elasticsearch_port = int(os.getenv("ELASTICSEARCH_PORT", "9200"))
+    
+    print(f"postgres_host: {postgres_host}")
+    print(f"postgres_user: {postgres_user}")
+    print(f"postgres_password: {postgres_password}")
+    print(f"postgres_db: {postgres_db}")
+    print(f"virtuoso_host: {virtuoso_host}")
+    print(f"virtuoso_http_port: {virtuoso_http_port}")
+    print(f"virtuoso_password: {virtuoso_password}")
+    
     sqlHandler = SQLHandler(
-        host="postgres",
-        user="user",
-        password="password",
-        database="history_DB",
+        host=postgres_host,
+        user=postgres_user,
+        password=postgres_password,
+        database=postgres_db,
     )
     sqlHandler.connect()
 
     rdfHandler = RDFHandler(
-        container_name="virtuoso",
+        container_name=virtuoso_host,
         kg_files_directory=kg_files_directory,
         _user="dba",
-        _password="my_strong_password",
-        sparql_endpoint="http://virtuoso:8890/sparql",
+        _password=virtuoso_password,
+        sparql_endpoint=f"http://{virtuoso_host}:{virtuoso_http_port}/sparql",
     )
 
     elasticsearchHandler = IndexHandler(
-        es_host="elastic",
-        es_port=9200,
+        es_host=elasticsearch_host,
+        es_port=elasticsearch_port,
     )
 
     elasticsearchHandler.initialize_HF_index(index_name="hf_models")
