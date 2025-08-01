@@ -16,10 +16,11 @@ setup(
         "arxiv>=2.1.0",
         "scikit-learn>=1.6.0",
         "vllm>=0.1.0",
-        "selenium>=4.11.0"
+        "selenium>=4.11.0",
+        "hypha_rpc==0.20.55"
     ],
     python_requires=">=3.8.10",
-    author="Nelson Q, Suhasini V",
+    author="Nelson Q, Suhasini V ,Dhwani S" 
     author_email="your.email@example.com",
     description="Collection of extractors for model information from different ML platforms",
     long_description=open("README.md").read(),

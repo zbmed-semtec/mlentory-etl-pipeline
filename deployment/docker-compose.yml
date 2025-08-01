@@ -9,6 +9,7 @@ services:
       # - gpu
       - no_gpu
       - openml_no_gpu
+      - ai4life_no_gpu
       - airflow_test
     image: apache/airflow:2.10.1  # Use the latest stable Airflow image
     command: >
@@ -43,6 +44,7 @@ services:
       # - gpu
       - no_gpu
       - openml_no_gpu
+      - ai4life_no_gpu
       - airflow_test
     image: apache/airflow:2.10.1
     command: "webserver"
@@ -74,6 +76,7 @@ services:
       # - gpu
       - no_gpu
       - openml_no_gpu
+      - ai4life_no_gpu
       - airflow_test
     image: postgres:13-alpine
     container_name: airflow_postgres
@@ -163,6 +166,25 @@ services:
     command: ["tail", "-f", "/dev/null"]
     networks:
       - mlentory_network
+    
+  ai4life_etl_with_no_gpu:
+    profiles: [no_gpu, ai4life_no_gpu]
+    container_name: ai4life_no_gpu
+    build: 
+      context: ../
+      dockerfile: deployment/Dockerfile.ai4life_no_gpu
+      target: ai4life_no_gpu
+    volumes:
+      - ../code/extractors:/app/extractors 
+      - ../code/transform:/app/transform
+      - ../code/load:/app/load
+      - ./ai4life_etl:/app/ai4life_etl
+      - /var/run/docker.sock:/var/run/docker.sock 
+    dns:
+      - 1.1.1.1
+    command: ["tail", "-f", "/dev/null"]
+    networks:
+      - mlentory_network
 
   ### Module in charge of transforming the data to the RDA FAIR4ML schema
   # transform:
@@ -228,6 +250,7 @@ services:
         - gpu
         - no_gpu
         - openml_no_gpu
+        - ai4life_no_gpu
     image: postgres:14.1-alpine
     container_name: postgres
     environment:
@@ -248,6 +271,7 @@ services:
       - gpu
       - no_gpu
       - openml_no_gpu
+      - ai4life_no_gpu
     container_name: pgadmin
     image: dpage/pgadmin4:latest
     environment:
@@ -271,6 +295,7 @@ services:
       - gpu
       - no_gpu
       - openml_no_gpu
+      - ai4life_no_gpu
     image: openlink/virtuoso-opensource-7:latest
     hostname: virtuoso
     container_name: virtuoso_db
@@ -290,6 +315,7 @@ services:
       - gpu
       - no_gpu
       - openml_no_gpu
+      - ai4life_no_gpu
     image: docker.elastic.co/elasticsearch/elasticsearch:8.18.2
     container_name: elastic_db
     hostname: elastic
