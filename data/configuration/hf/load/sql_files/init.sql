@@ -12,7 +12,8 @@ CREATE TABLE IF NOT EXISTS "Triplet" (
 CREATE TABLE IF NOT EXISTS "Triplet_Extraction_Info" (
     "id" BIGSERIAL PRIMARY KEY,
     "method_description" TEXT NOT NULL,
-    "extraction_confidence" DECIMAL(6,5)
+    "extraction_confidence" DECIMAL(6,5),
+    "extraction_info_hash" VARCHAR(128) NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS "Version_Range" (
@@ -28,24 +29,25 @@ CREATE TABLE IF NOT EXISTS "Version_Range" (
 CREATE INDEX IF NOT EXISTS idx_triplet_subject ON "Triplet" USING hash(subject);
 CREATE INDEX IF NOT EXISTS idx_triplet_object_hash ON "Triplet" USING hash(md5(object));
 CREATE INDEX IF NOT EXISTS idx_triplet_hash ON "Triplet" USING hash(triplet_hash);
+CREATE INDEX IF NOT EXISTS idx_extraction_info_hash ON "Triplet_Extraction_Info" USING hash(extraction_info_hash);
 
 -- Composite index for triplet lookups
 CREATE INDEX IF NOT EXISTS idx_triplet_composite ON "Triplet" 
 USING btree(subject, predicate, md5(object));
 
--- Index for extraction info lookups
-CREATE INDEX IF NOT EXISTS idx_extraction_info_composite ON "Triplet_Extraction_Info" 
-USING btree(method_description, extraction_confidence);
+-- -- Index for extraction info lookups
+-- CREATE INDEX IF NOT EXISTS idx_extraction_info_composite ON "Triplet_Extraction_Info" 
+-- USING btree(method_description, extraction_confidence);
 
--- Indexes for version range queries
-CREATE INDEX IF NOT EXISTS idx_version_range_dates ON "Version_Range" 
-USING brin(use_start, use_end);
+-- -- Indexes for version range queries
+-- CREATE INDEX IF NOT EXISTS idx_version_range_dates ON "Version_Range" 
+-- USING brin(use_start, use_end);
 
-CREATE INDEX IF NOT EXISTS idx_version_range_triplet ON "Version_Range" 
-USING btree(triplet_id);
+-- CREATE INDEX IF NOT EXISTS idx_version_range_triplet ON "Version_Range" 
+-- USING btree(triplet_id);
 
-CREATE INDEX IF NOT EXISTS idx_version_range_deprecated ON "Version_Range" 
-USING btree(deprecated);
+-- CREATE INDEX IF NOT EXISTS idx_version_range_deprecated ON "Version_Range" 
+-- USING btree(deprecated);
 
 ALTER TABLE "Version_Range" 
     ADD CONSTRAINT "version_range_triplet_id_foreign" 

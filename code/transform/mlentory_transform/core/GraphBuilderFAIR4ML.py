@@ -5,7 +5,7 @@ from rdflib import Graph, Literal, URIRef, BNode
 from rdflib.namespace import RDF, XSD
 
 from .GraphBuilderBase import GraphBuilderBase
-from ..utils.enums import Platform
+from ..utils.enums import Platform, ExtractionMethod
 
 class GraphBuilderFAIR4ML(GraphBuilderBase):
     """
@@ -43,6 +43,108 @@ class GraphBuilderFAIR4ML(GraphBuilderBase):
             raise ValueError("FAIR4ML_schema_data must be provided as a pandas DataFrame.")
         # TODO: Add more specific validation for schema columns if needed
         self.FAIR4ML_schema_data = FAIR4ML_schema_data
+
+    def dataframe_to_graph(
+            self,
+            df:pd.DataFrame,
+            identifier_column: Optional[str] = None,
+            platform: str = None,
+    ) -> Tuple[Graph, Graph]:
+        """
+        Convert a DataFrame to a Knowledge Graph using the FAIR4ML schema.
+
+        Args:
+            df (pd.DataFrame): The DataFrame to convert to a Knowledge Graph.
+            identifier_column (Optional[str]): The column to use as the identifier for the entities.
+            platform (str): The platform name for the entities in the DataFrame.
+
+        Returns:
+            Tuple[Graph, Graph]: A tuple containing:
+                - The Knowledge Graph created from the DataFrame
+                - The Metadata Graph containing provenance information
+
+        Raises:
+            ValueError: If the DataFrame is empty or if the identifier column is not found.
+        """
+        if df.empty:
+            return self.graph, self.metadata_graph
+
+        if identifier_column and identifier_column not in df.columns:
+            raise ValueError(
+                f"Identifier column '{identifier_column}' not found in DataFrame"
+            )
+        
+        if platform == "open_ml":
+            if identifier_column == "schema.org:name":
+                entity_type = "Run"
+            elif identifier_column == "schema.org:identifier":
+                entity_type = "Dataset"
+        else:
+            entity_type = "MLModel"
+
+        for idx, row in df.iterrows():
+            entity_id = (
+                row[identifier_column][0]["data"] if identifier_column else str(idx)
+            )
+
+            id_hash = self.generate_entity_hash(platform, entity_type, entity_id)
+            entity_uri = self.base_namespace[id_hash]
+
+            # Add entity type with metadata
+            self.add_triple_with_metadata(
+                entity_uri,
+                RDF.type,
+                self.namespaces["fair4ml"][entity_type],
+                {"extraction_method": ExtractionMethod.ETL, "confidence": 1.0},
+            )
+
+            # Go through the properties of the model
+            for column in df.columns:
+                try:
+                    predicate = self.get_predicate_uri(column)
+                except ValueError as e:
+                    print(f"Warning: Skipping column '{column}' due to error: {e}")
+                    continue # Skip to next column if predicate URI error
+
+                values = row[column]
+
+                # Check if the values are a list
+                if isinstance(values, list):
+                    for value_info in values:
+                        rdf_objects = self.generate_objects_for_FAIR4ML_schema(
+                            column, value_info["data"], platform
+                        )
+                        for rdf_object in rdf_objects:
+                            self.add_triple_with_metadata(
+                                entity_uri,
+                                predicate,
+                                rdf_object,
+                                {
+                                    "extraction_method": value_info[
+                                        "extraction_method"
+                                    ],
+                                    "confidence": value_info["confidence"],
+                                },
+                                value_info["extraction_time"],
+                            )
+                else:
+                        # Handle cases where the value might not be a list of dicts (e.g., direct values)
+                        # This part might need adjustment based on expected data structure variations
+                    if values is not None: # Ensure value is not None
+                        rdf_objects = self.generate_objects_for_FAIR4ML_schema(
+                            column, values, platform # Assuming direct value here
+                        )
+                        for rdf_object in rdf_objects:
+                            # Assuming default metadata if not provided in this structure
+                            self.add_triple_with_metadata(
+                                entity_uri,
+                                predicate,
+                                rdf_object,
+                                {"extraction_method": "Unknown", "confidence": 0.0}, # Placeholder metadata
+                                None # No extraction time provided
+                            )
+
+        return self.graph, self.metadata_graph
 
     def hf_dataframe_to_graph(
         self,
@@ -87,7 +189,7 @@ class GraphBuilderFAIR4ML(GraphBuilderBase):
                 entity_uri,
                 RDF.type,
                 self.namespaces["fair4ml"]["ML_Model"],
-                {"extraction_method": "System", "confidence": 1.0},
+                {"extraction_method": ExtractionMethod.ETL, "confidence": 1.0},
             )
 
             # Go through the properties of the model
@@ -227,6 +329,73 @@ class GraphBuilderFAIR4ML(GraphBuilderBase):
                         print(f"Warning: Could not parse '{item_value_str}' as date/dateTime for predicate '{predicate}'. Treating as string.")
                         objects.append(Literal(item_value_str, datatype=XSD.string))
 
+                elif "DatasetObject" in range_value: 
+                    id_hash = self.generate_entity_hash(platform, "DatasetObject", item_value_str)
+                    dataset_object_uri = self.base_namespace[id_hash]
+
+                    self.add_triple_with_metadata(
+                        dataset_object_uri, 
+                        RDF.type, 
+                        self.namespaces["fair4ml"]["DatasetObject"], 
+                        {"extraction_method": ExtractionMethod.ETL, "confidence": 1.0}
+                    )
+
+                    self.add_triple_with_metadata(
+                        dataset_object_uri, 
+                        self.namespaces["schema"]["name"], 
+                        Literal(item_value["name"], datatype=XSD.string), 
+                        {"extraction_method": ExtractionMethod.ETL, "confidence": 1.0})
+                    
+                    self.add_triple_with_metadata(
+                        dataset_object_uri, 
+                        self.namespaces["schema"]["url"], 
+                        Literal(item_value["url"], datatype=XSD.string), 
+                        {"extraction_method": ExtractionMethod.ETL, "confidence": 1.0}
+                    )
+
+                    sub_id_hash = self.generate_entity_hash(platform, "estimationProcedure"+str(id_hash), value["estimationProcedure"])
+                    est_proc_uri = self.base_namespace[sub_id_hash]
+
+                    # Link estimation procedure to dataset
+                    self.add_triple_with_metadata(
+                        dataset_object_uri,
+                        self.namespaces["fair4ml"]["estimationProcedure"],
+                        est_proc_uri,
+                        {"extraction_method": ExtractionMethod.ETL, "confidence": 1.0}
+                    )
+
+                    self.add_triple_with_metadata(
+                        est_proc_uri,
+                        RDF.type,
+                        self.namespaces["fair4ml"]["estimationProcedure"],
+                        {"extraction_method": ExtractionMethod.ETL, "confidence": 1.0}
+                    )
+
+                    self.add_triple_with_metadata(
+                        est_proc_uri,
+                        self.namespaces["schema"]["type"],
+                        Literal(item_value["estimationProcedure"]["type"], datatype=XSD.string),
+                        {"extraction_method": ExtractionMethod.ETL, "confidence": 1.0}
+                    )
+
+                    self.add_triple_with_metadata(
+                        est_proc_uri,
+                        self.namespaces["schema"]["url"],
+                        Literal(item_value["estimationProcedure"]["data_splits_url"], datatype=XSD.anyURI),
+                        {"extraction_method": ExtractionMethod.ETL, "confidence": 1.0}
+                    )
+
+                    params = item_value['estimationProcedure']['parameters']
+                    for param_key, param_val in params.items():
+                        self.add_triple_with_metadata(
+                            est_proc_uri,
+                            self.namespaces["fair4ml"][param_key],
+                            Literal(param_val, datatype=XSD.string),
+                            {"extraction_method": ExtractionMethod.ETL, "confidence": 1.0}
+                        )
+
+                    objects.append(dataset_object_uri)
+
                 elif "Dataset" in range_value:
                     id_hash = self.generate_entity_hash(platform, "Dataset", item_value_str)
                     dataset_uri = self.base_namespace[id_hash]
@@ -234,32 +403,56 @@ class GraphBuilderFAIR4ML(GraphBuilderBase):
                         dataset_uri,
                         RDF.type,
                         self.namespaces["fair4ml"]["Dataset"],
-                        {"extraction_method": "System", "confidence": 1.0})
+                        {"extraction_method": ExtractionMethod.ETL, "confidence": 1.0})
                     if( len(item_value_str) < 100):
                         self.add_triple_with_metadata(
                             dataset_uri,
                             self.namespaces["schema"]["name"],
                             Literal(item_value_str, datatype=XSD.string),
-                            {"extraction_method": "System", "confidence": 1.0})
+                            {"extraction_method": ExtractionMethod.ETL, "confidence": 1.0})
                         if platform == Platform.HUGGING_FACE.value:
                              self.add_triple_with_metadata(
                                 dataset_uri,
                                 self.namespaces["schema"]["url"],
                                 Literal("https://huggingface.co/datasets/"+item_value_str, datatype=XSD.anyURI),
-                                {"extraction_method": "System", "confidence": 1.0})
+                                {"extraction_method": ExtractionMethod.ETL, "confidence": 1.0})
                     else:
                         self.add_triple_with_metadata(
                             dataset_uri,
                             self.namespaces["schema"]["description"],
                             Literal(item_value_str, datatype=XSD.string),
-                            {"extraction_method": "System", "confidence": 1.0})
+                            {"extraction_method": ExtractionMethod.ETL, "confidence": 1.0})
                         self.add_triple_with_metadata(
                             dataset_uri,
                             self.namespaces["schema"]["name"],
                             Literal("Extracted model info: "+item_value_str[:50]+"...", datatype=XSD.string),
-                            {"extraction_method": "System", "confidence": 1.0})
+                            {"extraction_method": ExtractionMethod.ETL, "confidence": 1.0})
 
                     objects.append(dataset_uri)
+
+                elif "EvalutionObject" in range_value:
+                    # Generate a unique URI for the evaluation result            
+                    id_hash = self.generate_entity_hash(platform, "EvaluationObject", item_value_str)
+                    evaluation_uri = self.base_namespace[id_hash]
+
+                    # Add RDF type
+                    self.add_triple_with_metadata(
+                        evaluation_uri,
+                        RDF.type,
+                        self.namespaces["fair4ml"]["EvaluationObject"],
+                        {"extraction_method": ExtractionMethod.ETL, "confidence": 1.0}
+                    )
+
+                    # Add all evaluation metrics as triples
+                    for metric_key, metric_val in item_value.items():
+                        self.add_triple_with_metadata(
+                            evaluation_uri,
+                            self.namespaces["fair4ml"][metric_key],
+                            Literal(metric_val, datatype=XSD.double if isinstance(metric_val, float) else XSD.string),
+                            {"extraction_method": ExtractionMethod.ETL, "confidence": 1.0}
+                        )
+
+                    objects.append(evaluation_uri)
 
                 elif "ScholarlyArticle" in range_value:
                     article_id = item_value_str.split("/")[-1].split("v")[0].strip()
@@ -274,12 +467,12 @@ class GraphBuilderFAIR4ML(GraphBuilderBase):
                         scholarly_article_uri,
                         RDF.type,
                         self.namespaces["schema"]["ScholarlyArticle"],
-                        {"extraction_method": "System", "confidence": 1.0})
+                        {"extraction_method": ExtractionMethod.ETL, "confidence": 1.0})
                     self.add_triple_with_metadata(
                         scholarly_article_uri,
                         self.namespaces["schema"]["url"],
                         Literal("https://arxiv.org/abs/"+article_id, datatype=XSD.anyURI),
-                        {"extraction_method": "System", "confidence": 1.0})
+                        {"extraction_method": ExtractionMethod.ETL, "confidence": 1.0})
                     objects.append(scholarly_article_uri)
 
                 elif "Boolean" in range_value:
@@ -301,18 +494,34 @@ class GraphBuilderFAIR4ML(GraphBuilderBase):
                         person_uri,
                         RDF.type,
                         self.namespaces["schema"]["Person"],
-                        {"extraction_method": "System", "confidence": 1.0})
-                    self.add_triple_with_metadata(
+                        {"extraction_method": ExtractionMethod.ETL, "confidence": 1.0})
+                    if platform == Platform.OPEN_ML.value:
+
+                        self.add_triple_with_metadata(
+                        person_uri,
+                        self.namespaces["schema"]["name"],
+                        Literal(item_value["name"], datatype=XSD.string),
+                        {"extraction_method": ExtractionMethod.ETL, "confidence": 1.0})
+
+                        self.add_triple_with_metadata(
+                            person_uri,
+                            self.namespaces["schema"]["url"],
+                            Literal(item_value["url"], datatype=XSD.anyURI),
+                            {"extraction_method": ExtractionMethod.ETL, "confidence": 1.0})
+                    
+                    if platform == Platform.HUGGING_FACE.value:
+
+                        self.add_triple_with_metadata(
                         person_uri,
                         self.namespaces["schema"]["name"],
                         Literal(item_value_str, datatype=XSD.string),
-                        {"extraction_method": "System", "confidence": 1.0})
-                    if platform == Platform.HUGGING_FACE.value:
+                        {"extraction_method": ExtractionMethod.ETL, "confidence": 1.0})
+
                         self.add_triple_with_metadata(
                             person_uri,
                             self.namespaces["schema"]["url"],
                             Literal("https://huggingface.co/"+item_value_str, datatype=XSD.anyURI),
-                            {"extraction_method": "System", "confidence": 1.0})
+                            {"extraction_method": ExtractionMethod.ETL, "confidence": 1.0})
                     objects.append(person_uri)
 
                 elif "Organization" in range_value:
@@ -322,18 +531,18 @@ class GraphBuilderFAIR4ML(GraphBuilderBase):
                         organization_uri,
                         RDF.type,
                         self.namespaces["schema"]["Organization"],
-                        {"extraction_method": "System", "confidence": 1.0})
+                        {"extraction_method": ExtractionMethod.ETL, "confidence": 1.0})
                     self.add_triple_with_metadata(
                         organization_uri,
                         self.namespaces["schema"]["name"],
                         Literal(item_value_str, datatype=XSD.string),
-                        {"extraction_method": "System", "confidence": 1.0})
+                        {"extraction_method": ExtractionMethod.ETL, "confidence": 1.0})
                     if platform == Platform.HUGGING_FACE.value:
                         self.add_triple_with_metadata(
                             organization_uri,
                             self.namespaces["schema"]["url"],
                             URIRef("https://huggingface.co/"+item_value_str),
-                            {"extraction_method": "System", "confidence": 1.0})
+                            {"extraction_method": ExtractionMethod.ETL, "confidence": 1.0})
                     objects.append(organization_uri)
 
                 elif "DefinedTerm" in range_value:
@@ -347,14 +556,33 @@ class GraphBuilderFAIR4ML(GraphBuilderBase):
                             defined_term_uri,
                             RDF.type,
                             self.namespaces["schema"]["DefinedTerm"],
-                            {"extraction_method": "System", "confidence": 1.0})
+                            {"extraction_method": ExtractionMethod.ETL, "confidence": 1.0})
                         self.add_triple_with_metadata(
                             defined_term_uri,
                             self.namespaces["schema"]["name"],
                             Literal(item_value_str, datatype=XSD.string),
-                            {"extraction_method": "System", "confidence": 1.0})
+                            {"extraction_method": ExtractionMethod.ETL, "confidence": 1.0})
                         objects.append(defined_term_uri)
 
+                elif "CreativeWork" in range_value:
+                    if platform == Platform.HUGGING_FACE.value and ":" in item_value_str:
+                        objects.append(Literal(item_value_str, datatype=XSD.string))
+                    else:
+                        print(f"Creating in FAIR4ML CreativeWork for {item_value_str}")
+                        id_hash = self.generate_entity_hash(platform, "CreativeWork", item_value_str.strip().lower())
+                        creative_work_uri = self.base_namespace[id_hash]
+                        self.add_triple_with_metadata(
+                            creative_work_uri,
+                            RDF.type,
+                            self.namespaces["schema"]["CreativeWork"],
+                            {"extraction_method": ExtractionMethod.ETL, "confidence": 1.0})
+                        self.add_triple_with_metadata(
+                            creative_work_uri,
+                            self.namespaces["schema"]["name"],
+                            Literal(item_value_str, datatype=XSD.string),
+                            {"extraction_method": ExtractionMethod.ETL, "confidence": 1.0})
+                        objects.append(creative_work_uri)
+                    
                 elif "fair4ml:MLModel" in range_value:
                     id_hash = self.generate_entity_hash(platform, "MLModel", item_value_str)
                     ml_model_uri = self.base_namespace[id_hash]
@@ -362,18 +590,18 @@ class GraphBuilderFAIR4ML(GraphBuilderBase):
                         ml_model_uri,
                         RDF.type,
                         self.namespaces["fair4ml"]["MLModel"],
-                        {"extraction_method": "System", "confidence": 1.0})
+                        {"extraction_method": ExtractionMethod.ETL, "confidence": 1.0})
                     self.add_triple_with_metadata(
                         ml_model_uri,
                         self.namespaces["schema"]["name"],
                         Literal(item_value_str, datatype=XSD.string),
-                        {"extraction_method": "System", "confidence": 1.0})
+                        {"extraction_method": ExtractionMethod.ETL, "confidence": 1.0})
                     if platform == Platform.HUGGING_FACE.value:
                         self.add_triple_with_metadata(
                             ml_model_uri,
                             self.namespaces["schema"]["url"],
                             URIRef("https://huggingface.co/"+item_value_str),
-                            {"extraction_method": "System", "confidence": 1.0})
+                            {"extraction_method": ExtractionMethod.ETL, "confidence": 1.0})
                     objects.append(ml_model_uri)
                 else:
                     # Fallback for unhandled range types - treat as string

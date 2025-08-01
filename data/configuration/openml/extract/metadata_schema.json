@@ -1,6 +1,6 @@
 {
   "run": {
-    "schema.org:name": "Run_{run.id}",
+    "schema.org:name": ["run.flow_name", "Run_{run.id}"],
     "schema.org:url": "run.openml_url",
     "schema.org:version": "flow.version",
     "schema.org:description": "flow.description",
@@ -39,7 +39,8 @@
           "name" : "dataset.name", 
           "url": "dataset.openml_url",
           "estimationProcedure" : "task.estimation_procedure"
-      }
+      },
+    "schema.org:keywords": ["run.tags","flow.tags"]
     },
 
   "dataset":{
@@ -53,7 +54,6 @@
       "schema.org:uploadDate": "dataset.upload_date",
       "schema.org:version": "dataset.version",
       "schema.org:distribution": "dataset.url",
-      "schema.org:sameAs": "dataset.paper_url",
       "schema.org:description": "dataset.description",
       "schema.org:status": "NA",
       "likes": "NA",

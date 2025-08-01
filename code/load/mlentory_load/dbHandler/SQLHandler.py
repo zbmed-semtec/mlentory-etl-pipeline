@@ -2,6 +2,13 @@ import psycopg2
 import pandas as pd
 from typing import Callable, List, Dict, Set, Any
 from psycopg2.extras import execute_values
+from psycopg2.extensions import register_adapter, AsIs
+import numpy as np
+
+register_adapter(np.int64, AsIs)
+register_adapter(np.float64, AsIs)
+
+import time
 
 
 class SQLHandler:
@@ -20,6 +27,7 @@ class SQLHandler:
         password (str): Database password
         database (str): Database name
         connection: Active database connection
+        query_stats: Dictionary to store query execution statistics
     """
 
     def __init__(self, host: str, user: str, password: str, database: str):
@@ -37,6 +45,7 @@ class SQLHandler:
         self.password = password
         self.database = database
         self.connection = None
+        self.query_stats = {"queries": {}}
 
     def connect(self) -> None:
         """Establish connection to the PostgreSQL database."""
@@ -84,11 +93,20 @@ class SQLHandler:
         Returns:
             pd.DataFrame: Query results as DataFrame
         """
+        start_time = time.time()
         cursor = self.connection.cursor()
         cursor.execute(sql, params or ())
         columns = [desc[0] for desc in cursor.description]
         result = cursor.fetchall()
         cursor.close()
+        duration = time.time() - start_time
+
+        if sql not in self.query_stats["queries"]:
+            self.query_stats["queries"][sql] = {"count": 0, "total_time": 0}
+
+        self.query_stats["queries"][sql]["count"] += 1
+        self.query_stats["queries"][sql]["total_time"] += duration
+
         return pd.DataFrame(result, columns=columns)
 
     def delete(self, table: str, condition: str) -> None:
@@ -196,37 +214,35 @@ class SQLHandler:
         batch_size: int = 1000,
     ) -> List[int]:
         """
-        Insert multiple records into the specified table in batches.
+        Insert multiple records into the specified table in batches using
+        psycopg2.extras.execute_values for efficiency and type safety.
 
         Args:
             table (str): Target table name
             columns (List[str]): List of column names
             values (List[tuple]): List of value tuples to insert
+            batch_size (int): The size of each batch to process.
 
         Returns:
             List[int]: List of inserted row IDs
         """
+        if not values:
+            return []
+
         cursor = self.connection.cursor()
         inserted_ids = []
+        columns_str = ", ".join(f'"{col}"' for col in columns)
+
+        # Construct the INSERT query for use with execute_values
+        query = f'INSERT INTO "{table}" ({columns_str}) VALUES %s RETURNING id'
 
         # Process in batches
         for i in range(0, len(values), batch_size):
-            batch = values[i : min(i + batch_size, len(values))]
-            # print("BATCH SIZE: ", len(batch))
-
-            # Create the INSERT query with RETURNING id
-            columns_str = ", ".join(f'"{col}"' for col in columns)
-            placeholders = ",".join(
-                [f"({','.join(['%s'] * len(columns))})" for _ in batch]
-            )
-            query = f'INSERT INTO "{table}" ({columns_str}) VALUES {placeholders} RETURNING id'
-
-            # Flatten the batch values into a single list
-            flat_values = [val for tup in batch for val in tup]
-
-            # Execute directly without execute_values
-            cursor.execute(query, flat_values)
-            batch_ids = cursor.fetchall()
+            batch = values[i : i + batch_size]
+            
+            # Use execute_values with fetch=True to get the returned IDs
+            batch_ids = execute_values(cursor, query, batch, fetch=True)
+            
             inserted_ids.extend([row[0] for row in batch_ids])
 
         self.connection.commit()
@@ -257,7 +273,9 @@ class SQLHandler:
             for update_dict, condition in zip(batch_updates, batch_conditions):
                 set_clause = ", ".join([f'"{key}" = %s' for key in update_dict.keys()])
                 sql = f'UPDATE "{table}" SET {set_clause} WHERE {condition}'
-                cursor.execute(sql, list(update_dict.values()))
+                
+                execute_values(cursor, sql, list(update_dict.values()))
+                
 
         self.connection.commit()
         cursor.close()

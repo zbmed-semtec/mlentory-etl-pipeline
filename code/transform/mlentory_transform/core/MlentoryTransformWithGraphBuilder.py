@@ -12,14 +12,95 @@ from .GraphBuilderFAIR4ML import GraphBuilderFAIR4ML
 from .GraphBuilderCroissant import GraphBuilderCroissant
 from .GraphBuilderArxiv import GraphBuilderArxiv
 from .GraphBuilderKeyWords import GraphBuilderKeyWords
+from .GraphBuilderLicense import GraphBuilderLicense
 
 class MlentoryTransformWithGraphBuilder:
-    def __init__(self, base_namespace: str = "http://example.org/", FAIR4ML_schema_data: pd.DataFrame = None):
+    def __init__(self, base_namespace: str = "https://example.org/", FAIR4ML_schema_data: pd.DataFrame = None):
         
         self.graph_builder_fair4ml = GraphBuilderFAIR4ML(base_namespace, FAIR4ML_schema_data)
         self.graph_builder_croissant = GraphBuilderCroissant(base_namespace)
         self.graph_builder_arxiv = GraphBuilderArxiv(base_namespace)
         self.graph_builder_keywords = GraphBuilderKeyWords(base_namespace)
+        self.graph_builder_licenses = GraphBuilderLicense(base_namespace)
+
+    def transform_OpenML_models_with_related_entities(
+        self,
+        extracted_entities: Dict[str, pd.DataFrame],
+        save_intermediate_graphs: bool = False,
+        save_output: bool = False,
+        kg_output_dir: str = None,
+        extraction_metadata_output_dir: str = None,
+    ) -> Tuple[rdflib.Graph, rdflib.Graph]:
+        """
+        Transform the extracted data into a knowledge graph.
+        """
+
+        print(extracted_entities.keys())
+
+        runs_kg, runs_extraction_metadata = self.transform_OpenML_runs(
+            extracted_df=extracted_entities["run"],
+            save_output=save_intermediate_graphs,
+            output_dir=kg_output_dir,
+        )
+
+        datasets_kg, datasets_extraction_metadata = self.transform_OpenML_datasets(
+            extracted_df=extracted_entities["dataset"],
+            save_output=save_intermediate_graphs,
+            output_dir=kg_output_dir,
+        )
+
+        kg_integrated = self.unify_graphs(
+            [runs_kg, datasets_kg],
+            save_output_in_json=save_output,
+            output_dir=kg_output_dir,
+        )
+
+        extraction_metadata_integrated = self.unify_graphs(
+            [runs_extraction_metadata,
+             datasets_extraction_metadata],
+            save_output_in_json=save_output,
+            output_dir=extraction_metadata_output_dir,
+        )
+        
+        return kg_integrated, extraction_metadata_integrated
+        
+    def transform_OpenML_runs(
+            self, 
+            extracted_df: pd.DataFrame, 
+            save_output: bool = False, 
+            output_dir: str = None
+            ) -> Tuple[rdflib.Graph, rdflib.Graph]:
+        
+            """
+            Transform the extracted data into a knowledge graph and save it to a file.
+            """
+        
+            knowledge_graph, extraction_metadata_graph = self.graph_builder_fair4ml.dataframe_to_graph(extracted_df, identifier_column="schema.org:name", platform=Platform.OPEN_ML.value)
+            
+            if save_output:
+                self.save_graph(knowledge_graph, "Transformed_OpenML_runs_kg", output_dir)
+                self.save_graph(extraction_metadata_graph, "Transformed_OpenML_runs_kg_metadata", output_dir)
+
+            return knowledge_graph, extraction_metadata_graph
+        
+    def transform_OpenML_datasets(
+            self, 
+            extracted_df: pd.DataFrame, 
+            save_output: bool = False, 
+            output_dir: str = None
+            ) -> Tuple[rdflib.Graph, rdflib.Graph]:
+        
+            """
+            Transform the extracted data into a knowledge graph and save it to a file.
+            """
+
+            knowledge_graph, extraction_metadata_graph = self.graph_builder_fair4ml.dataframe_to_graph(extracted_df, identifier_column="schema.org:identifier", platform=Platform.OPEN_ML.value)
+            
+            if save_output:
+                self.save_graph(knowledge_graph, "Transformed_OpenML_datasets_kg", output_dir)
+                self.save_graph(extraction_metadata_graph, "Transformed_OpenML_datasets_kg_metadata", output_dir)
+
+            return knowledge_graph, extraction_metadata_graph
     
 
     def transform_HF_models_with_related_entities(
@@ -56,9 +137,15 @@ class MlentoryTransformWithGraphBuilder:
             save_output=save_intermediate_graphs,
             output_dir=kg_output_dir,
         )
+        
+        licenses_kg, licenses_extraction_metadata = self.transform_HF_licenses(
+            extracted_df=extracted_entities["licenses"],
+            save_output=save_intermediate_graphs,
+            output_dir=kg_output_dir,
+        )
 
         kg_integrated = self.unify_graphs(
-            [models_kg, datasets_kg, arxiv_kg, keywords_kg],
+            [models_kg, datasets_kg, arxiv_kg, keywords_kg, licenses_kg],
             save_output_in_json=save_output,
             output_dir=kg_output_dir,
         )
@@ -67,7 +154,8 @@ class MlentoryTransformWithGraphBuilder:
             [models_extraction_metadata,
              datasets_extraction_metadata,
              arxiv_extraction_metadata,
-             keywords_extraction_metadata],
+             keywords_extraction_metadata,
+             licenses_extraction_metadata],
             save_output_in_json=save_output,
             output_dir=extraction_metadata_output_dir,
         )
@@ -119,6 +207,21 @@ class MlentoryTransformWithGraphBuilder:
         if save_output:
             self.save_graph(knowledge_graph, "Transformed_HF_kg", output_dir)
             self.save_graph(extraction_metadata_graph, "Transformed_HF_kg_metadata", output_dir)
+
+        return knowledge_graph, extraction_metadata_graph
+
+    def transform_HF_licenses(
+        self,
+        extracted_df: pd.DataFrame,
+        save_output: bool = False,
+        output_dir: str = None,
+    ) -> Tuple[rdflib.Graph, rdflib.Graph]:
+        
+        knowledge_graph, extraction_metadata_graph = self.graph_builder_licenses.hf_dataframe_to_graph(extracted_df, identifier_column="Name", platform=Platform.HUGGING_FACE.value)
+        
+        if save_output:
+            self.save_graph(knowledge_graph, "Transformed_HF_licenses_kg", output_dir)
+            self.save_graph(extraction_metadata_graph, "Transformed_HF_licenses_kg_metadata", output_dir)
 
         return knowledge_graph, extraction_metadata_graph
     
@@ -175,7 +278,7 @@ class MlentoryTransformWithGraphBuilder:
 
         if save_output_in_json:
             current_date = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-            kg_output_path = os.path.join(output_dir, f"{current_date}_unified_kg.ttl")
+            kg_output_path = os.path.join(output_dir, f"{current_date}_unified_kg.nt")
             unified_graph.serialize(destination=kg_output_path, format="turtle")
 
         return unified_graph
@@ -214,8 +317,8 @@ class MlentoryTransformWithGraphBuilder:
         disambiguated_graph = rdflib.Graph()
         
         # Define the RDF types and properties we need
-        RDF = rdflib.Namespace("http://www.w3.org/1999/02/22-rdf-syntax-ns#")
-        NS1 = rdflib.Namespace("http://mlentory.de/ns1#")
+        RDF = rdflib.Namespace("https://www.w3.org/1999/02/22-rdf-syntax-ns#")
+        NS1 = rdflib.Namespace("https://mlentory.de/ns1#")
         TYPE = RDF.type
         STATEMENT_METADATA = NS1.StatementMetadata
         CONFIDENCE = NS1.confidence
@@ -295,7 +398,7 @@ class MlentoryTransformWithGraphBuilder:
                 raise ValueError("output_dir must be provided if save_output_in_json is True")
                 
             current_date = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-            kg_output_path = os.path.join(output_dir, f"{current_date}_disambiguated_kg.ttl")
+            kg_output_path = os.path.join(output_dir, f"{current_date}_disambiguated_kg.nt")
             disambiguated_graph.serialize(destination=kg_output_path, format="turtle")
         
         return disambiguated_graph
@@ -305,8 +408,8 @@ class MlentoryTransformWithGraphBuilder:
         Save the graph to a file.
         """
         current_date = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-        kg_output_path = os.path.join(output_dir, f"{current_date}_{name}.ttl")
-        graph.serialize(destination=kg_output_path, format="turtle")
+        kg_output_path = os.path.join(output_dir, f"{current_date}_{name}.nt")
+        graph.serialize(destination=kg_output_path, format="nt")
         
     def print_detailed_dataframe(self, df: pd.DataFrame):
         """

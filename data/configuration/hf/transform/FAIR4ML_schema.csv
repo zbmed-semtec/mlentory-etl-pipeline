@@ -40,7 +40,7 @@ schema.org,schema.org:funding,Grant,Text
 schema.org,schema.org:inLanguage,Language or Text,Text
 schema.org,schema.org:isAccessibleForFree,Boolean,Text
 schema.org,schema.org:keywords,DefinedTerm or Text or URL,DefinedTerm
-schema.org,schema.org:license,CreativeWork or URL,Text
+schema.org,schema.org:license,CreativeWork or URL,CreativeWork
 schema.org,schema.org:maintainer,Organization or Person,Text
 schema.org,schema.org:version,Text,Text
 schema.org,schema.org:description,Text or TextObject,Text

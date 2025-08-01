@@ -81,9 +81,9 @@ class LoadProcessor:
             current_graph = self.GraphHandler.get_current_graph()
             current_date = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
             output_ttl_file_path = os.path.join(
-                output_ttl_file_path, f"{current_date}_mlentory_graph.ttl"
+                output_ttl_file_path, f"{current_date}_mlentory_graph.nt"
             )
-            current_graph.serialize(output_ttl_file_path, format="turtle")
+            current_graph.serialize(output_ttl_file_path, format="nt")
 
     def update_dbs_with_kg(self, kg: Graph, extraction_metadata: Graph):
         """
@@ -100,10 +100,10 @@ class LoadProcessor:
     def print_DB_states(self):
         """Print current state of all databases for debugging."""
         triplets_df = self.GraphHandler.SQLHandler.query(
-            'SELECT count(*) FROM "Triplet"'
+            'SELECT COUNT(*) FROM "Triplet"'
         )
         ranges_df = self.GraphHandler.SQLHandler.query(
-            'SELECT count(*) FROM "Version_Range"'
+            'SELECT COUNT(*) FROM "Version_Range"'
         )
         triplets_extraction_info_df = self.GraphHandler.SQLHandler.query(
             'SELECT COUNT(*) FROM "Triplet_Extraction_Info"'
