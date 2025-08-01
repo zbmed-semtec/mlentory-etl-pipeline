@@ -20,7 +20,7 @@ setup(
         "hypha_rpc==0.20.55"
     ],
     python_requires=">=3.8.10",
-    author="Nelson Q, Suhasini V ,Dhwani S" 
+    author="Nelson Q, Suhasini V ,Dhwani S",
     author_email="your.email@example.com",
     description="Collection of extractors for model information from different ML platforms",
     long_description=open("README.md").read(),

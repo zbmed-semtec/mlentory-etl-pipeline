@@ -173,8 +173,9 @@ services:
     build: 
       context: ../
       dockerfile: deployment/Dockerfile.ai4life_no_gpu
-      target: ai4life_no_gpu
+      target: no_gpu_ai4life
     volumes:
+      - ../data/configuration/ai4life:/app/configuration/ai4life
       - ../code/extractors:/app/extractors 
       - ../code/transform:/app/transform
       - ../code/load:/app/load
