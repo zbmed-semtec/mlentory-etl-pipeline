@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from transformers import AutoTokenizer, AutoModel
 from tqdm import tqdm
 import numpy as np
+import hashlib
 
 @dataclass
 class Section:
@@ -287,7 +288,7 @@ class MarkdownParser:
         
     def extract_fine_grained_sections(
         self, text: str, title: str = "", start_idx: int = 0, 
-        end_idx: int = 0, max_section_length: int = 500
+        end_idx: int = 0, max_section_length: int = 1000
     ) -> List[Section]:
         """
         Create fine-grained sections by splitting text into smaller chunks based on paragraphs and sentences.
@@ -384,11 +385,6 @@ class MarkdownParser:
             # Convert to absolute indices in the original document
             absolute_start = start_idx + relative_start
             absolute_end = start_idx + relative_end
-            
-            # Skip tiny paragraphs (unless they're a special block, indicated by significantly larger line count compared to character count)
-            is_likely_special_block = (len(paragraph) > 2 and len(paragraph_content) / len(paragraph) < 20)
-            if len(paragraph_content) < 30 and not is_likely_special_block:
-                continue
                 
             # Check if this paragraph is a special block (code block, table, etc.)
             is_special_block = False
@@ -404,10 +400,16 @@ class MarkdownParser:
                     block_type = "Code Block"
                 elif "|" in paragraph_content and not paragraph_content.startswith(">"):
                     block_type = "Table"
+                    # Just return the first 4 lines of the table
+                    paragraph_content = "\n".join(paragraph_content.split("\n")[:4])
+                    paragraph_content = paragraph_content + "\n..."
                 elif paragraph_content.strip().startswith(">"):
                     block_type = "Blockquote"
                 elif any(paragraph_content.lstrip().startswith(marker + " ") for marker in ["-", "*", "+"]) or re.match(r"^\d+\.\s", paragraph_content.lstrip()):
                     block_type = "List"
+                    # Just return the first 4 lines of the list
+                    paragraph_content = "\n".join(paragraph_content.split("\n")[:4])
+                    paragraph_content = paragraph_content + "\n..."
                     
                 section_title = f"{title} - {block_type}" if title else f"{block_type}"
                 sections.append(
@@ -420,59 +422,17 @@ class MarkdownParser:
                 )
                 continue
                 
-            # Split long paragraphs further into chunks
-            if len(paragraph_content) > max_section_length:
-                # Try to split by sentences
-                sentence_endings = [m.start() for m in re.finditer(r'[.!?]\s+', paragraph_content)]
-                
-                if sentence_endings:
-                    # Create chunks of sentences that fit within max_section_length
-                    chunks = []
-                    current_chunk_start = 0
-                    
-                    for end_pos in sentence_endings:
-                        if end_pos - current_chunk_start > max_section_length:
-                            # This chunk is big enough
-                            chunks.append(paragraph_content[current_chunk_start:end_pos+1])
-                            current_chunk_start = end_pos + 1
-                    
-                    # Add the last chunk if there's content left
-                    if current_chunk_start < len(paragraph_content):
-                        chunks.append(paragraph_content[current_chunk_start:])
-                        
-                    # Create sections for each chunk
-                    for chunk_idx, chunk in enumerate(chunks):
-                        section_title = f"{title} - Par. {p_idx+1}.{chunk_idx+1}" if title else f"Paragraph {p_idx+1}.{chunk_idx+1}"
-                        sections.append(
-                            Section(
-                                title=section_title,
-                                content=chunk,
-                                start_idx=absolute_start,
-                                end_idx=absolute_end
-                            )
-                        )
-                else:
-                    # If can't split by sentences, just create one section for the paragraph
-                    section_title = f"{title} - Par. {p_idx+1}" if title else f"Paragraph {p_idx+1}"
-                    sections.append(
-                        Section(
-                            title=section_title,
-                            content=paragraph_content,
-                            start_idx=absolute_start,
-                            end_idx=absolute_end
-                        )
-                    )
-            else:
-                # Create one section for the paragraph
-                section_title = f"{title} - Par. {p_idx+1}" if title else f"Paragraph {p_idx+1}"
-                sections.append(
-                    Section(
-                        title=section_title,
-                        content=paragraph_content,
-                        start_idx=absolute_start,
-                        end_idx=absolute_end
-                    )
+            
+            # Create one section for the paragraph
+            section_title = f"{title} - Par. {p_idx+1}" if title else f"Paragraph {p_idx+1}"
+            sections.append(
+                Section(
+                    title=section_title,
+                    content=paragraph_content,
+                    start_idx=absolute_start,
+                    end_idx=absolute_end
                 )
+            )
                 
         # If no sections were created (e.g., all paragraphs were too small),
         # create one section for the entire content
@@ -488,7 +448,99 @@ class MarkdownParser:
             
         return sections
     
-    def extract_hierarchical_sections(self, text: str, max_section_length: int = 500) -> List[Section]:
+    def trim_tables_and_lists(self, text: str, max_lines: int = 5) -> str:
+        """
+        Finds tables and lists in the markdown text and trims them to a specified maximum number of lines.
+
+        Args:
+            text (str): The input markdown text.
+            max_lines (int): The maximum number of lines to keep for tables and lists. Defaults to 5.
+
+        Returns:
+            str: The markdown text with tables and lists trimmed.
+        
+        Example:
+            >>> parser = MarkdownParser()
+            >>> markdown_text =
+            ... Some text
+            ... | Header 1 | Header 2 |
+            ... |----------|----------|
+            ... | Cell 1   | Cell 2   |
+            ... | Cell 3   | Cell 4   |
+            ... | Cell 5   | Cell 6   |
+            ... | Cell 7   | Cell 8   |
+            ... - Item 1
+            ... - Item 2
+            ... - Item 3
+            ... - Item 4
+            ... - Item 5
+            ... - Item 6
+            ... 
+            >>> trimmed_text = parser.trim_tables_and_lists(markdown_text, max_lines=3)
+            >>> print(trimmed_text)
+            <BLANKLINE>
+            # Title
+            Some text
+            | Header 1 | Header 2 |
+            |----------|----------|
+            | Cell 1   | Cell 2   |
+            ...
+            - Item 1
+            - Item 2
+            - Item 3
+            ...
+            <BLANKLINE>
+        """
+        lines = text.split("\n")
+        processed_lines = []
+        i = 0
+        while i < len(lines):
+            is_special, block_end = self._is_special_markdown_block(lines, i)
+            
+            # Check if the special block is a table or a list
+            is_table_or_list = False
+            if is_special:
+                block_content = "\n".join(lines[i : block_end + 1])
+                # Check for table characteristics (contains '|')
+                if "|" in block_content and not block_content.strip().startswith(">"):
+                    is_table_or_list = True
+                # Check for list characteristics (starts with list markers)
+                elif any(
+                    block_content.lstrip().startswith(marker + " ") for marker in ["-", "*", "+"]
+                ) or re.match(r"^\d+\.\s", block_content.lstrip()):
+                    is_table_or_list = True
+
+            if is_special and is_table_or_list:
+                # If it's a table or list and longer than max_lines, trim it
+                if (block_end - i + 1) > max_lines:
+                    processed_lines.extend(lines[i : i + max_lines])
+                    processed_lines.append("...")
+                else:
+                    # If not longer, add as is
+                    processed_lines.extend(lines[i : block_end + 1])
+                i = block_end + 1
+            else:
+                # If not a table/list or not special, add line as is
+                processed_lines.append(lines[i])
+                i += 1
+        
+        return "\n".join(processed_lines)
+    
+    def extract_chunk_sections(self, text: str, max_section_length: int = 2000, max_list_table_lines: int = 5) -> List[Section]:
+        """
+        Extract sections from text by splitting it into chunks of the given maximum length.
+        """
+        sections = []
+        # First we want to trim any tables and lists to 5 lines in the original text
+        
+        text = self.trim_tables_and_lists(text, max_lines=max_list_table_lines)
+        
+        for i in range(0, len(text), max_section_length):
+            sections.append(Section(title=f"Chunk {i//max_section_length+1}", content=text[i:i+max_section_length], start_idx=i, end_idx=i+max_section_length))
+        
+        return sections
+    
+    def extract_hierarchical_sections(self, text: str, max_section_length: int = 5000) -> List[Section]:
         """
         Extract sections from text by combining header-based sections with fine-grained paragraph sections.
         This approach keeps the hierarchical structure but adds additional granularity within each section.
@@ -507,15 +559,27 @@ class MarkdownParser:
             >>> len(sections) > 0
             True
         """
-        all_sections = []
-        
+        content_map: Dict[str, Section] = {} # Use content hash as key, section as value
+
+        # Helper function to add sections while handling duplicates
+        def add_or_update_section(section: Section):
+            if section.title == "" or section.content == "":
+                return
+            
+            # Calculate hash of the content
+            content_hash = hashlib.sha256(section.content.encode('utf-8')).hexdigest()
+
+            if content_hash not in content_map or \
+               len(section.title) < len(content_map[content_hash].title):
+                content_map[content_hash] = section
+
         # First get the header-based sections
         header_sections = self.extract_sections(text)
         
-        # Add header sections and create fine-grained sections for each
+        # Process header sections and their corresponding fine-grained sections
         for section in header_sections:
-            # Add the original header section
-            all_sections.append(section)
+            # Consider the original header section
+            add_or_update_section(section)
             
             # Create fine-grained sections from this section's content
             fine_sections = self.extract_fine_grained_sections(
@@ -526,7 +590,21 @@ class MarkdownParser:
                 max_section_length=max_section_length
             )
             
-            # Add the fine-grained sections
-            all_sections.extend(fine_sections)
+            # Consider the fine-grained sections
+            for fine_section in fine_sections:
+                add_or_update_section(fine_section)
             
-        return all_sections
+        # If no header sections were found, process the entire text as one block
+        if not header_sections and text.strip():
+            fine_sections = self.extract_fine_grained_sections(
+                text,
+                title="",  # No title if no headers
+                start_idx=0,
+                end_idx=len(text.split("\n")) -1,
+                max_section_length=max_section_length
+            )
+            for fine_section in fine_sections:
+                add_or_update_section(fine_section)
+        
+        # Return the unique sections stored in the map values
+        return list(content_map.values())

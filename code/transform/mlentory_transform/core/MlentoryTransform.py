@@ -4,9 +4,10 @@ import rdflib
 from datetime import datetime
 from tqdm import tqdm
 import os
+
 from ..hf_transform.TransformHF import TransformHF
 from .KnowledgeGraphHandler import KnowledgeGraphHandler
-from ..utils.enums import Platform, ExtractionMethod
+from ..utils.enums import Platform
 
 
 class MlentoryTransform:
@@ -42,26 +43,76 @@ class MlentoryTransform:
         self.kg_handler = kg_handler
         self.transform_hf = transform_hf
 
-    def transform_HF_models(
+    def transform_HF_models_with_related_entities(
+        self,
+        extracted_entities: Dict[str, pd.DataFrame],
+        save_output: bool = False,
+        kg_output_dir: str = None,
+        extraction_metadata_output_dir: str = None,
+    ) -> Tuple[rdflib.Graph, rdflib.Graph]:
+        """
+        Transform the extracted data into a knowledge graph.
+        """
+        models_kg, models_extraction_metadata = self.transform_HF_models(
+            extracted_df=extracted_entities["models"],
+            save_output_in_json=False,
+            output_dir=kg_output_dir+"/models",
+        )
+
+        datasets_kg, datasets_extraction_metadata = self.transform_HF_datasets(
+            extracted_df=extracted_entities["datasets"],
+            save_output_in_json=False,
+            output_dir=kg_output_dir,
+        )
+
+        arxiv_kg, arxiv_extraction_metadata = self.transform_HF_arxiv(
+            extracted_df=extracted_entities["articles"],
+            save_output_in_json=False,
+            output_dir=kg_output_dir,
+        )
+        
+        keywords_kg, keywords_extraction_metadata = self.transform_HF_keywords(
+            extracted_df=extracted_entities["keywords"],
+            save_output_in_json=True,
+            output_dir=kg_output_dir,
+        )
+
+        kg_integrated = self.unify_graphs(
+            [models_kg, datasets_kg, arxiv_kg, keywords_kg],
+            save_output_in_json=save_output,
+            output_dir=kg_output_dir,
+        )
+
+        extraction_metadata_integrated = self.unify_graphs(
+            [models_extraction_metadata,
+             datasets_extraction_metadata,
+             arxiv_extraction_metadata,
+             keywords_extraction_metadata],
+            save_output_in_json=save_output,
+            output_dir=extraction_metadata_output_dir,
+        )
+        
+        return kg_integrated, extraction_metadata_integrated
+
+    def transform_data(
         self,
         extracted_df: pd.DataFrame,
+        platform: str,
+        identifier_column: str,
         save_output_in_json: bool = False,
         output_dir: str = None,
     ) -> Tuple[rdflib.Graph, rdflib.Graph]:
         """
         Transform the extracted data into a knowledge graph.
 
-        This method:
-        1. Processes each row of the input DataFrame
-        2. Applies the specified transformations
-        3. Optionally saves the results to a file
-        4. Returns the transformed knowledge graph and metadata graph
         Args:
-            extracted_df (pd.DataFrame): DataFrame containing extracted model data
+            extracted_df (pd.DataFrame): DataFrame containing extracted data
+            platform (str): Platform name (e.g., Platform.OPEN_ML.value or Platform.HUGGING_FACE.value)
             save_output_in_json (bool, optional): Whether to save the transformed data.
                 Defaults to False.
             output_dir (str, optional): Directory to save the transformed data.
                 Required if save_output_in_json is True.
+            identifier_column (str, optional): Column name to use as identifier.
 
         Returns:
             Tuple[rdflib.Graph, rdflib.Graph]: Transformed knowledge graph and metadata graph
@@ -72,32 +123,64 @@ class MlentoryTransform:
         # Reset the knowledge graph handler before processing new data
         self.kg_handler.reset_graphs()
 
-        # transformed_df = self.transform_hf.transform_models(extracted_df)
+        # Ensure the directory exists if saving output
+        if save_output_in_json:
+            if not output_dir:
+                raise ValueError("output_dir must be provided when save_output_in_json is True")
+            if not os.path.exists(output_dir):
+                os.makedirs(output_dir, mode=0o777)
 
         # Transform the dataframe to a knowledge graph
         knowledge_graph, metadata_graph = (
             self.kg_handler.dataframe_to_graph_FAIR4ML_schema(
-                df=extracted_df, 
-                identifier_column="schema.org:name", 
-                platform=Platform.HUGGING_FACE.value
+                df=extracted_df,
+                identifier_column=identifier_column,
+                platform=platform
             )
         )
 
-        self.current_sources[Platform.HUGGING_FACE.value] = knowledge_graph
-        self.current_sources[f"{Platform.HUGGING_FACE.value}_metadata"] = metadata_graph
+        self.current_sources[platform] = knowledge_graph
+        self.current_sources[f"{platform}_metadata"] = metadata_graph
 
         if save_output_in_json:
             current_date = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
             kg_output_path = os.path.join(
-                output_dir, f"{current_date}_Transformed_HF_kg.json"
+                output_dir, f"{current_date}_Transformed_{platform}_kg.json"
             )
             metadata_output_path = os.path.join(
-                output_dir, f"{current_date}_Transformed_HF_kg_metadata.json"
+                output_dir, f"{current_date}_Transformed_{platform}_kg_metadata.json"
             )
             knowledge_graph.serialize(destination=kg_output_path, format="json-ld")
             metadata_graph.serialize(destination=metadata_output_path, format="json-ld")
 
         return knowledge_graph, metadata_graph
+    
+    def transform_OpenML_runs(self, extracted_df, save_output_in_json=False, output_dir=None):
+        return self.transform_data(
+            extracted_df=extracted_df,
+            platform=Platform.OPEN_ML.value,
+            save_output_in_json=save_output_in_json,
+            output_dir=output_dir,
+            identifier_column="schema.org:name"
+        )
+    
+    def transform_OpenML_datasets(self, extracted_df, save_output_in_json=False, output_dir=None):
+        return self.transform_data(
+            extracted_df=extracted_df,
+            platform=Platform.OPEN_ML.value,
+            save_output_in_json=save_output_in_json,
+            output_dir=output_dir,
+            identifier_column="schema.org:identifier"
+        )
+
+    def transform_HF_models(self, extracted_df, save_output_in_json=False, output_dir=None):
+        return self.transform_data(
+            extracted_df=extracted_df,
+            platform=Platform.HUGGING_FACE.value,
+            save_output_in_json=save_output_in_json,
+            output_dir=output_dir,
+            identifier_column="schema.org:name"
+        )
 
     def transform_HF_datasets(
         self,
@@ -186,6 +269,42 @@ class MlentoryTransform:
         
         return knowledge_graph, metadata_graph
     
+    def transform_HF_keywords(
+        self,
+        extracted_df: pd.DataFrame,
+        save_output_in_json: bool = False,
+        output_dir: str = None,
+    ) -> Tuple[rdflib.Graph, rdflib.Graph]:
+        """
+        Transform the extracted data into a knowledge graph.
+        """
+        # Reset the knowledge graph handler before processing new data
+        self.kg_handler.reset_graphs()
+        
+        # Transform the dataframe to a knowledge graph
+        knowledge_graph, metadata_graph = (
+            self.kg_handler.dataframe_to_graph_keywords(
+                df=extracted_df, 
+                identifier_column="tag_name", 
+                platform=Platform.HUGGING_FACE.value
+            )
+        )
+        
+        self.current_sources[f"{Platform.HUGGING_FACE.value}_keywords"] = knowledge_graph
+        self.current_sources[f"{Platform.HUGGING_FACE.value}_keywords_metadata"] = metadata_graph
+        
+        if save_output_in_json:
+            current_date = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+            kg_output_path = os.path.join(
+                output_dir, f"{current_date}_Processed_HF_keywords_kg.json"
+            )
+            metadata_output_path = os.path.join(
+                output_dir, f"{current_date}_Processed_HF_keywords_kg_metadata.json"
+            )
+            knowledge_graph.serialize(destination=kg_output_path, format="json-ld")
+        
+        return knowledge_graph, metadata_graph
+    
     def unify_graphs(
         self,
         graphs: List[rdflib.Graph],
@@ -222,10 +341,13 @@ class MlentoryTransform:
         if disambiguate_extraction_metadata:
             unified_graph = self.disambiguate_statement_metadata(unified_graph)
 
+        if not os.path.exists(output_dir):
+            os.makedirs(output_dir, mode=0o777)
+
         if save_output_in_json:
             current_date = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-            kg_output_path = os.path.join(output_dir, f"{current_date}_unified_kg.ttl")
-            unified_graph.serialize(destination=kg_output_path, format="turtle")
+            kg_output_path = os.path.join(output_dir, f"{current_date}_unified_kg.nt")
+            unified_graph.serialize(destination=kg_output_path, format="nt")
 
         return unified_graph
 
@@ -263,8 +385,8 @@ class MlentoryTransform:
         disambiguated_graph = rdflib.Graph()
         
         # Define the RDF types and properties we need
-        RDF = rdflib.Namespace("http://www.w3.org/1999/02/22-rdf-syntax-ns#")
-        NS1 = rdflib.Namespace("http://mlentory.de/ns1#")
+        RDF = rdflib.Namespace("https://www.w3.org/1999/02/22-rdf-syntax-ns#")
+        NS1 = rdflib.Namespace("https://mlentory.de/ns1#")
         TYPE = RDF.type
         STATEMENT_METADATA = NS1.StatementMetadata
         CONFIDENCE = NS1.confidence
@@ -344,7 +466,7 @@ class MlentoryTransform:
                 raise ValueError("output_dir must be provided if save_output_in_json is True")
                 
             current_date = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-            kg_output_path = os.path.join(output_dir, f"{current_date}_disambiguated_kg.ttl")
+            kg_output_path = os.path.join(output_dir, f"{current_date}_disambiguated_kg.nt")
             disambiguated_graph.serialize(destination=kg_output_path, format="turtle")
         
         return disambiguated_graph
@@ -401,8 +523,8 @@ class MlentoryTransform:
             
         Example:
             >>> MlentoryTransform.disambiguate_unified_graph(
-            ...     "path/to/unified_kg.ttl", 
-            ...     "path/to/disambiguated_kg.ttl"
+            ...     "path/to/unified_kg.nt", 
+            ...     "path/to/disambiguated_kg.nt"
             ... )
         """
         # Check if input file exists

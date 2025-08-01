@@ -23,7 +23,7 @@ from elasticsearch_dsl import (
 )
 import inspect
 
-from mlentory_load.core.Entities import HFModel, Model
+from mlentory_load.core.Entities import HFModel, OpenMLRun
 
 
 class IndexHandler:
@@ -70,6 +70,16 @@ class IndexHandler:
         #     HFModel.init(index=index_name, using=self.es)
         #     self.es.indices.open(index=index_name)
 
+    def initialize_OpenML_index(self, index_name: str = "openml_models"):
+        """
+        Initialize the OpenML run index.
+        Args:
+            index_name (str): Name for the index
+        """
+        self.openml_index = index_name
+        if not self.es.indices.exists(index=index_name):
+            OpenMLRun.init(index=index_name, using=self.es)
+
     def create_hf_model_index_entity(self, row: pd.Series, model_uri: str):
         """
         Create an Elasticsearch document for a HuggingFace model.
@@ -105,9 +115,51 @@ class IndexHandler:
             index_model_entity.author = self.handle_raw_data(row["schema.org:author"])
         else:
             index_model_entity.author = []
+        
+        
 
         # print(index_model_entity.to_dict())
         return index_model_entity
+
+    def create_openml_index_entity_with_dict(self, info:Dict, uri:str):
+        index_run_entity =  OpenMLRun()
+
+        index_run_entity.meta.index = self.openml_index
+
+        index_run_entity.db_identifier = uri
+        index_run_entity.name = ""
+        index_run_entity.license = ""
+        index_run_entity.mlTask = []
+        index_run_entity.sharedBy = ""
+        index_run_entity.modelCategory = []
+        index_run_entity.trainedOn = set()
+        index_run_entity.keywords = []
+
+        for key, value in info.items():
+            if "identifier" in key:
+                index_run_entity.name = (
+                    value[0].split("/")[-2] + "/" + value[0].split("/")[-1]
+                )
+            elif "name" in key:
+                index_run_entity.name = value[0]
+            elif "sharedBy" in key:
+                index_run_entity.sharedBy = value[0]
+            elif "license" in key:
+                index_run_entity.license = value[0].lower()
+            elif "mlTask" in key:
+                value = [v.lower() for v in value]
+                index_run_entity.mlTask.extend(value)
+            elif "modelCategory" in key:
+                value = [v.lower() for v in value]
+                index_run_entity.modelCategory.extend(value)
+            elif "trainedOn" in key:
+                index_run_entity.trainedOn.update(value)
+            elif "keywords" in key:
+                index_run_entity.keywords.extend(value)
+
+        index_run_entity.trainedOn = list(index_run_entity.trainedOn)
+
+        return index_run_entity
 
     def create_hf_dataset_index_entity_with_dict(self, info: Dict, dataset_uri: str):
         index_model_entity = HFModel()
@@ -116,29 +168,39 @@ class IndexHandler:
 
         index_model_entity.db_identifier = dataset_uri
         index_model_entity.name = ""
-        index_model_entity.sharedBy = []
+        index_model_entity.sharedBy = ""
         index_model_entity.releaseNotes = ""
-        index_model_entity.mlTask = []
         index_model_entity.license = ""
-        index_model_entity.relatedDatasets = []
+        index_model_entity.mlTask = []
+        index_model_entity.keywords = []
+        index_model_entity.relatedDatasets = set()
+        index_model_entity.baseModels = []
 
         for key, value in info.items():
             if "identifier" in key:
                 index_model_entity.name = (
                     value[0].split("/")[-2] + "/" + value[0].split("/")[-1]
                 )
-            elif "releaseNotes" in key:
-                index_model_entity.releaseNotes = value[0]
-            elif "mlTask" in key:
-                index_model_entity.mlTask = value
-            elif "trainedOn" in key:
-                index_model_entity.relatedDatasets.append(value[0])
-            elif "testedOn" in key:
-                index_model_entity.relatedDatasets.append(value[0])
+            elif "description" in key:
+                index_model_entity.description = value[0]
             elif "sharedBy" in key:
                 index_model_entity.sharedBy = value[0]
             elif "license" in key:
-                index_model_entity.license = value[0]
+                index_model_entity.license = value[0].lower()
+            elif "mlTask" in key:
+                value = [v.lower() for v in value]
+                index_model_entity.mlTask.extend(value)
+            elif "trainedOn" in key:
+                index_model_entity.relatedDatasets.update(value)
+            elif "testedOn" in key:
+                index_model_entity.relatedDatasets.update(value)
+            elif "keywords" in key:
+                index_model_entity.keywords.extend(value)
+            elif "fineTunedFrom" in key:
+                index_model_entity.baseModels.extend(value)
+        
+        index_model_entity.relatedDatasets = list(index_model_entity.relatedDatasets)
+        
         return index_model_entity
 
     def handle_raw_data(self, raw_data: Any):
@@ -204,7 +266,7 @@ class IndexHandler:
         """
         try:
             self.es.update(index=index_name, id=document_id, body={"doc": document})
-            print("Document updated successfully.")
+            # print("Document updated successfully.")
         except Exception as e:
             print(f"Error updating document: {str(e)}")
 

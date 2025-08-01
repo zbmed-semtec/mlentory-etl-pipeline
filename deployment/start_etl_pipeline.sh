@@ -1,12 +1,12 @@
 #!/bin/bash
-# start_mlentory.sh
+# start_mlentory_etl.sh
 # Script to set up and start the MLentory environment
 
 set -e  # Exit on error
 
 # Check if running with sudo
 if [ "$EUID" -ne 0 ]; then
-  echo "Please run with sudo: sudo ./start_mlentory.sh"
+  echo "Please run with sudo: sudo ./start_mlentory_etl.sh"
   exit 1
 fi
 
@@ -70,6 +70,14 @@ else
     docker-compose --profile "$PROFILE" down
 fi
 # docker compose --profile $PROFILE down
+
+# Build containers
+echo "Building containers..."
+if command -v docker compose &> /dev/null; then
+    docker compose --profile "$PROFILE" build
+else
+    docker-compose --profile "$PROFILE" build
+fi
 
 # Start containers with environment variables explicitly passed
 echo "Starting containers with profile: $PROFILE"

@@ -63,7 +63,15 @@ def parse_args() -> argparse.Namespace:
     )
     
     parser.add_argument(
-        "--num-runs", type=int, default=20, help="Number of runs to extract metadata from"
+        "--num-instances", type=int, default=20, help="Number of instances to extract metadata from"
+    )
+
+    parser.add_argument(
+        "--offset", type=int, default=0, help="Number of instances to skip before extracting"
+    )
+
+    parser.add_argument(
+        "--threads", type=int, default=4, help="Number of threads for parallel processing"
     )
 
     parser.add_argument(
@@ -88,28 +96,40 @@ def main():
     logger.info(f"Initialization time: {end_time - start_time} seconds")
     
     start_time = time.time()
-    extracted_df = extractor.get_multiple_runs_metadata(
-        num_runs=args.num_runs, 
+    extracted_entities = extractor.extract_run_info_with_additional_entities(
+        num_instances=args.num_instances, 
+        offset=args.offset,
+        threads=args.threads, 
         output_dir=args.output_dir,
-        save_result_in_json=args.save_extraction
-    )
+        save_result_in_json=args.save_extraction,
+        additional_entities=["dataset"]
+        )
+
     end_time = time.time()
 
-    # log.info DataFrame details
-    logger.info("\n--- DataFrame Summary ---\n")
-    logger.info(f"Shape: {extracted_df.shape}")  # (rows, columns)
-    logger.info(f"Number of Rows: {extracted_df.shape[0]}")
-    logger.info(f"Number of Columns: {extracted_df.shape[1]}")
+    run_df = extracted_entities['run']
+    dataset_df = extracted_entities['dataset']
 
+    logger.info("\n--- Run DataFrame Summary ---\n")
+    logger.info(f"Shape: {run_df.shape}") 
+    logger.info(f"Number of Rows: {run_df.shape[0]}")
+    logger.info(f"Number of Columns: {run_df.shape[1]}")
     logger.info("\n--- Column Info ---\n")
-    logger.info(str(extracted_df.info()) + "\n")  # Shows data types and missing values
-
+    logger.info(str(run_df.info()) + "\n") 
     logger.info("--- First Few Rows ---\n")
-    logger.info(str(extracted_df.head()) + "\n")  # Displays first 5 rows
+    logger.info(str(run_df.head()) + "\n") 
+
+    logger.info("\n--- Dataset DataFrame Summary ---\n")
+    logger.info(f"Shape: {dataset_df.shape}") 
+    logger.info(f"Number of Rows: {dataset_df.shape[0]}")
+    logger.info(f"Number of Columns: {dataset_df.shape[1]}")
+    logger.info("\n--- Column Info ---\n")
+    logger.info(str(dataset_df.info()) + "\n") 
+    logger.info("--- First Few Rows ---\n")
+    logger.info(str(dataset_df.head()) + "\n") 
 
     logger.info(f"Extraction Time: {end_time - start_time:.2f} seconds")
     
-    logger.info(f"Extraction time: {end_time - start_time} seconds")
 
 if __name__ == "__main__":
     main()
