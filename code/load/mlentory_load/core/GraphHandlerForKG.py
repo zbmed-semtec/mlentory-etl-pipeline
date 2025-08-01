@@ -115,6 +115,8 @@ class GraphHandlerForKG(GraphHandler):
     def update_extraction_metadata_graph_with_kg(self):
         """
         Update the metadata graph with information from a knowledge graph containing metadata nodes.
+        self.extraction_metadata is the graph containing the metadata nodes and it looks like this:
+        <http://example.com/data_1> <http://example.com/data_1/meta/subject> <http://example.com/data_1/meta/predicate> <http://example.com/data_1/meta/object> .
 
         This method:
         1. Processes each StatementMetadata node in the graph
@@ -131,7 +133,7 @@ class GraphHandlerForKG(GraphHandler):
 
         self.logger.info("Processing extraction metadata...")
         for triplet in tqdm(
-            self.extraction_metadata, desc="Creating triples dictionaries"
+            self.extraction_metadata, desc="Creating extraction triples dictionaries for upload"
         ):
             if triplet[0] not in triplets_metadata:
                 triplets_metadata[triplet[0]] = {triplet[1]: triplet[2]}
