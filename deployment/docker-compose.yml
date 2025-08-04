@@ -231,7 +231,7 @@ services:
         - no_gpu
         - openml_no_gpu
     image: postgres:14.1-alpine
-    container_name: postgres
+    container_name: postgres_db
     environment:
       POSTGRES_USER: user
       POSTGRES_PASSWORD: password
