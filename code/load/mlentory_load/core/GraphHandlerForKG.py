@@ -79,6 +79,8 @@ class GraphHandlerForKG(GraphHandler):
     def set_kg(self, kg: Graph):
         """
         Set the KG to be loaded.
+        Args:
+            kg (Graph): The KG to be loaded.
         """
         self.kg = kg
 
