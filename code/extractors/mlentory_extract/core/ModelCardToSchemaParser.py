@@ -202,7 +202,7 @@ class ModelCardToSchemaParser:
             return f"{model_repo_weight/(math.pow(10,9)):.3f} Gbytes"
         except:
             print(f"Error: Could not calculate repository weight for {model_name}")
-            return "Not available"
+            return "Information not found"
     
     def parse_known_fields_HF(self, HF_df: pd.DataFrame) -> pd.DataFrame:
         """
