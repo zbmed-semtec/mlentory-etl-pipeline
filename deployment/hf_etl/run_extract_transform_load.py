@@ -174,16 +174,16 @@ def initialize_load_processor(
         LoadProcessor: The load processor instance.
     """
     # Get database configuration from environment variables
-    postgres_host = os.getenv("POSTGRES_HOST", "postgres")
+    postgres_host = os.getenv("POSTGRES_HOST", "postgres_db")
     postgres_user = os.getenv("POSTGRES_USER", "user") 
     postgres_password = os.getenv("POSTGRES_PASSWORD", "password")
     postgres_db = os.getenv("POSTGRES_DB", "history_DB")
     
-    virtuoso_host = os.getenv("VIRTUOSO_HOST", "virtuoso")
+    virtuoso_host = os.getenv("VIRTUOSO_HOST", "virtuoso_db")
     virtuoso_http_port = os.getenv("VIRTUOSO_HTTP_PORT", "8890")
     virtuoso_password = os.getenv("VIRTUOSO_DBA_PASSWORD", "my_strong_password")
     
-    elasticsearch_host = os.getenv("ELASTICSEARCH_HOST", "elastic")
+    elasticsearch_host = os.getenv("ELASTICSEARCH_HOST", "elastic_db")
     elasticsearch_port = int(os.getenv("ELASTICSEARCH_PORT", "9200"))
     
     print(f"postgres_host: {postgres_host}")
@@ -308,6 +308,21 @@ def parse_args() -> argparse.Namespace:
         default="None",
         help="Strategy to use for unstructured text extraction.",
     )
+    
+    parser.add_argument(
+        "--remote-db",
+        "-rd",
+        # action="store_true",
+        default=False,
+        help="Use remote databases for loading data.",
+    )
+    
+    parser.add_argument(
+        "--chunking",
+        default=True,
+        help="Wheter or not to chunk the data for the uploading step"
+    )
+    
     return parser.parse_args()
 
 
@@ -423,7 +438,7 @@ def main():
         start_time = time.time()
         kg_integrated.parse(
             args.output_dir
-            + "/../../copy_examples/files/kg/10000_HF_models_kg.ttl",
+            + "/../../copy_examples/files/kg/example_HF_models_kg.nt",
             format="turtle",
         )
         end_time = time.time()
@@ -435,7 +450,7 @@ def main():
         start_time = time.time()
         extraction_metadata_integrated.parse(
             args.output_dir
-            + "/../../copy_examples/files/extraction_metadata/10000_HF_models_extraction_metadata_kg.ttl",
+            + "/../../copy_examples/files/extraction_metadata/example_HF_models_extraction_metadata_kg.nt",
             format="turtle",
         )
         end_time = time.time()
@@ -452,14 +467,19 @@ def main():
 
     logger.info("Cleaning databases...")
     start_time = time.time()
-    # loader.clean_DBs()
+    loader.clean_DBs()
     end_time = time.time()
     logger.info(f"Database cleaning took {end_time - start_time:.2f} seconds")
 
     # Load data
     logger.info("Starting database update with KG...")
     start_time = time.time()
-    loader.update_dbs_with_kg(kg_integrated, extraction_metadata_integrated)
+    loader.update_dbs_with_kg(kg_integrated,
+                              extraction_metadata_integrated,
+                              remote_db=args.remote_db,
+                              kg_chunks_size=200,
+                              save_chunks=args.chunking,
+                              chunks_output_dir=args.output_dir+"/chunks")
     end_time = time.time()
     logger.info(f"Database update with KG took {end_time - start_time:.2f} seconds")
     
