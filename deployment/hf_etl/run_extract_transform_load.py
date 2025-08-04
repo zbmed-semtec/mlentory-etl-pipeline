@@ -404,10 +404,10 @@ def main():
             end_time = time.time()
             logger.info(f"Model extraction with default parameters took {end_time - start_time:.2f} seconds")
             
-            for key, value in extracted_entities["models"].items():
-                logger.info(f"Key: {key}")
-                logger.info(f"Value: {value}")
-                logger.info(f"Value type: {type(value)}")
+            # for key, value in extracted_entities["models"].items():
+            #     logger.info(f"Key: {key}")
+            #     logger.info(f"Value: {value}")
+            #     logger.info(f"Value type: {type(value)}")
             
             # 'models' key in extracted_entities already contains the combined models here
             if "models" not in extracted_entities or extracted_entities["models"].empty:

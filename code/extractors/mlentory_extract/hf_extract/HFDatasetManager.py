@@ -8,7 +8,11 @@ import itertools
 import arxiv
 import os
 import time
+import logging
 from concurrent.futures import ThreadPoolExecutor, as_completed
+
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
 
 
 class HFDatasetManager:
@@ -66,12 +70,16 @@ class HFDatasetManager:
             Exception: If there's an error loading or updating the dataset
         """
         try:
+            logger.info(f"Loading models from HuggingFace dataset")
+            
             # Load base dataset
+            # If this section ever freezes, just delete the cache and try again.
             dataset = load_dataset(
                 "librarian-bots/model_cards_with_metadata",
                 revision="4e7edd391342ee5c182afd08a6f62bff38f44535",
             )["train"].to_pandas()
             
+            logger.info(f"Loaded {len(dataset)} models from HuggingFace dataset")
 
             if update_recent:
                 # Get the most recent modification date from the dataset

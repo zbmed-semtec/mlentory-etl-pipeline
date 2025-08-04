@@ -89,7 +89,7 @@ class GraphHandlerForDF(GraphHandler):
             self.models_to_index.append(model_uri)
 
             # Deprecate all the triplets that were not created or updated for the current model
-            self.deprecate_old_triplets(model_uri)
+            self.deprecate_old_triplets_for_model(model_uri)
 
         # Update the dates of the models that have not been updated
         self.update_triplet_ranges_for_unchanged_models(self.curr_update_date)
