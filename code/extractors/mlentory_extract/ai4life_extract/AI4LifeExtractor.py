@@ -309,21 +309,22 @@ class AI4LifeExtractor:
         
         return rows
         
-    def dict_to_dataframe(self, extracted_metadata:Dict) -> pd.DataFrame:
+    def dict_to_dataframe(self, extracted_metadata:Dict, entity) -> pd.DataFrame:
         """
         Converts a Dict to a pandas DataFrame.
         
         Args:
             extracted_metadata: metadata dictionary to be converted to dataframe.
+            entity: entity to extract and process from the extracted metadata
             
         Returns:
             pandas DataFrame containing the flattened data.
         """
-        # Extract the 'model' list
-        models = extracted_metadata.get('model', [])
+        # Extract the 'entity' list
+        extracted_entity = extracted_metadata.get(entity, [])
         
         # Flatten the data
-        flattened_data = self.flatten_model_data(models)
+        flattened_data = self.flatten_model_data(extracted_entity)
         
         # Create DataFrame
         df = pd.DataFrame(flattened_data)
@@ -337,7 +338,6 @@ class AI4LifeExtractor:
                 url_columns.append(col)
         
         return df
-
 
     def download_modelfiles_with_additional_entities(self, num_models: int, output_dir: str = "./output", additional_entities: List[str] = ["dataset", "application"]) -> Dict[str, List[Dict[str, Any]]]:
         """Download model files and save their metadata to a JSON file.
@@ -372,6 +372,14 @@ class AI4LifeExtractor:
         # Save extracted metadata
         output_filename = Path(output_dir) / f'extraction_metadata_{self.extraction_timestamp}.json'
         self._save_json(extracted_metadata, output_filename)
-        #convert to dataframe from dictionary
-        extracted_metadata_df = self.json_to_dataframe(extracted_metadata)
-        return extracted_metadata_df
+
+        extracted_metadata_df_with_additional_entities = {}
+        all_entities = ["model"] + additional_entities 
+
+        for entity in all_entities:
+            #convert to dataframe from dictionary
+            extracted_metadata_df = self.dict_to_dataframe(extracted_metadata, entity)
+            extracted_metadata_df_with_additional_entities[entity] = extracted_metadata_df
+
+        return extracted_metadata_df_with_additional_entities
+    
