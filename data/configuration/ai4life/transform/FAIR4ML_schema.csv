@@ -1,0 +1,49 @@
+Source,Property,Range,Real_Range
+FAIR4ML,fair4ml:sharedBy,Person or Organization,Person
+FAIR4ML,fair4ml:evaluatedOn,Dataset or croissant:Dataset,None
+FAIR4ML,fair4ml:testedOn,Dataset or croissant:Dataset,None
+FAIR4ML,fair4ml:trainedOn,Dataset or croissant:Dataset,Text
+FAIR4ML,fair4ml:fineTunedFrom,fair4ml:MLModel,None
+FAIR4ML,fair4ml:legal,Text,None
+FAIR4ML,fair4ml:ethicalLegalSocial,Text,None
+FAIR4ML,fair4ml:hasCO2eEmissions,Text,None
+FAIR4ML,fair4ml:intendedUse,Text or DefinedTerm or URL,Text
+FAIR4ML,fair4ml:mlTask,Text or DefinedTerm,None
+FAIR4ML,fair4ml:modelCategory,Text or DefinedTerm,Text
+FAIR4ML,fair4ml:modelRisks,Text,None
+FAIR4ML,fair4ml:usageInstructions,Text,URL
+FAIR4ML,fair4ml:validatedOn,Dataset or croissant:Dataset,None
+schema.org,schema.org:distribution,schema:MediaObject,None
+schema.org,schema.org:memoryRequirements,Text or URL,None
+schema.org,schema.org:operatingSystem,Text,None
+schema.org,schema.org:processorRequirements,Text,None
+schema.org,schema.org:releaseNotes,Text or URL,Text
+schema.org,schema.org:softwareHelp,CreativeWork,None
+schema.org,schema.org:softwareRequirements,Text or URL,None
+schema.org,schema.org:storageRequirements,Text or URL,None
+codemeta,codemeta:buildInstructions,URL,None
+codemeta,codemeta:developmentStatus,Text,None
+codemeta,codemeta:issueTracker,URL,None
+codemeta,codemeta:readme,URL,URL
+codemeta,codemeta:referencePublication,ScholarlyArticle,URL
+schema.org,schema.org:archivedAt,URL or WebPage,URL
+schema.org,schema.org:author,Organization or Person,Person
+schema.org,schema.org:citation,CreativeWork or Text,CreativeWork
+schema.org,schema.org:conditionsOfAccess,Text,Text
+schema.org,schema.org:contributor,Organization or Person,None
+schema.org,schema.org:copyrightHolder,Organization or Person,None
+schema.org,schema.org:dateCreated,Date or DateTime,Date or DateTime
+schema.org,schema.org:dateModified,Date or DateTime,Date or DateTime
+schema.org,schema.org:datePublished,Date or DateTime,Date or DateTime
+schema.org,schema.org:discussionUrl,URL,None
+schema.org,schema.org:funding,Grant,None
+schema.org,schema.org:inLanguage,Language or Text,None
+schema.org,schema.org:isAccessibleForFree,Boolean,None
+schema.org,schema.org:keywords,DefinedTerm or Text or URL,DefinedTerm
+schema.org,schema.org:license,CreativeWork or URL,Text
+schema.org,schema.org:maintainer,Organization or Person,Person
+schema.org,schema.org:version,Text,Text
+schema.org,schema.org:description,Text or TextObject,Text
+schema.org,schema.org:identifier,PropertyValue or Text or URL,Text
+schema.org,schema.org:name,Text,Text
+schema.org,schema.org:url,URL,URL
