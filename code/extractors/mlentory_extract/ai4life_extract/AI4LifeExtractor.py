@@ -2,6 +2,7 @@ import os
 import csv
 import json
 import requests
+import pandas as pd
 from collections import Counter, defaultdict
 from datetime import datetime
 from typing import Dict, Any, List, Optional, Tuple
@@ -43,6 +44,7 @@ class AI4LifeExtractor:
         with schema_file_path.open(encoding='utf-8') as f:
             reader = csv.reader(f, delimiter='\t')
             next(reader)  # Skip headers
+            print(reader)
             for out_key, paths in reader:
                 mapping[out_key] = [p.strip() for p in paths.split(',') if p.strip()]
         return mapping
@@ -241,6 +243,101 @@ class AI4LifeExtractor:
 
         # Save grouped records
         return self._save_grouped_records(known, unknown, output_dir)
+    
+    def format_citation(self, citation: List[Dict[str, Any]]) -> str:
+        """
+        Formats a list of citation dictionaries into a semicolon-separated string with clickable DOIs/URLs.
+        Args:
+            citation: List of citation dictionaries, each containing 'text', 'doi', and/or 'url'.
+        Returns:
+            Formatted string with text and clickable DOI/URL.
+        """
+        formatted = []
+        for item in citation:
+            text = item.get('text', '')
+            doi = item.get('doi', '')
+            url = item.get('url', '')
+            # Use DOI if present, otherwise URL
+            ref = doi if doi else url
+            if ref:
+                formatted.append(f"{text} ({ref})")
+            else:
+                formatted.append(text)
+        return '; '.join(formatted)
+    
+    def flatten_model_data(self, models: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        """
+        Flattens the nested JSON model data into a list of dictionaries suitable for DataFrame creation.
+        
+        Args:
+            models: List of model dictionaries from the JSON data.
+        
+        Returns:
+            List of flattened dictionaries, each representing a model.
+        """
+        rows = []
+        
+        for model in models:
+            row = {}
+            for key, value in model.items():
+                if isinstance(value, list) and len(value) > 0 and isinstance(value[0], dict):
+                    if 'data' in value[0]:
+                        # Handle fields with a 'data' key (e.g., identifier, name, license)
+                        data = value[0]['data']
+                        if isinstance(data, list):
+                            # Join lists into a string (e.g., authors, keywords)
+                            row[key] = '; '.join(str(item) for item in data if item)
+                        else:
+                            # Direct value (e.g., string, number, or null)
+                            row[key] = data
+                    elif key == 'fair4ml:testedOn':
+                        # Handle testedOn to extract test statuses
+                        tests = value[0]['data'][-1] if value[0]['data'] else []
+                        for test in tests:
+                            row[f"{test['name']}"] = test.get('status', None)
+                    elif 'schema.org:citation' and isinstance(value, list) and value and isinstance(value[0], dict) and 'data' in value[0]:
+                        # Handle schema.org:citation specifically
+                        row[key] = self.format_citation(value[0].get('data', []))
+                    elif key == 'schema.org:version':
+                        # Extract version number
+                        row[key] = value[0]['data'][0].get('version', None)
+                else:
+                    # Handle null or empty fields
+                    row[key] = None if not value else value[0]['data']
+            
+            rows.append(row)
+        
+        return rows
+        
+    def dict_to_dataframe(self, extracted_metadata:Dict) -> pd.DataFrame:
+        """
+        Converts a Dict to a pandas DataFrame.
+        
+        Args:
+            extracted_metadata: metadata dictionary to be converted to dataframe.
+            
+        Returns:
+            pandas DataFrame containing the flattened data.
+        """
+        # Extract the 'model' list
+        models = extracted_metadata.get('model', [])
+        
+        # Flatten the data
+        flattened_data = self.flatten_model_data(models)
+        
+        # Create DataFrame
+        df = pd.DataFrame(flattened_data)
+        
+        # Identify columns that may contain URLs (only strings starting with 'https')
+        url_columns = []
+        for col in df.columns:
+            # Check if any non-null value is a string starting with 'https'
+            has_urls = any(isinstance(val, str) and val.startswith('https') for val in df[col] if pd.notnull(val))
+            if has_urls:
+                url_columns.append(col)
+        
+        return df
+
 
     def download_modelfiles_with_additional_entities(self, num_models: int, output_dir: str = "./output", additional_entities: List[str] = ["dataset", "application"]) -> Dict[str, List[Dict[str, Any]]]:
         """Download model files and save their metadata to a JSON file.
@@ -275,5 +372,6 @@ class AI4LifeExtractor:
         # Save extracted metadata
         output_filename = Path(output_dir) / f'extraction_metadata_{self.extraction_timestamp}.json'
         self._save_json(extracted_metadata, output_filename)
-
-        return extracted_metadata
+        #convert to dataframe from dictionary
+        extracted_metadata_df = self.json_to_dataframe(extracted_metadata)
+        return extracted_metadata_df
