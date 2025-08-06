@@ -1,11 +1,11 @@
 key	value_paths
 schema.org:identifier	id,manifest.id_emoji
 fair4ml:modelCategory	manifest.weights.pytorch_state_dict.architecture.callable
-fair4ml:sharedBy	created_by,manifest.uploader.name,manifest.uploader.email
+fair4ml:sharedBy	manifest.uploader.name,manifest.uploader.email,created_by
 fair4ml:testedOn	manifest.test_inputs,manifest.test_reports.reports
 fair4ml:trainedOn	manifest.training_data.id
 fair4ml:intendedUse	manifest.description
-codemeta:readme	manifest.documentation
+codemeta:readme	config.zenodo.links.latest_html
 codemeta:referencePublication	config.zenodo.doi_url
 schema.org:citation	manifest.cite
 schema.org:maintainer	manifest.maintainers
@@ -26,3 +26,4 @@ codemeta:developmentStatus	manifest.test_reports.status
 codemeta:issueTracker	manifest.test_reports.reports
 schema.org:releaseNotes	config.zenodo.notes
 schema.org:url	config.zenodo.links.html
+schema.org:description	manifest.description
