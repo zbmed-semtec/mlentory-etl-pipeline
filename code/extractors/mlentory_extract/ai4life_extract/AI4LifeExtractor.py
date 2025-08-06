@@ -44,7 +44,6 @@ class AI4LifeExtractor:
         with schema_file_path.open(encoding='utf-8') as f:
             reader = csv.reader(f, delimiter='\t')
             next(reader)  # Skip headers
-            print(reader)
             for out_key, paths in reader:
                 mapping[out_key] = [p.strip() for p in paths.split(',') if p.strip()]
         return mapping
@@ -142,28 +141,64 @@ class AI4LifeExtractor:
 
     def _map_model_metadata(self, model: Dict[str, Any]) -> Dict[str, Any]:
         """Map a single model's metadata to the schema.
-
+        
         Args:
-            model (Dict[str, Any]): The model data to map.
-
+            model: The model data to map.
+        
         Returns:
-            Dict[str, Any]: Mapped model metadata.
+            Mapped model metadata following the defined schema.
         """
         flat = self._flatten_dict(model)
         mapped = {out_key: None for out_key in self.schema}
 
+        # Map simple fields
         for out_key, paths in self.schema.items():
             if not paths:
                 continue
+                
             values = [flat[p] for p in paths if p in flat]
-            mapped[out_key] = values[0] if len(values) == 1 else values if values else None
-
-        # Handle list fields
-        for key in ["schema.org:identifier", "schema.org:keywords"]:
-            if isinstance(mapped.get(key), list):
-                mapped[key] = " ".join(str(x) for x in mapped[key] if x is not None) if key == "schema.org:identifier" else ", ".join(mapped[key])
-
+            if values:
+                mapped[out_key] = values[0] if len(values) == 1 else values
+        
+        # Handle special cases
+        if isinstance(mapped.get("schema.org:identifier"), list):
+            mapped["schema.org:identifier"] = " ".join(
+                str(x) for x in mapped["schema.org:identifier"] if x is not None
+            )
+        
+        # Process dates
+        for date_field in ["schema.org:dateCreated", "schema.org:dateModified"]:
+            if date_field in mapped and mapped[date_field] is not None:
+                mapped[date_field] = datetime.utcfromtimestamp(
+                    mapped[date_field]
+                ).strftime('%Y-%m-%d')
+        
+        # Process contributor fields (authors and maintainers)
+        for contributor_field in ["schema.org:author", "schema.org:maintainer"]:
+            contributors = mapped.get(contributor_field, []) or []
+            transformed = []
+            
+            for contributor in contributors:
+                name = contributor.get('name', '')
+                orcid = contributor.get('orcid', '')
+                github_user = contributor.get('github_user', '')
+                
+                url = (
+                    f"https://orcid.org/{orcid}" if orcid else
+                    f"https://github.com/{github_user}" if github_user else
+                    ""
+                )
+                
+                transformed.append({'name': name, 'url': url})
+            
+            mapped[contributor_field] = transformed
+        
+        # Handle special case for sharedBy
+        shared_by = mapped.get("fair4ml:sharedBy")
+        mapped["fair4ml:sharedBy"] = shared_by[0] if shared_by else ""
+        
         return mapped
+    
 
     def _wrap_mapped_models(self, mapped_models: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         """Wrap mapped models with metadata details.
