@@ -190,16 +190,18 @@ class AI4LifeExtractor:
                 )
                 
                 transformed.append({'name': name, 'url': url})
-            
             mapped[contributor_field] = transformed
         
         # Handle special case for sharedBy
         shared_by = mapped.get("fair4ml:sharedBy")
         mapped["fair4ml:sharedBy"] = shared_by[0] if shared_by else ""
         
+        # Handle special case for version
+        version = mapped.get("schema.org:version")
+        mapped["schema.org:version"] = version[-1]["version"]
+        
         return mapped
     
-
     def _wrap_mapped_models(self, mapped_models: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         """Wrap mapped models with metadata details.
 
@@ -311,12 +313,13 @@ class AI4LifeExtractor:
             List of flattened dictionaries, each representing a model.
         """
         rows = []
-        
+        count = 0
         for model in models:
             row = {}
             for key, value in model.items():
                 if isinstance(value, list) and len(value) > 0 and isinstance(value[0], dict):
                     if 'data' in value[0]:
+                        
                         # Handle fields with a 'data' key (e.g., identifier, name, license)
                         data = value[0]['data']
                         if isinstance(data, list):
@@ -325,17 +328,6 @@ class AI4LifeExtractor:
                         else:
                             # Direct value (e.g., string, number, or null)
                             row[key] = data
-                    elif key == 'fair4ml:testedOn':
-                        # Handle testedOn to extract test statuses
-                        tests = value[0]['data'][-1] if value[0]['data'] else []
-                        for test in tests:
-                            row[f"{test['name']}"] = test.get('status', None)
-                    elif 'schema.org:citation' and isinstance(value, list) and value and isinstance(value[0], dict) and 'data' in value[0]:
-                        # Handle schema.org:citation specifically
-                        row[key] = self.format_citation(value[0].get('data', []))
-                    elif key == 'schema.org:version':
-                        # Extract version number
-                        row[key] = value[0]['data'][0].get('version', None)
                 else:
                     # Handle null or empty fields
                     row[key] = None if not value else value[0]['data']

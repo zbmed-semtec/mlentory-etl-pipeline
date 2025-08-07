@@ -7,7 +7,6 @@ fair4ml:trainedOn	manifest.training_data.id
 fair4ml:intendedUse	manifest.description
 codemeta:readme	config.zenodo.links.latest_html
 codemeta:referencePublication	config.zenodo.doi_url
-schema.org:citation	manifest.cite
 schema.org:maintainer	manifest.maintainers
 schema.org:author	manifest.authors
 schema.org:license	manifest.license
