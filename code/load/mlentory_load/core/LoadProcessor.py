@@ -100,7 +100,7 @@ class LoadProcessor:
             )
             current_graph.serialize(output_ttl_file_path, format="nt")
 
-    def update_dbs_with_kg(self, kg: Graph, extraction_metadata: Graph, remote_db: bool = False, kg_chunks_size: int = 100, save_chunks: bool = False, load_output_dir: str = ""):
+    def update_dbs_with_kg(self, kg: Graph, extraction_metadata: Graph, remote_db: bool = False, kg_chunks_size: int = 100, save_chunks: bool = False, load_output_dir: str = "", trigger_etl: bool = True):
         """
         Update all databases with new data from KG. The KG represents the metadata
 
@@ -111,7 +111,8 @@ class LoadProcessor:
             kg_chunks_size (int): Number of models to process at a time. If 0, treats entire KG as single chunk.
             save_chunks (bool, optional): Whether to save the chunks to disk. Defaults to False.
             load_output_dir (str, optional): Directory to store the chunks on disk. Defaults to "". 
-                If this parameter is "", when save_chunks or remote_db are true an exception will be thrown. 
+                If this parameter is "", when save_chunks or remote_db are true an exception will be thrown.
+            trigger_etl (bool, optional): Whether to automatically trigger ETL processing after remote upload. Defaults to True.
         """
         
         if (save_chunks or remote_db) and (load_output_dir == ""):
@@ -123,7 +124,7 @@ class LoadProcessor:
             kg_chunks, extraction_metadata_chunks, chunk_files = self.create_chunks_with_files(
                 kg, extraction_metadata, kg_chunks_size, load_output_dir
             )
-            self.send_batch_to_remote_db(chunk_files)
+            self.send_batch_to_remote_db(chunk_files, trigger_etl=trigger_etl)
         else:
             kg_chunks, extraction_metadata_chunks = self.create_chunks(
                 kg, extraction_metadata, kg_chunks_size, 
@@ -318,12 +319,13 @@ class LoadProcessor:
         
         return kg_chunks, extraction_metadata_chunks, chunk_files
 
-    def send_batch_to_remote_db(self, chunk_files: Dict[str, str]):
+    def send_batch_to_remote_db(self, chunk_files: Dict[str, str], trigger_etl: bool = True):
         """
         Send a batch of chunk files to the remote database.
         
         Args:
             chunk_files (Dict): Dictionary containing batch_id, chunk_dir, and num_chunks
+            trigger_etl (bool): Whether to automatically trigger ETL processing after upload. Defaults to True.
         """
         batch_id = chunk_files["batch_id"]
         chunk_dir = chunk_files["chunk_dir"]
@@ -348,14 +350,110 @@ class LoadProcessor:
             
             # Finalize the batch
             finalize_url = f"{self.remote_api_base_url.rstrip('/')}/upload/batch/{batch_id}/finalize"
-            #Chack this timeout for big uploads
+            #Check this timeout for big uploads
             response = requests.post(finalize_url, timeout=120)
             response.raise_for_status()
             
             logger.info(f"Successfully finalized batch {batch_id}. Response: {response.json()}")
             
+            # Trigger ETL processing if requested
+            if trigger_etl:
+                self.trigger_remote_etl_processing(batch_id)
+            
         except Exception as e:
             logger.error(f"Failed to send batch to remote database: {e}")
+            raise
+
+    def trigger_remote_etl_processing(self, batch_id: str):
+        """
+        Trigger ETL processing for a batch on the remote server.
+        
+        Args:
+            batch_id (str): The batch identifier to process through ETL
+            
+        Raises:
+            requests.RequestException: If HTTP request fails
+            Exception: If ETL processing trigger fails
+        """
+        try:
+            etl_url = f"{self.remote_api_base_url.rstrip('/')}/upload/process-etl/{batch_id}"
+            logger.info(f"Triggering ETL processing for batch {batch_id} at: {etl_url}")
+            
+            # Trigger ETL processing with extended timeout for large datasets
+            response = requests.post(etl_url, timeout=600)  # 10 minute timeout for ETL
+            response.raise_for_status()
+            
+            result = response.json()
+            logger.info(f"Successfully triggered ETL processing for batch {batch_id}. Response: {result}")
+            
+        except requests.RequestException as e:
+            logger.error(f"Failed to trigger ETL processing for batch {batch_id}: {e}")
+            # Don't re-raise here - ETL can be triggered manually later
+            logger.warning(f"ETL processing for batch {batch_id} can be triggered manually via: {etl_url}")
+        except Exception as e:
+            logger.error(f"Unexpected error triggering ETL for batch {batch_id}: {e}")
+            logger.warning(f"ETL processing for batch {batch_id} can be triggered manually via the API")
+
+    def trigger_auto_etl_processing(self):
+        """
+        Trigger automatic ETL processing for all complete batches on the remote server.
+        
+        Returns:
+            dict: Response from the auto-processing endpoint
+            
+        Raises:
+            requests.RequestException: If HTTP request fails
+            Exception: If auto-processing trigger fails
+        """
+        try:
+            auto_etl_url = f"{self.remote_api_base_url.rstrip('/')}/upload/auto-process-etl"
+            logger.info(f"Triggering auto ETL processing at: {auto_etl_url}")
+            
+            # Trigger auto ETL processing with extended timeout
+            response = requests.post(auto_etl_url, timeout=900)  # 15 minute timeout for auto-processing
+            response.raise_for_status()
+            
+            result = response.json()
+            logger.info(f"Successfully triggered auto ETL processing. Response: {result}")
+            return result
+            
+        except requests.RequestException as e:
+            logger.error(f"Failed to trigger auto ETL processing: {e}")
+            raise
+        except Exception as e:
+            logger.error(f"Unexpected error triggering auto ETL processing: {e}")
+            raise
+
+    def get_batch_status(self, batch_id: str):
+        """
+        Get the status of a batch upload on the remote server.
+        
+        Args:
+            batch_id (str): The batch identifier to check
+            
+        Returns:
+            dict: Batch status information
+            
+        Raises:
+            requests.RequestException: If HTTP request fails
+            Exception: If status check fails
+        """
+        try:
+            status_url = f"{self.remote_api_base_url.rstrip('/')}/upload/batch/{batch_id}/status"
+            logger.info(f"Checking batch status for {batch_id} at: {status_url}")
+            
+            response = requests.get(status_url, timeout=30)
+            response.raise_for_status()
+            
+            result = response.json()
+            logger.info(f"Batch {batch_id} status: {result}")
+            return result
+            
+        except requests.RequestException as e:
+            logger.error(f"Failed to get batch status for {batch_id}: {e}")
+            raise
+        except Exception as e:
+            logger.error(f"Unexpected error getting batch status for {batch_id}: {e}")
             raise
 
     def send_chunk_files_to_remote_db(self, batch_id: str, file_name: str, chunk_number: int, total_chunks: int, kg_file_path: str, metadata_file_path: str):
