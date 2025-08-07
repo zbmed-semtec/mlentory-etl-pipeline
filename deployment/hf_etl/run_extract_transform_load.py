@@ -186,6 +186,8 @@ def initialize_load_processor(
     elasticsearch_host = os.getenv("ELASTICSEARCH_HOST", "elastic_db")
     elasticsearch_port = int(os.getenv("ELASTICSEARCH_PORT", "9200"))
     
+    remote_api_base_url = os.getenv("REMOTE_API_BASE_URL", "http://backend:8000")
+    
     print(f"postgres_host: {postgres_host}")
     print(f"postgres_user: {postgres_user}")
     print(f"postgres_password: {postgres_password}")
@@ -235,6 +237,7 @@ def initialize_load_processor(
         IndexHandler=elasticsearchHandler,
         GraphHandler=graphHandler,
         kg_files_directory=kg_files_directory,
+        remote_api_base_url=remote_api_base_url,
     )
 
 def intialize_folder_structure(output_dir: str, clean_folders: bool = False) -> None:
@@ -404,11 +407,6 @@ def main():
             end_time = time.time()
             logger.info(f"Model extraction with default parameters took {end_time - start_time:.2f} seconds")
             
-            # for key, value in extracted_entities["models"].items():
-            #     logger.info(f"Key: {key}")
-            #     logger.info(f"Value: {value}")
-            #     logger.info(f"Value type: {type(value)}")
-            
             # 'models' key in extracted_entities already contains the combined models here
             if "models" not in extracted_entities or extracted_entities["models"].empty:
                 logging.warning("No models were extracted using the default method. Check parameters or HF connection.")
@@ -474,20 +472,21 @@ def main():
     # Load data
     logger.info("Starting database update with KG...")
     start_time = time.time()
-    loader.update_dbs_with_kg(kg_integrated,
+    if args.chunking or args.remote_db:
+        loader.update_dbs_with_kg(kg_integrated,
                               extraction_metadata_integrated,
                               remote_db=args.remote_db,
-                              kg_chunks_size=200,
-                              save_chunks=args.chunking,
-                              chunks_output_dir=args.output_dir+"/chunks")
+                              kg_chunks_size=350,
+                              save_chunks=True,
+                              load_output_dir=args.output_dir+"/chunks")
+    else:
+        loader.update_dbs_with_kg(kg_integrated,
+                              extraction_metadata_integrated,
+                              remote_db=args.remote_db,
+                              kg_chunks_size=0,
+                              save_chunks=False)
     end_time = time.time()
     logger.info(f"Database update with KG took {end_time - start_time:.2f} seconds")
-    
-    # print("CHECKING QUERY STATS!!!!!!!!!!!!!!")
-    # print(loader.GraphHandler.SQLHandler.query_stats["queries"])
-    
-    # print("CHECKING LICENSES!!!!!!!!!!!!!!")
-    # print(extracted_entities["licenses"])
 
 
 if __name__ == "__main__":
