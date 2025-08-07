@@ -1,5 +1,5 @@
 Source,Property,Range,Real_Range
-FAIR4ML,fair4ml:sharedBy,Person or Organization,Person
+FAIR4ML,fair4ml:sharedBy,Person or Organization,Text
 FAIR4ML,fair4ml:evaluatedOn,Dataset or croissant:Dataset,None
 FAIR4ML,fair4ml:testedOn,Dataset or croissant:Dataset,None
 FAIR4ML,fair4ml:trainedOn,Dataset or croissant:Dataset,Text
