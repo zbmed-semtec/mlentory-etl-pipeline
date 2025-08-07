@@ -8,11 +8,27 @@ import argparse
 import time
 from datetime import datetime
 from mlentory_extract.ai4life_extract import AI4LifeExtractor
+from mlentory_load.core import LoadProcessor, GraphHandlerForKG
+from mlentory_load.dbHandler import RDFHandler, SQLHandler, IndexHandler
 from mlentory_transform.core import (
     MlentoryTransform,
     KnowledgeGraphHandler,
     MlentoryTransformWithGraphBuilder,
 )
+
+# Load environment variables with defaults
+POSTGRES_HOST = os.getenv("POSTGRES_HOST", "postgres")
+POSTGRES_USER = os.getenv("POSTGRES_USER", "user")
+POSTGRES_PASSWORD = os.getenv("POSTGRES_PASSWORD", "password")
+POSTGRES_DB = os.getenv("POSTGRES_DB", "history_DB")
+
+VIRTUOSO_HOST = os.getenv("VIRTUOSO_HOST", "virtuoso_db")
+VIRTUOSO_USER = os.getenv("VIRTUOSO_USER", "dba")
+VIRTUOSO_PASSWORD = os.getenv("VIRTUOSO_PASSWORD", "my_strong_password")
+VIRTUOSO_SPARQL_ENDPOINT = os.getenv("VIRTUOSO_SPARQL_ENDPOINT", f"http://{VIRTUOSO_HOST}:8890/sparql") # Default uses VIRTUOSO_HOST
+
+ELASTICSEARCH_HOST = os.getenv("ELASTICSEARCH_HOST", "elastic_db")
+ELASTICSEARCH_PORT = int(os.getenv("ELASTICSEARCH_PORT", "9200")) # Env vars are strings
 
 def setup_logging() -> logging.Logger:
     """
@@ -67,6 +83,62 @@ def initialize_transform(config_path: str) -> MlentoryTransform:
     transformer = MlentoryTransformWithGraphBuilder(base_namespace="https://w3id.org/mlentory/mlentory_graph/", FAIR4ML_schema_data=new_schema)
 
     return transformer
+
+def initialize_load_processor(
+    kg_files_directory: str, logger: logging.Logger
+) -> LoadProcessor:
+    """
+    Initializes the load processor with the configuration data.
+
+    Args:
+        kg_files_directory (str): The path to the kg files directory.
+        logger (logging.Logger): The logger instance.
+
+    Returns:
+        LoadProcessor: The load processor instance.
+    """
+    sqlHandler = SQLHandler(
+        host=POSTGRES_HOST,
+        user=POSTGRES_USER,
+        password=POSTGRES_PASSWORD,
+        database=POSTGRES_DB,
+    )
+    sqlHandler.connect()
+
+    rdfHandler = RDFHandler(
+        container_name=VIRTUOSO_HOST,  # Assuming container name is the same as the host
+        kg_files_directory=kg_files_directory,
+        _user=VIRTUOSO_USER,
+        _password=VIRTUOSO_PASSWORD,
+        sparql_endpoint=VIRTUOSO_SPARQL_ENDPOINT,
+    )
+
+    elasticsearchHandler = IndexHandler(
+        es_host=ELASTICSEARCH_HOST,
+        es_port=ELASTICSEARCH_PORT,
+    )
+
+    elasticsearchHandler.initialize_AI4Life_index(index_name="ai4life_models")
+
+    # Initializing the graph creator
+    graphHandler = GraphHandlerForKG(
+        SQLHandler=sqlHandler,
+        RDFHandler=rdfHandler,
+        IndexHandler=elasticsearchHandler,
+        kg_files_directory=kg_files_directory,
+        graph_identifier="https://w3id.org/mlentory/mlentory_graph",
+        deprecated_graph_identifier="https://w3id.org/mlentory/deprecated_mlentory_graph",
+        logger=logger,
+    )
+
+    # Initializing the load processor
+    return LoadProcessor(
+        SQLHandler=sqlHandler,
+        RDFHandler=rdfHandler,
+        IndexHandler=elasticsearchHandler,
+        GraphHandler=graphHandler,
+        kg_files_directory=kg_files_directory,
+    )
 
     
 def parse_args() -> argparse.Namespace:
@@ -139,6 +211,26 @@ def main():
     )
     end_time = time.time()
     logger.info(f"Transformation process took {end_time - start_time:.2f} seconds")
+    
+    # Initialize loader
+    logger.info("Initializing loader...")
+    start_time = time.time()
+    loader = initialize_load_processor(args.output_dir+"/kg", logger)
+    end_time = time.time()
+    logger.info(f"Loader initialization took {end_time - start_time:.2f} seconds")
+
+    logger.info("Cleaning databases...")
+    start_time = time.time()
+    # loader.clean_DBs()
+    end_time = time.time()
+    logger.info(f"Database cleaning took {end_time - start_time:.2f} seconds")
+
+    # Load data
+    logger.info("Starting database update with KG...")
+    start_time = time.time()
+    loader.update_dbs_with_kg(kg_integrated, kg_metadata_integrated)
+    end_time = time.time()
+    logger.info(f"Database update with KG took {end_time - start_time:.2f} seconds")
     
 if __name__ == "__main__":
     main()
