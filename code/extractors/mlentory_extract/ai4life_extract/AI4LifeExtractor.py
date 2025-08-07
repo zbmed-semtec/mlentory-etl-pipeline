@@ -301,40 +301,6 @@ class AI4LifeExtractor:
             else:
                 formatted.append(text)
         return '; '.join(formatted)
-    
-    def flatten_model_data(self, models: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-        """
-        Flattens the nested JSON model data into a list of dictionaries suitable for DataFrame creation.
-        
-        Args:
-            models: List of model dictionaries from the JSON data.
-        
-        Returns:
-            List of flattened dictionaries, each representing a model.
-        """
-        rows = []
-        count = 0
-        for model in models:
-            row = {}
-            for key, value in model.items():
-                if isinstance(value, list) and len(value) > 0 and isinstance(value[0], dict):
-                    if 'data' in value[0]:
-                        
-                        # Handle fields with a 'data' key (e.g., identifier, name, license)
-                        data = value[0]['data']
-                        if isinstance(data, list):
-                            # Join lists into a string (e.g., authors, keywords)
-                            row[key] = '; '.join(str(item) for item in data if item)
-                        else:
-                            # Direct value (e.g., string, number, or null)
-                            row[key] = data
-                else:
-                    # Handle null or empty fields
-                    row[key] = None if not value else value[0]['data']
-            
-            rows.append(row)
-        
-        return rows
         
     def dict_to_dataframe(self, extracted_metadata:Dict, entity) -> pd.DataFrame:
         """
@@ -347,14 +313,12 @@ class AI4LifeExtractor:
         Returns:
             pandas DataFrame containing the flattened data.
         """
+    
         # Extract the 'entity' list
         extracted_entity = extracted_metadata.get(entity, [])
         
-        # Flatten the data
-        flattened_data = self.flatten_model_data(extracted_entity)
-        
         # Create DataFrame
-        df = pd.DataFrame(flattened_data)
+        df = pd.DataFrame(extracted_entity)
         
         # Identify columns that may contain URLs (only strings starting with 'https')
         url_columns = []
