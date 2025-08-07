@@ -22,6 +22,85 @@ class MlentoryTransformWithGraphBuilder:
         self.graph_builder_arxiv = GraphBuilderArxiv(base_namespace)
         self.graph_builder_keywords = GraphBuilderKeyWords(base_namespace)
         self.graph_builder_licenses = GraphBuilderLicense(base_namespace)
+    
+    def transform_AI4Life_models_with_related_entities(
+        self,
+        extracted_entities: Dict[str, pd.DataFrame],
+        save_output: bool = False,
+        kg_output_dir: str = None,
+    ) -> Tuple[rdflib.Graph, rdflib.Graph]:
+        """
+        Transform the extracted data into a knowledge graph.
+        """
+        # Create output directory if it doesn't exist and save_output is True
+        if save_output and kg_output_dir:
+            os.makedirs(kg_output_dir, exist_ok=True)
+
+        models_kg, models_metadata_kg = self.transform_AI4Life_models(
+            extracted_df=extracted_entities["model"],
+            save_output= save_output,
+            output_dir=kg_output_dir,
+
+        )
+
+        datasets_kg, datasets_metadata_kg = self.transform_AI4Life_datasets(
+            extracted_df=extracted_entities["dataset"],
+            save_output= save_output,
+            output_dir=kg_output_dir,
+
+        )
+
+        kg_integrated = self.unify_graphs(
+            [models_kg, datasets_kg],
+            save_output_in_json=save_output,
+            output_dir=kg_output_dir,
+        )
+
+        kg_metadata_integrated = self.unify_graphs(
+            [models_metadata_kg,
+             datasets_metadata_kg],
+            save_output_in_json=save_output,
+            output_dir=kg_output_dir,
+        )
+        
+        return kg_integrated, kg_metadata_integrated
+
+
+    def transform_AI4Life_models(
+            self, 
+            extracted_df: pd.DataFrame, 
+            save_output: bool = False, 
+            output_dir: str = None
+            ) -> Tuple[rdflib.Graph, rdflib.Graph]:
+        
+            """
+            Transform the extracted data into a knowledge graph and save it to a file.
+            """
+            
+            knowledge_graph, extraction_metadata_graph = self.graph_builder_fair4ml.dataframe_to_graph(extracted_df, identifier_column="schema.org:identifier", platform=Platform.AI4LIFE.value)
+            if save_output:
+                self.save_graph(knowledge_graph, "Transformed_AI4Life_models_kg", output_dir)
+                self.save_graph(extraction_metadata_graph, "Transformed_AI4Life_models_kg_metadata", output_dir)
+
+            return knowledge_graph, extraction_metadata_graph
+    
+    def transform_AI4Life_datasets(
+            self, 
+            extracted_df: pd.DataFrame, 
+            save_output: bool = False, 
+            output_dir: str = None
+            ) -> Tuple[rdflib.Graph, rdflib.Graph]:
+        
+            """
+            Transform the extracted data into a knowledge graph and save it to a file.
+            """
+            
+            knowledge_graph, extraction_metadata_graph = self.graph_builder_fair4ml.dataframe_to_graph(extracted_df, identifier_column="dataset_schema.org:identifier", platform=Platform.AI4LIFE.value)
+            if save_output:
+                self.save_graph(knowledge_graph, "Transformed_AI4Life_datasets_kg", output_dir)
+                self.save_graph(extraction_metadata_graph, "Transformed_AI4Life_datasets_kg_metadata", output_dir)
+
+            return knowledge_graph, extraction_metadata_graph
 
     def transform_OpenML_models_with_related_entities(
         self,
