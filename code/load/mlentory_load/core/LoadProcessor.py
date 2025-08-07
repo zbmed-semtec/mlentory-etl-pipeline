@@ -100,13 +100,20 @@ class LoadProcessor:
             )
             current_graph.serialize(output_ttl_file_path, format="nt")
 
-    def update_dbs_with_kg(self, kg: Graph, extraction_metadata: Graph, remote_db: bool = False, kg_chunks_size: int = 100, save_chunks: bool = False, load_output_dir: str = "", trigger_etl: bool = True):
+    def update_dbs_with_kg(self, kg: Graph, extraction_metadata: Graph,
+                                            extraction_name: str = "hf_extraction",
+                                            remote_db: bool = False, 
+                                            kg_chunks_size: int = 100, 
+                                            save_chunks: bool = False, 
+                                            load_output_dir: str = "", 
+                                            trigger_etl: bool = True):
         """
         Update all databases with new data from KG. The KG represents the metadata
 
         Args:
             kg (Graph): Knowledge graph to be loaded
             extraction_metadata (Graph): Extraction metadata of the KG
+            extraction_name (str, optional): Name/type of extraction (e.g., "hf_extraction", "openml_extraction"). Defaults to "hf_extraction".
             remote_db (bool): Whether to use remote databases
             kg_chunks_size (int): Number of models to process at a time. If 0, treats entire KG as single chunk.
             save_chunks (bool, optional): Whether to save the chunks to disk. Defaults to False.
@@ -124,7 +131,7 @@ class LoadProcessor:
             kg_chunks, extraction_metadata_chunks, chunk_files = self.create_chunks_with_files(
                 kg, extraction_metadata, kg_chunks_size, load_output_dir
             )
-            self.send_batch_to_remote_db(chunk_files, trigger_etl=trigger_etl)
+            self.send_batch_to_remote_db(chunk_files, trigger_etl=trigger_etl, extraction_name=extraction_name)
         else:
             kg_chunks, extraction_metadata_chunks = self.create_chunks(
                 kg, extraction_metadata, kg_chunks_size, 
@@ -319,20 +326,22 @@ class LoadProcessor:
         
         return kg_chunks, extraction_metadata_chunks, chunk_files
 
-    def send_batch_to_remote_db(self, chunk_files: Dict[str, str], trigger_etl: bool = True):
+    def send_batch_to_remote_db(self, chunk_files: Dict[str, str], trigger_etl: bool = True, extraction_name: str = "hf_extraction"):
         """
         Send a batch of chunk files to the remote database.
         
         Args:
             chunk_files (Dict): Dictionary containing batch_id, chunk_dir, and num_chunks
             trigger_etl (bool): Whether to automatically trigger ETL processing after upload. Defaults to True.
+            extraction_name (str): Name/type of extraction for identification. Defaults to "hf_extraction".
         """
         batch_id = chunk_files["batch_id"]
+        upload_date = "".join(batch_id.split("_")[0:-2]) 
         chunk_dir = chunk_files["chunk_dir"]
         num_chunks = chunk_files["num_chunks"]
         
         try:
-            logger.info(f"Sending batch {batch_id} with {num_chunks} chunks from {chunk_dir}")
+            logger.info(f"Sending batch {batch_id} for {extraction_name} with {num_chunks} chunks from {chunk_dir}")
             
             # Upload each chunk pair
             for i in range(1, num_chunks + 1):
@@ -344,7 +353,7 @@ class LoadProcessor:
                     continue
                     
                 self.send_chunk_files_to_remote_db(
-                    batch_id, f"chunks_from_{batch_id}", i-1, num_chunks,
+                    batch_id, f"{upload_date}_{extraction_name}", i-1, num_chunks,
                     kg_filename, metadata_filename
                 )
             
@@ -358,18 +367,19 @@ class LoadProcessor:
             
             # Trigger ETL processing if requested
             if trigger_etl:
-                self.trigger_remote_etl_processing(batch_id)
+                self.trigger_remote_etl_processing(batch_id, extraction_name)
             
         except Exception as e:
             logger.error(f"Failed to send batch to remote database: {e}")
             raise
 
-    def trigger_remote_etl_processing(self, batch_id: str):
+    def trigger_remote_etl_processing(self, batch_id: str, extraction_name: str):
         """
         Trigger ETL processing for a batch on the remote server.
         
         Args:
             batch_id (str): The batch identifier to process through ETL
+            extraction_name (str): Name/type of extraction for identification
             
         Raises:
             requests.RequestException: If HTTP request fails
@@ -377,22 +387,22 @@ class LoadProcessor:
         """
         try:
             etl_url = f"{self.remote_api_base_url.rstrip('/')}/upload/process-etl/{batch_id}"
-            logger.info(f"Triggering ETL processing for batch {batch_id} at: {etl_url}")
+            logger.info(f"Triggering ETL processing for {extraction_name} batch {batch_id} at: {etl_url}")
             
             # Trigger ETL processing with extended timeout for large datasets
             response = requests.post(etl_url, timeout=600)  # 10 minute timeout for ETL
             response.raise_for_status()
             
             result = response.json()
-            logger.info(f"Successfully triggered ETL processing for batch {batch_id}. Response: {result}")
+            logger.info(f"Successfully triggered ETL processing for {extraction_name} batch {batch_id}. Response: {result}")
             
         except requests.RequestException as e:
-            logger.error(f"Failed to trigger ETL processing for batch {batch_id}: {e}")
+            logger.error(f"Failed to trigger ETL processing for {extraction_name} batch {batch_id}: {e}")
             # Don't re-raise here - ETL can be triggered manually later
-            logger.warning(f"ETL processing for batch {batch_id} can be triggered manually via: {etl_url}")
+            logger.warning(f"ETL processing for {extraction_name} batch {batch_id} can be triggered manually via: {etl_url}")
         except Exception as e:
-            logger.error(f"Unexpected error triggering ETL for batch {batch_id}: {e}")
-            logger.warning(f"ETL processing for batch {batch_id} can be triggered manually via the API")
+            logger.error(f"Unexpected error triggering ETL for {extraction_name} batch {batch_id}: {e}")
+            logger.warning(f"ETL processing for {extraction_name} batch {batch_id} can be triggered manually via the API")
 
     def trigger_auto_etl_processing(self):
         """
