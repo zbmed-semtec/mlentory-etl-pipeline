@@ -475,6 +475,7 @@ def main():
     if args.chunking or args.remote_db:
         loader.update_dbs_with_kg(kg_integrated,
                               extraction_metadata_integrated,
+                              extraction_name="hf_extraction",
                               remote_db=args.remote_db,
                               kg_chunks_size=350,
                               save_chunks=True,
@@ -482,6 +483,7 @@ def main():
     else:
         loader.update_dbs_with_kg(kg_integrated,
                               extraction_metadata_integrated,
+                              extraction_name="hf_extraction",
                               remote_db=args.remote_db,
                               kg_chunks_size=0,
                               save_chunks=False)

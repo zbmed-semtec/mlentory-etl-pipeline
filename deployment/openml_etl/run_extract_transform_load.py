@@ -321,7 +321,7 @@ def main():
 
     logger.info("Loading the knowledge graph to database")
     start_time = time.time()
-    loader.update_dbs_with_kg(kg_integrated, extraction_metadata_integrated)
+    loader.update_dbs_with_kg(kg_integrated, extraction_metadata_integrated, extraction_name="openml_extraction")
     end_time = time.time()
     logger.info("Loading data to db completed successfully")
     logger.info(f"TIME TAKEN FOR LOADING METADATA:  {end_time - start_time} seconds")
