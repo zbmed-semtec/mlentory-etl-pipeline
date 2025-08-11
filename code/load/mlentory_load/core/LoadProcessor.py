@@ -104,7 +104,7 @@ class LoadProcessor:
                                             extraction_name: str = "hf_extraction",
                                             remote_db: bool = False, 
                                             kg_chunks_size: int = 100, 
-                                            save_chunks: bool = False, 
+                                            save_load_output: bool = False, 
                                             load_output_dir: str = "", 
                                             trigger_etl: bool = True):
         """
@@ -116,26 +116,25 @@ class LoadProcessor:
             extraction_name (str, optional): Name/type of extraction (e.g., "hf_extraction", "openml_extraction"). Defaults to "hf_extraction".
             remote_db (bool): Whether to use remote databases
             kg_chunks_size (int): Number of models to process at a time. If 0, treats entire KG as single chunk.
-            save_chunks (bool, optional): Whether to save the chunks to disk. Defaults to False.
+            save_load_output (bool, optional): Whether to save the chunks to disk. Defaults to False.
             load_output_dir (str, optional): Directory to store the chunks on disk. Defaults to "". 
-                If this parameter is "", when save_chunks or remote_db are true an exception will be thrown.
+                If this parameter is "", when save_load_output or remote_db are true an exception will be thrown.
             trigger_etl (bool, optional): Whether to automatically trigger ETL processing after remote upload. Defaults to True.
         """
         
-        if (save_chunks or remote_db) and (load_output_dir == ""):
+        if (save_load_output or remote_db) and (load_output_dir == ""):
             raise ValueError("No output directory found")
-        
         
         if remote_db:
             # For remote uploads, we need to save chunks and get file paths
             kg_chunks, extraction_metadata_chunks, chunk_files = self.create_chunks_with_files(
-                kg, extraction_metadata, kg_chunks_size, load_output_dir
+                kg=kg, extraction_metadata=extraction_metadata, kg_chunks_size=kg_chunks_size, chunks_output_dir=load_output_dir
             )
             self.send_batch_to_remote_db(chunk_files, trigger_etl=trigger_etl, extraction_name=extraction_name)
         else:
             kg_chunks, extraction_metadata_chunks = self.create_chunks(
                 kg, extraction_metadata, kg_chunks_size, 
-                save_chunks=save_chunks, save_path=load_output_dir
+                save_chunks=save_load_output, save_path=load_output_dir
             )
             
             for kg_chunk, extraction_metadata_chunk in zip(kg_chunks, extraction_metadata_chunks):
@@ -258,12 +257,12 @@ class LoadProcessor:
                 # Save each chunk pair with numbered filenames
                 for i, (kg_chunk, metadata_chunk) in enumerate(zip(kg_chunks, extraction_metadata_chunks), 1):
                     # Save KG chunk
-                    kg_filename = os.path.join(chunk_dir, f"kg_chunk_{i:03d}.ttl")
-                    kg_chunk.serialize(kg_filename, format="turtle")
+                    kg_filename = os.path.join(chunk_dir, f"kg_chunk_{i:03d}.nt")
+                    kg_chunk.serialize(kg_filename, format="nt")
                     
                     # Save metadata chunk
-                    metadata_filename = os.path.join(chunk_dir, f"metadata_chunk_{i:03d}.ttl")
-                    metadata_chunk.serialize(metadata_filename, format="turtle")
+                    metadata_filename = os.path.join(chunk_dir, f"metadata_chunk_{i:03d}.nt")
+                    metadata_chunk.serialize(metadata_filename, format="nt")
                 
                 logger.info(f"Successfully saved {len(kg_chunks)} chunk pairs to {chunk_dir}")
                 
@@ -345,8 +344,8 @@ class LoadProcessor:
             
             # Upload each chunk pair
             for i in range(1, num_chunks + 1):
-                kg_filename = os.path.join(chunk_dir, f"kg_chunk_{i:03d}.ttl")
-                metadata_filename = os.path.join(chunk_dir, f"metadata_chunk_{i:03d}.ttl")
+                kg_filename = os.path.join(chunk_dir, f"kg_chunk_{i:03d}.nt")
+                metadata_filename = os.path.join(chunk_dir, f"metadata_chunk_{i:03d}.nt")
                 
                 if not os.path.exists(kg_filename) or not os.path.exists(metadata_filename):
                     logger.error(f"Chunk files not found: {kg_filename}, {metadata_filename}")
