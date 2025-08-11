@@ -186,7 +186,7 @@ def initialize_load_processor(
     elasticsearch_host = os.getenv("ELASTICSEARCH_HOST", "elastic_db")
     elasticsearch_port = int(os.getenv("ELASTICSEARCH_PORT", "9200"))
     
-    remote_api_base_url = os.getenv("REMOTE_API_BASE_URL", "http://backend:8000")
+    remote_api_base_url = os.getenv("REMOTE_API_BASE_URL", "http://10.0.7.249:8000")
     
     print(f"postgres_host: {postgres_host}")
     print(f"postgres_user: {postgres_user}")
@@ -195,6 +195,9 @@ def initialize_load_processor(
     print(f"virtuoso_host: {virtuoso_host}")
     print(f"virtuoso_http_port: {virtuoso_http_port}")
     print(f"virtuoso_password: {virtuoso_password}")
+    print(f"elasticsearch_host: {elasticsearch_host}")
+    print(f"elasticsearch_port: {elasticsearch_port}")
+    print(f"remote_api_base_url: {remote_api_base_url}")
     
     sqlHandler = SQLHandler(
         host=postgres_host,
@@ -338,11 +341,10 @@ def main():
     kg_files_directory = "./../kg_files"  # Path to kg files directory
     intialize_folder_structure(args.output_dir,clean_folders=False)
     
-    use_dummy_data = args.use_dummy_data
     kg_integrated = Graph()  
     extraction_metadata_integrated = Graph()
     
-    if not use_dummy_data:
+    if args.use_dummy_data is False:
 
         # Initialize extractor
         logger.info("Initializing extractor...")
@@ -354,7 +356,7 @@ def main():
         extracted_entities = {}
         models_df = pd.DataFrame()
 
-        if args.model_list_file :
+        if args.model_list_file:
             logger.info(f"Processing models from file: {args.model_list_file}")
             try:
                 model_ids_from_file = load_models_from_file(args.model_list_file)
@@ -472,13 +474,13 @@ def main():
     # Load data
     logger.info("Starting database update with KG...")
     start_time = time.time()
-    if args.chunking or args.remote_db:
+    if args.chunking is True:
         loader.update_dbs_with_kg(kg_integrated,
                               extraction_metadata_integrated,
                               extraction_name="hf_extraction",
                               remote_db=args.remote_db,
                               kg_chunks_size=350,
-                              save_chunks=True,
+                              save_load_output=True,
                               load_output_dir=args.output_dir+"/chunks")
     else:
         loader.update_dbs_with_kg(kg_integrated,
@@ -486,7 +488,8 @@ def main():
                               extraction_name="hf_extraction",
                               remote_db=args.remote_db,
                               kg_chunks_size=0,
-                              save_chunks=False)
+                              save_load_output=True,
+                              load_output_dir=args.output_dir+"/chunks")
     end_time = time.time()
     logger.info(f"Database update with KG took {end_time - start_time:.2f} seconds")
 
