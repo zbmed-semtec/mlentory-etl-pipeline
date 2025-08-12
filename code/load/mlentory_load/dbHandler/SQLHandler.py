@@ -1,12 +1,14 @@
 import psycopg2
-from psycopg2 import pool
-import pandas as pd
-from typing import Callable, List, Dict, Set, Any, Optional
 from psycopg2.extras import execute_values
 from psycopg2.extensions import register_adapter, AsIs
+from psycopg2.pool import SimpleConnectionPool
 import numpy as np
+import pandas as pd
+from typing import Callable, List, Dict, Set, Any, Optional
+
 import time
 import logging
+import contextlib
 
 register_adapter(np.int64, AsIs)
 register_adapter(np.float64, AsIs)
@@ -14,11 +16,11 @@ register_adapter(np.float64, AsIs)
 
 class SQLHandler:
     """
-    Handler for SQL database operations with connection pooling and health checking.
+    Handler for SQL database operations with connection pooling.
 
     This class provides functionality to:
-    - Manage database connections with automatic reconnection
-    - Execute CRUD operations with connection pooling
+    - Manage database connections with connection pooling
+    - Execute CRUD operations
     - Handle batch operations
     - Clean and reset database state
 
@@ -27,8 +29,10 @@ class SQLHandler:
         user (str): Database username
         password (str): Database password
         database (str): Database name
-        connection_pool: PostgreSQL connection pool
+        pool: Connection pool
         query_stats: Dictionary to store query execution statistics
+        max_retries (int): Maximum number of reconnection attempts
+        retry_delay (float): Delay between reconnection attempts in seconds
         min_connections (int): Minimum number of connections in pool
         max_connections (int): Maximum number of connections in pool
     """
@@ -39,7 +43,9 @@ class SQLHandler:
         user: str, 
         password: str, 
         database: str,
-        min_connections: int = 2,
+        max_retries: int = 3,
+        retry_delay: float = 1.0,
+        min_connections: int = 1,
         max_connections: int = 10
     ):
         """
@@ -50,107 +56,154 @@ class SQLHandler:
             user (str): Database username
             password (str): Database password
             database (str): Database name
-            min_connections (int): Minimum connections in pool (default: 2)
-            max_connections (int): Maximum connections in pool (default: 10)
+            max_retries (int): Maximum number of reconnection attempts
+            retry_delay (float): Delay between reconnection attempts in seconds
+            min_connections (int): Minimum number of connections in pool
+            max_connections (int): Maximum number of connections in pool
+
+        Raises:
+            ValueError: If any required connection parameter is empty
         """
+        if not all([host, user, password, database]):
+            raise ValueError("All connection parameters (host, user, password, database) must be provided")
+            
         self.host = host
         self.user = user
         self.password = password
         self.database = database
+        self.pool = None
+        self.query_stats = {"queries": {}}
+        self.max_retries = max_retries
+        self.retry_delay = retry_delay
         self.min_connections = min_connections
         self.max_connections = max_connections
-        self.connection_pool: Optional[pool.SimpleConnectionPool] = None
-        self.query_stats = {"queries": {}}
         self.logger = logging.getLogger(__name__)
 
-    def connect(self) -> None:
+    def _create_pool(self) -> None:
         """
-        Establish connection pool to the PostgreSQL database.
+        Create a new connection pool with the configured parameters.
         
         Raises:
-            psycopg2.Error: If unable to create connection pool
+            psycopg2.Error: If unable to create the connection pool
         """
         try:
-            if self.connection_pool:
-                self.connection_pool.closeall()
-            
-            self.connection_pool = psycopg2.pool.SimpleConnectionPool(
-                self.min_connections,
-                self.max_connections,
+            self.pool = SimpleConnectionPool(
+                minconn=self.min_connections,
+                maxconn=self.max_connections,
                 host=self.host,
                 user=self.user,
                 password=self.password,
                 database=self.database,
-                # Connection health parameters
-                keepalives_idle=600,      # Start keepalives after 10 minutes idle
-                keepalives_interval=30,   # Send keepalive every 30 seconds
-                keepalives_count=3,       # Allow 3 failed keepalives before declaring dead
-                connect_timeout=10        # 10 second connection timeout
+                # Configure TCP keepalive
+                keepalives=1,
+                keepalives_idle=30,
+                keepalives_interval=10,
+                keepalives_count=5
             )
-            self.logger.info(f"Connection pool created with {self.min_connections}-{self.max_connections} connections")
-        except Exception as e:
+            self.logger.info(f"Created connection pool (min={self.min_connections}, max={self.max_connections})")
+        except psycopg2.Error as e:
             self.logger.error(f"Failed to create connection pool: {e}")
             raise
 
-    def disconnect(self) -> None:
-        """Close all connections in the pool if it exists."""
-        if self.connection_pool:
-            self.connection_pool.closeall()
-            self.connection_pool = None
-            self.logger.info("Connection pool closed")
-
-    def _get_connection(self):
+    @contextlib.contextmanager
+    def get_connection(self):
         """
-        Get a connection from the pool with automatic reconnection.
+        Get a connection from the pool with automatic return.
         
-        Returns:
-            psycopg2.connection: Database connection
-            
+        Yields:
+            psycopg2.extensions.connection: Database connection from the pool
+             
         Raises:
-            psycopg2.Error: If unable to get connection after retries
+            psycopg2.Error: If unable to get a connection from the pool
         """
-        if not self.connection_pool:
-            self.logger.warning("Connection pool not initialized, creating new pool")
-            self.connect()
-        
-        max_retries = 3
-        for attempt in range(max_retries):
+        if self.pool is None:
+            self._create_pool()
+             
+        for attempt in range(self.max_retries + 1):
             try:
-                connection = self.connection_pool.getconn()
-                
-                # Test the connection with a simple query
-                if connection.closed != 0:
-                    # Connection is closed, remove it and try again
-                    self.connection_pool.putconn(connection, close=True)
-                    if attempt < max_retries - 1:
-                        continue
-                    else:
-                        raise psycopg2.InterfaceError("Unable to get valid connection")
-                
-                return connection
-                
+                connection = self.pool.getconn()
+                try:
+                    yield connection
+                finally:
+                    self.pool.putconn(connection)
+                return
             except (psycopg2.OperationalError, psycopg2.InterfaceError) as e:
-                self.logger.warning(f"Connection issue on attempt {attempt + 1}: {e}")
-                if attempt < max_retries - 1:
-                    # Try to recreate the pool
+                if attempt < self.max_retries:
+                    self.logger.warning(
+                        f"Failed to get connection from pool (attempt {attempt + 1}/{self.max_retries + 1}): {e}. "
+                        f"Recreating pool..."
+                    )
                     try:
-                        self.connect()
-                    except Exception as pool_error:
-                        self.logger.error(f"Failed to recreate pool: {pool_error}")
-                        time.sleep(1)  # Brief delay before retry
+                        self.pool.closeall()
+                    except:
+                        pass
+                    self._create_pool()
+                    time.sleep(self.retry_delay)
                 else:
+                    self.logger.error(f"Failed to get connection after {self.max_retries + 1} attempts")
                     raise
 
-    def _return_connection(self, connection, close: bool = False) -> None:
+    def connect(self) -> None:
         """
-        Return a connection to the pool.
+        Initialize the connection pool.
         
-        Args:
-            connection: Database connection to return
-            close (bool): Whether to close the connection instead of returning it
+        Raises:
+            psycopg2.Error: If unable to create the connection pool
         """
-        if self.connection_pool and connection:
-            self.connection_pool.putconn(connection, close=close)
+        self._create_pool()
+
+    def disconnect(self) -> None:
+        """Close all connections in the pool."""
+        if self.pool:
+            try:
+                self.pool.closeall()
+                self.logger.info("Closed all database connections in the pool")
+            except:
+                pass
+            finally:
+                self.pool = None
+
+    def health_check(self) -> Dict[str, Any]:
+        """
+        Perform a health check on the database connection pool.
+
+        Returns:
+            Dict[str, Any]: Health status information including pool status,
+                           query statistics, and connection parameters
+
+        Example:
+            {
+                "status": "healthy",
+                "pool_active": True,
+                "host": "postgres_db",
+                "database": "history_DB",
+                "query_count": 42,
+                "total_queries": 15,
+                "min_connections": 1,
+                "max_connections": 10
+            }
+        """
+        pool_active = False
+        if self.pool:
+            try:
+                with self.get_connection() as conn:
+                    with conn.cursor() as cursor:
+                        cursor.execute("SELECT 1")
+                        cursor.fetchone()
+                        pool_active = True
+            except:
+                pass
+                
+        return {
+            "status": "healthy" if pool_active else "unhealthy",
+            "pool_active": pool_active,
+            "host": self.host,
+            "database": self.database,
+            "query_count": sum(stats["count"] for stats in self.query_stats["queries"].values()),
+            "total_queries": len(self.query_stats["queries"]),
+            "min_connections": self.min_connections,
+            "max_connections": self.max_connections
+        }
 
     def insert(self, table: str, data: Dict[str, Any]) -> int:
         """
@@ -165,24 +218,23 @@ class SQLHandler:
             
         Raises:
             psycopg2.Error: If there's an error executing the SQL query
+            ValueError: If table name or data is invalid
         """
-        connection = self._get_connection()
-        try:
-            cursor = connection.cursor()
-            placeholders = ", ".join(["%s"] * len(data))
-            columns = ", ".join(f'"{k}"' for k in data.keys())
-            sql = f'INSERT INTO "{table}" ({columns}) VALUES ({placeholders}) RETURNING id'
-            cursor.execute(sql, list(data.values()))
-            last_insert_id = cursor.fetchone()[0]
-            connection.commit()
-            cursor.close()
-            return last_insert_id
-        except Exception as e:
-            connection.rollback()
-            self.logger.error(f"Insert failed: {e}")
-            raise
-        finally:
-            self._return_connection(connection)
+        if not table or not data:
+            raise ValueError("Table name and data must be provided")
+            
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            try:
+                placeholders = ", ".join(["%s"] * len(data))
+                columns = ", ".join(f'"{k}"' for k in data.keys())
+                sql = f'INSERT INTO "{table}" ({columns}) VALUES ({placeholders}) RETURNING id'
+                cursor.execute(sql, list(data.values()))
+                last_insert_id = cursor.fetchone()[0]
+                conn.commit()
+                return last_insert_id
+            finally:
+                cursor.close()
 
     def query(self, sql: str, params: Dict[str, Any] = None) -> pd.DataFrame:
         """
@@ -197,33 +249,30 @@ class SQLHandler:
             
         Raises:
             psycopg2.Error: If there's an error executing the SQL query
+            ValueError: If SQL query is empty
         """
+        if not sql or not sql.strip():
+            raise ValueError("SQL query must be provided")
+            
         start_time = time.time()
-        connection = self._get_connection()
-        
-        try:
-            cursor = connection.cursor()
-            cursor.execute(sql, params or ())
-            columns = [desc[0] for desc in cursor.description]
-            result = cursor.fetchall()
-            cursor.close()
-            
-            duration = time.time() - start_time
-            
-            # Update query statistics
-            if sql not in self.query_stats["queries"]:
-                self.query_stats["queries"][sql] = {"count": 0, "total_time": 0}
-            
-            self.query_stats["queries"][sql]["count"] += 1
-            self.query_stats["queries"][sql]["total_time"] += duration
-            
-            return pd.DataFrame(result, columns=columns)
-            
-        except Exception as e:
-            self.logger.error(f"Query failed: {e}")
-            raise
-        finally:
-            self._return_connection(connection)
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            try:
+                cursor.execute(sql, params or ())
+                columns = [desc[0] for desc in cursor.description] if cursor.description else []
+                result = cursor.fetchall()
+                
+                duration = time.time() - start_time
+
+                if sql not in self.query_stats["queries"]:
+                    self.query_stats["queries"][sql] = {"count": 0, "total_time": 0}
+
+                self.query_stats["queries"][sql]["count"] += 1
+                self.query_stats["queries"][sql]["total_time"] += duration
+
+                return pd.DataFrame(result, columns=columns)
+            finally:
+                cursor.close()
 
     def delete(self, table: str, condition: str) -> None:
         """
@@ -235,20 +284,19 @@ class SQLHandler:
             
         Raises:
             psycopg2.Error: If there's an error executing the SQL query
+            ValueError: If table name or condition is invalid
         """
-        connection = self._get_connection()
-        try:
-            cursor = connection.cursor()
-            sql = f'DELETE FROM "{table}" WHERE {condition}'
-            cursor.execute(sql)
-            connection.commit()
-            cursor.close()
-        except Exception as e:
-            connection.rollback()
-            self.logger.error(f"Delete failed: {e}")
-            raise
-        finally:
-            self._return_connection(connection)
+        if not table or not condition:
+            raise ValueError("Table name and condition must be provided")
+            
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            try:
+                sql = f'DELETE FROM "{table}" WHERE {condition}'
+                cursor.execute(sql)
+                conn.commit()
+            finally:
+                cursor.close()
 
     def update(self, table: str, data: Dict[str, Any], condition: str) -> None:
         """
@@ -261,21 +309,20 @@ class SQLHandler:
             
         Raises:
             psycopg2.Error: If there's an error executing the SQL query
+            ValueError: If parameters are invalid
         """
-        connection = self._get_connection()
-        try:
-            cursor = connection.cursor()
-            set_clause = ", ".join([f'"{key}" = %s' for key in data.keys()])
-            sql = f'UPDATE "{table}" SET {set_clause} WHERE {condition}'
-            cursor.execute(sql, list(data.values()))
-            connection.commit()
-            cursor.close()
-        except Exception as e:
-            connection.rollback()
-            self.logger.error(f"Update failed: {e}")
-            raise
-        finally:
-            self._return_connection(connection)
+        if not table or not data or not condition:
+            raise ValueError("Table name, data, and condition must be provided")
+            
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            try:
+                set_clause = ", ".join([f'"{key}" = %s' for key in data.keys()])
+                sql = f'UPDATE "{table}" SET {set_clause} WHERE {condition}'
+                cursor.execute(sql, list(data.values()))
+                conn.commit()
+            finally:
+                cursor.close()
 
     def execute_sql(self, sql: str, params: tuple = None) -> None:
         """
@@ -287,19 +334,18 @@ class SQLHandler:
 
         Raises:
             psycopg2.Error: If there's an error executing the SQL query
+            ValueError: If SQL query is empty
         """
-        connection = self._get_connection()
-        try:
-            cursor = connection.cursor()
-            cursor.execute(sql, params or ())
-            connection.commit()
-            cursor.close()
-        except Exception as e:
-            connection.rollback()
-            self.logger.error(f"Execute SQL failed: {e}")
-            raise
-        finally:
-            self._return_connection(connection)
+        if not sql or not sql.strip():
+            raise ValueError("SQL query must be provided")
+            
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            try:
+                cursor.execute(sql, params or ())
+                conn.commit()
+            finally:
+                cursor.close()
 
     def delete_all_tables(self):
         """
@@ -308,29 +354,24 @@ class SQLHandler:
         Raises:
             psycopg2.Error: If there's an error executing the SQL query
         """
-        connection = self._get_connection()
-        try:
-            cursor = connection.cursor()
-            cursor.execute(
-                """
-                    SELECT table_name FROM information_schema.tables
-                    WHERE table_schema = 'public'
-                """
-            )
-            tables = cursor.fetchall()
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            try:
+                cursor.execute(
+                    """
+                        SELECT table_name FROM information_schema.tables
+                        WHERE table_schema = 'public'
+                    """
+                )
+                tables = cursor.fetchall()
 
-            cursor.execute("SET CONSTRAINTS ALL DEFERRED")
-            for table in tables:
-                cursor.execute(f'TRUNCATE TABLE "{table[0]}" CASCADE')
+                cursor.execute("SET CONSTRAINTS ALL DEFERRED")
+                for table in tables:
+                    cursor.execute(f'TRUNCATE TABLE "{table[0]}" CASCADE')
 
-            connection.commit()
-            cursor.close()
-        except Exception as e:
-            connection.rollback()
-            self.logger.error(f"Delete all tables failed: {e}")
-            raise
-        finally:
-            self._return_connection(connection)
+                conn.commit()
+            finally:
+                cursor.close()
 
     def clean_all_tables(self):
         """
@@ -344,35 +385,29 @@ class SQLHandler:
         Raises:
             psycopg2.Error: If there's an error executing the SQL query
         """
-        connection = self._get_connection()
-        try:
-            cursor = connection.cursor()
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            try:
+                # Get all tables
+                cursor.execute(
+                    """
+                    SELECT table_name FROM information_schema.tables
+                    WHERE table_schema = 'public'
+                    """
+                )
+                tables = cursor.fetchall()
 
-            # Get all tables
-            cursor.execute(
-                """
-                SELECT table_name FROM information_schema.tables
-                WHERE table_schema = 'public'
-                """
-            )
-            tables = cursor.fetchall()
+                # Defer constraints and truncate tables
+                cursor.execute("SET CONSTRAINTS ALL DEFERRED")
 
-            # Defer constraints and truncate tables
-            cursor.execute("SET CONSTRAINTS ALL DEFERRED")
+                for table in tables:
+                    table_name = table[0]
+                    # TRUNCATE is faster than DELETE and resets sequences automatically
+                    cursor.execute(f'TRUNCATE TABLE "{table_name}" CASCADE')
 
-            for table in tables:
-                table_name = table[0]
-                # TRUNCATE is faster than DELETE and resets sequences automatically
-                cursor.execute(f'TRUNCATE TABLE "{table_name}" CASCADE')
-
-            connection.commit()
-            cursor.close()
-        except Exception as e:
-            connection.rollback()
-            self.logger.error(f"Clean all tables failed: {e}")
-            raise
-        finally:
-            self._return_connection(connection)
+                conn.commit()
+            finally:
+                cursor.close()
 
     def batch_insert(
         self,
@@ -396,37 +431,36 @@ class SQLHandler:
             
         Raises:
             psycopg2.Error: If there's an error executing the SQL query
+            ValueError: If parameters are invalid
         """
+        if not table or not columns:
+            raise ValueError("Table name and columns must be provided")
+            
         if not values:
             return []
 
-        connection = self._get_connection()
-        try:
-            cursor = connection.cursor()
-            inserted_ids = []
-            columns_str = ", ".join(f'"{col}"' for col in columns)
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            try:
+                inserted_ids = []
+                columns_str = ", ".join(f'"{col}"' for col in columns)
 
-            # Construct the INSERT query for use with execute_values
-            query = f'INSERT INTO "{table}" ({columns_str}) VALUES %s RETURNING id'
+                # Construct the INSERT query for use with execute_values
+                query = f'INSERT INTO "{table}" ({columns_str}) VALUES %s RETURNING id'
 
-            # Process in batches
-            for i in range(0, len(values), batch_size):
-                batch = values[i : i + batch_size]
-                
-                # Use execute_values with fetch=True to get the returned IDs
-                batch_ids = execute_values(cursor, query, batch, fetch=True)
-                
-                inserted_ids.extend([row[0] for row in batch_ids])
+                # Process in batches
+                for i in range(0, len(values), batch_size):
+                    batch = values[i : i + batch_size]
+                    
+                    # Use execute_values with fetch=True to get the returned IDs
+                    batch_ids = execute_values(cursor, query, batch, fetch=True)
+                    
+                    inserted_ids.extend([row[0] for row in batch_ids])
 
-            connection.commit()
-            cursor.close()
-            return inserted_ids
-        except Exception as e:
-            connection.rollback()
-            self.logger.error(f"Batch insert failed: {e}")
-            raise
-        finally:
-            self._return_connection(connection)
+                conn.commit()
+                return inserted_ids
+            finally:
+                cursor.close()
 
     def batch_update(
         self,
@@ -442,33 +476,34 @@ class SQLHandler:
             table (str): Target table name
             updates (List[Dict[str, Any]]): List of update dictionaries
             conditions (List[str]): List of WHERE clauses for updates
-            batch_size (int): The size of each batch to process.
-            
+            batch_size (int): The size of each batch to process
+
         Raises:
             psycopg2.Error: If there's an error executing the SQL query
+            ValueError: If parameters are invalid
         """
-        connection = self._get_connection()
-        try:
-            cursor = connection.cursor()
+        if not table or not updates or not conditions:
+            raise ValueError("Table name, updates, and conditions must be provided")
+            
+        if len(updates) != len(conditions):
+            raise ValueError("Updates and conditions lists must have the same length")
+            
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            try:
+                for i in range(0, len(updates), batch_size):
+                    batch_updates = updates[i : min(i + batch_size, len(updates))]
+                    batch_conditions = conditions[i : min(i + batch_size, len(conditions))]
 
-            for i in range(0, len(updates), batch_size):
-                batch_updates = updates[i : min(i + batch_size, len(updates))]
-                batch_conditions = conditions[i : min(i + batch_size, len(conditions))]
+                    for update_dict, condition in zip(batch_updates, batch_conditions):
+                        set_clause = ", ".join([f'"{key}" = %s' for key in update_dict.keys()])
+                        sql = f'UPDATE "{table}" SET {set_clause} WHERE {condition}'
+                        
+                        cursor.execute(sql, list(update_dict.values()))
 
-                for update_dict, condition in zip(batch_updates, batch_conditions):
-                    set_clause = ", ".join([f'"{key}" = %s' for key in update_dict.keys()])
-                    sql = f'UPDATE "{table}" SET {set_clause} WHERE {condition}'
-                    
-                    cursor.execute(sql, list(update_dict.values()))
-
-            connection.commit()
-            cursor.close()
-        except Exception as e:
-            connection.rollback()
-            self.logger.error(f"Batch update failed: {e}")
-            raise
-        finally:
-            self._return_connection(connection)
+                conn.commit()
+            finally:
+                cursor.close()
 
     def batch_query(self, queries: List[str]) -> List[pd.DataFrame]:
         """
@@ -482,44 +517,28 @@ class SQLHandler:
             
         Raises:
             psycopg2.Error: If there's an error executing the SQL query
+            ValueError: If queries list is invalid
         """
-        connection = self._get_connection()
-        try:
-            results = []
-            cursor = connection.cursor()
-
-            for query in queries:
-                cursor.execute(query)
-                if cursor.description:  # If the query returns results
-                    columns = [desc[0] for desc in cursor.description]
-                    result = cursor.fetchall()
-                    results.append(pd.DataFrame(result, columns=columns))
-                else:
-                    results.append(pd.DataFrame())
-
-            cursor.close()
-            return results
-        except Exception as e:
-            self.logger.error(f"Batch query failed: {e}")
-            raise
-        finally:
-            self._return_connection(connection)
-
-    def get_pool_status(self) -> Dict[str, Any]:
-        """
-        Get current connection pool status for monitoring.
-        
-        Returns:
-            Dict[str, Any]: Pool status information
-        """
-        if not self.connection_pool:
-            return {"status": "not_initialized"}
-        
-        # Note: SimpleConnectionPool doesn't expose detailed stats
-        # This is a basic implementation
-        return {
-            "status": "active",
-            "min_connections": self.min_connections,
-            "max_connections": self.max_connections,
-            "pool_type": "SimpleConnectionPool"
-        }
+        if not queries:
+            raise ValueError("Queries list must be provided")
+            
+        results = []
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            try:
+                for query in queries:
+                    if not query or not query.strip():
+                        results.append(pd.DataFrame())
+                        continue
+                        
+                    cursor.execute(query)
+                    if cursor.description:  # If the query returns results
+                        columns = [desc[0] for desc in cursor.description]
+                        result = cursor.fetchall()
+                        results.append(pd.DataFrame(result, columns=columns))
+                    else:
+                        results.append(pd.DataFrame())
+            finally:
+                cursor.close()
+                
+        return results
