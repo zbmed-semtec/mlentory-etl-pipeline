@@ -163,11 +163,13 @@ class LoadProcessor:
         Raises:
             ValueError: If save_chunks is True but save_path is None
         """
-        
-        
-            
+         
         kg_chunks = []
         extraction_metadata_chunks = []
+        
+        if kg_chunks_size == 0:
+            kg_chunks.append(kg)
+            extraction_metadata_chunks.append(extraction_metadata)
         
         if kg_chunks_size>0:
             triplets_metadata = {}
@@ -218,7 +220,7 @@ class LoadProcessor:
                         temp_metadata_chunk.add(metadata_triplet_of_entity)
                     
                 
-                if batch_triplet_cnt*6 >= kg_chunks_size:
+                if batch_triplet_cnt*7 >= kg_chunks_size:
                     batch_triplet_cnt = 0
                     kg_chunks.append(temp_kg_chunk)
                     
@@ -230,15 +232,11 @@ class LoadProcessor:
                     # Copy namespaces to new chunks
                     for prefix, namespace in kg.namespaces():
                         temp_kg_chunk.bind(prefix, namespace)
-                    for prefix, namespace in extraction_metadata.namespaces():
                         temp_metadata_chunk.bind(prefix, namespace)  
             
             if batch_triplet_cnt>0:
                 kg_chunks.append(temp_kg_chunk)
                 extraction_metadata_chunks.append(temp_metadata_chunk)
-        else:
-            kg_chunks.append(kg)
-            extraction_metadata_chunks.append(extraction_metadata)
             
         if save_chunks:
             if save_path is "":
@@ -271,7 +269,7 @@ class LoadProcessor:
                 raise
         
         return kg_chunks, extraction_metadata_chunks
-
+        
     def create_chunks_with_files(self, kg: Graph, extraction_metadata: Graph, kg_chunks_size: int, chunks_output_dir: str) -> Tuple[List[Graph], List[Graph], Dict[str, str]]:
         """
         Create chunks and save them to files for remote upload.
