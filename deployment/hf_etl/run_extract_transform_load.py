@@ -426,7 +426,7 @@ def main():
         start_time = time.time()
         kg_integrated, extraction_metadata_integrated = transformer.transform_HF_models_with_related_entities(
             extracted_entities=extracted_entities,
-            save_output=True,
+            save_output=False,
             kg_output_dir=args.output_dir+"/kg",
             extraction_metadata_output_dir=args.output_dir+"/extraction_metadata",
         )
@@ -479,7 +479,7 @@ def main():
                               extraction_metadata_integrated,
                               extraction_name="hf_extraction",
                               remote_db=args.remote_db,
-                              kg_chunks_size=350,
+                              kg_chunks_size=3000,
                               save_load_output=True,
                               load_output_dir=args.output_dir+"/chunks")
     else:
