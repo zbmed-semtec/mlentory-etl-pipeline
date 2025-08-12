@@ -17,6 +17,7 @@ setup(
         "elasticsearch==7.13.4",
         "elasticsearch-dsl<8.0.0",
         "tqdm",
+        "requests",
     ],
     python_requires=">=3.8.10",
     author="Nelson Q",

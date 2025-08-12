@@ -1,4 +1,5 @@
 https://huggingface.co/lodestones/Chroma
+https://huggingface.co/eshaaftab900/EN_DeepSeek-R1-Distill-Llama-8B-ft-QRCD-lora-adapters-2
 https://huggingface.co/openai/whisper-small
 https://huggingface.co/black-forest-labs/FLUX.1-Kontext-dev
 https://huggingface.co/pritamdeka/BioBERT-mnli-snli-scinli-scitail-mednli-stsb

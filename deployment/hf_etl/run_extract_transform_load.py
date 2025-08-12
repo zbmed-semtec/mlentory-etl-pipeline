@@ -173,25 +173,51 @@ def initialize_load_processor(
     Returns:
         LoadProcessor: The load processor instance.
     """
+    # Get database configuration from environment variables
+    postgres_host = os.getenv("POSTGRES_HOST", "postgres_db")
+    postgres_user = os.getenv("POSTGRES_USER", "user") 
+    postgres_password = os.getenv("POSTGRES_PASSWORD", "password")
+    postgres_db = os.getenv("POSTGRES_DB", "history_DB")
+    
+    virtuoso_host = os.getenv("VIRTUOSO_HOST", "virtuoso_db")
+    virtuoso_http_port = os.getenv("VIRTUOSO_HTTP_PORT", "8890")
+    virtuoso_password = os.getenv("VIRTUOSO_DBA_PASSWORD", "my_strong_password")
+    
+    elasticsearch_host = os.getenv("ELASTICSEARCH_HOST", "elastic_db")
+    elasticsearch_port = int(os.getenv("ELASTICSEARCH_PORT", "9200"))
+    
+    remote_api_base_url = os.getenv("REMOTE_API_BASE_URL", "http://10.0.7.249:8000")
+    
+    print(f"postgres_host: {postgres_host}")
+    print(f"postgres_user: {postgres_user}")
+    print(f"postgres_password: {postgres_password}")
+    print(f"postgres_db: {postgres_db}")
+    print(f"virtuoso_host: {virtuoso_host}")
+    print(f"virtuoso_http_port: {virtuoso_http_port}")
+    print(f"virtuoso_password: {virtuoso_password}")
+    print(f"elasticsearch_host: {elasticsearch_host}")
+    print(f"elasticsearch_port: {elasticsearch_port}")
+    print(f"remote_api_base_url: {remote_api_base_url}")
+    
     sqlHandler = SQLHandler(
-        host=POSTGRES_HOST,
-        user=POSTGRES_USER,
-        password=POSTGRES_PASSWORD,
-        database=POSTGRES_DB,
+        host=postgres_host,
+        user=postgres_user,
+        password=postgres_password,
+        database=postgres_db,
     )
     sqlHandler.connect()
 
     rdfHandler = RDFHandler(
-        container_name=VIRTUOSO_HOST,  # Assuming container name is the same as the host
+        container_name=virtuoso_host,
         kg_files_directory=kg_files_directory,
-        _user=VIRTUOSO_USER,
-        _password=VIRTUOSO_PASSWORD,
-        sparql_endpoint=VIRTUOSO_SPARQL_ENDPOINT,
+        _user="dba",
+        _password=virtuoso_password,
+        sparql_endpoint=f"http://{virtuoso_host}:{virtuoso_http_port}/sparql",
     )
 
     elasticsearchHandler = IndexHandler(
-        es_host=ELASTICSEARCH_HOST,
-        es_port=ELASTICSEARCH_PORT,
+        es_host=elasticsearch_host,
+        es_port=elasticsearch_port,
     )
 
     elasticsearchHandler.initialize_HF_index(index_name="hf_models")
@@ -214,6 +240,7 @@ def initialize_load_processor(
         IndexHandler=elasticsearchHandler,
         GraphHandler=graphHandler,
         kg_files_directory=kg_files_directory,
+        remote_api_base_url=remote_api_base_url,
     )
 
 def intialize_folder_structure(output_dir: str, clean_folders: bool = False) -> None:
@@ -287,6 +314,21 @@ def parse_args() -> argparse.Namespace:
         default="None",
         help="Strategy to use for unstructured text extraction.",
     )
+    
+    parser.add_argument(
+        "--remote-db",
+        "-rd",
+        # action="store_true",
+        default=False,
+        help="Use remote databases for loading data.",
+    )
+    
+    parser.add_argument(
+        "--chunking",
+        default=True,
+        help="Wheter or not to chunk the data for the uploading step"
+    )
+    
     return parser.parse_args()
 
 
@@ -299,11 +341,10 @@ def main():
     kg_files_directory = "./../kg_files"  # Path to kg files directory
     intialize_folder_structure(args.output_dir,clean_folders=False)
     
-    use_dummy_data = args.use_dummy_data
     kg_integrated = Graph()  
     extraction_metadata_integrated = Graph()
     
-    if not use_dummy_data:
+    if args.use_dummy_data is False:
 
         # Initialize extractor
         logger.info("Initializing extractor...")
@@ -315,7 +356,7 @@ def main():
         extracted_entities = {}
         models_df = pd.DataFrame()
 
-        if args.model_list_file :
+        if args.model_list_file:
             logger.info(f"Processing models from file: {args.model_list_file}")
             try:
                 model_ids_from_file = load_models_from_file(args.model_list_file)
@@ -368,11 +409,6 @@ def main():
             end_time = time.time()
             logger.info(f"Model extraction with default parameters took {end_time - start_time:.2f} seconds")
             
-            # for key, value in extracted_entities["models"].items():
-            #     logger.info(f"Key: {key}")
-            #     logger.info(f"Value: {value}")
-            #     logger.info(f"Value type: {type(value)}")
-            
             # 'models' key in extracted_entities already contains the combined models here
             if "models" not in extracted_entities or extracted_entities["models"].empty:
                 logging.warning("No models were extracted using the default method. Check parameters or HF connection.")
@@ -390,7 +426,7 @@ def main():
         start_time = time.time()
         kg_integrated, extraction_metadata_integrated = transformer.transform_HF_models_with_related_entities(
             extracted_entities=extracted_entities,
-            save_output=True,
+            save_output=False,
             kg_output_dir=args.output_dir+"/kg",
             extraction_metadata_output_dir=args.output_dir+"/extraction_metadata",
         )
@@ -402,7 +438,7 @@ def main():
         start_time = time.time()
         kg_integrated.parse(
             args.output_dir
-            + "/../../copy_examples/files/kg/10000_HF_models_kg.ttl",
+            + "/../../copy_examples/files/kg/example_HF_models_kg.nt",
             format="turtle",
         )
         end_time = time.time()
@@ -414,7 +450,7 @@ def main():
         start_time = time.time()
         extraction_metadata_integrated.parse(
             args.output_dir
-            + "/../../copy_examples/files/extraction_metadata/10000_HF_models_extraction_metadata_kg.ttl",
+            + "/../../copy_examples/files/extraction_metadata/example_HF_models_extraction_metadata_kg.nt",
             format="turtle",
         )
         end_time = time.time()
@@ -431,22 +467,31 @@ def main():
 
     logger.info("Cleaning databases...")
     start_time = time.time()
-    # loader.clean_DBs()
+    loader.clean_DBs()
     end_time = time.time()
     logger.info(f"Database cleaning took {end_time - start_time:.2f} seconds")
 
     # Load data
     logger.info("Starting database update with KG...")
     start_time = time.time()
-    loader.update_dbs_with_kg(kg_integrated, extraction_metadata_integrated)
+    if args.chunking is True:
+        loader.update_dbs_with_kg(kg_integrated,
+                              extraction_metadata_integrated,
+                              extraction_name="hf_extraction",
+                              remote_db=args.remote_db,
+                              kg_chunks_size=3000,
+                              save_load_output=True,
+                              load_output_dir=args.output_dir+"/chunks")
+    else:
+        loader.update_dbs_with_kg(kg_integrated,
+                              extraction_metadata_integrated,
+                              extraction_name="hf_extraction",
+                              remote_db=args.remote_db,
+                              kg_chunks_size=0,
+                              save_load_output=True,
+                              load_output_dir=args.output_dir+"/chunks")
     end_time = time.time()
     logger.info(f"Database update with KG took {end_time - start_time:.2f} seconds")
-    
-    # print("CHECKING QUERY STATS!!!!!!!!!!!!!!")
-    # print(loader.GraphHandler.SQLHandler.query_stats["queries"])
-    
-    # print("CHECKING LICENSES!!!!!!!!!!!!!!")
-    # print(extracted_entities["licenses"])
 
 
 if __name__ == "__main__":

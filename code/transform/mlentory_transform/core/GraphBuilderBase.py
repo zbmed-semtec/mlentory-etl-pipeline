@@ -57,6 +57,7 @@ class GraphBuilderBase:
             "rdf": RDF,
             "rdfs": RDFS,
             "xsd": XSD,
+            "mlentory": self.meta_namespace
         }
 
         # Bind all namespaces to the graphs

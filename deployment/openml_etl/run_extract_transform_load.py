@@ -35,6 +35,8 @@ VIRTUOSO_SPARQL_ENDPOINT = os.getenv("VIRTUOSO_SPARQL_ENDPOINT", f"http://{VIRTU
 ELASTICSEARCH_HOST = os.getenv("ELASTICSEARCH_HOST", "elastic_db")
 ELASTICSEARCH_PORT = int(os.getenv("ELASTICSEARCH_PORT", "9200")) # Env vars are strings
 
+REMOTE_API_BASE_URL = os.getenv("REMOTE_API_BASE_URL", "http://localhost:8000")
+
 
 def load_tsv_file_to_list(path: str) -> List[str]:
     return [val[0] for val in pd.read_csv(path, sep="\t").values.tolist()]
@@ -182,6 +184,7 @@ def initialize_load_processor(kg_files_directory: str, logger: logging.Logger) -
             IndexHandler=elasticsearchHandler,
             GraphHandler=graphHandler,
             kg_files_directory=kg_files_directory,
+            remote_api_base_url=REMOTE_API_BASE_URL,
         )
 
     except Exception as e:
@@ -318,7 +321,7 @@ def main():
 
     logger.info("Loading the knowledge graph to database")
     start_time = time.time()
-    loader.update_dbs_with_kg(kg_integrated, extraction_metadata_integrated)
+    loader.update_dbs_with_kg(kg_integrated, extraction_metadata_integrated, extraction_name="openml_extraction")
     end_time = time.time()
     logger.info("Loading data to db completed successfully")
     logger.info(f"TIME TAKEN FOR LOADING METADATA:  {end_time - start_time} seconds")
