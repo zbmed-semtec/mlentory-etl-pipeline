@@ -255,6 +255,7 @@ def intialize_folder_structure(output_dir: str, clean_folders: bool = False) -> 
     os.makedirs(output_dir+"/articles", exist_ok=True)
     os.makedirs(output_dir+"/kg", exist_ok=True)
     os.makedirs(output_dir+"/extraction_metadata", exist_ok=True)
+    os.makedirs(output_dir+"/chunks", exist_ok=True)
 
 def parse_args() -> argparse.Namespace:
     """
