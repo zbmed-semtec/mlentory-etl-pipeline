@@ -92,7 +92,7 @@ class AI4Life(Document):
     """
 
     db_identifier = Keyword()
-
+    
     name = Text(
         analyzer=analyzer(
             "title_analyzer",
@@ -100,6 +100,7 @@ class AI4Life(Document):
             tokenizer=tokenizer("edge_ngram", "edge_ngram", min_gram=3, max_gram=30),
         ),
     )
+    relatedDatasets = Text(multi=True)
     description = Text()
     license = Text()
     sharedBy = Text()

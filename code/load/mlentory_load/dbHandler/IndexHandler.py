@@ -181,6 +181,7 @@ class IndexHandler:
         index_run_entity.license = ""
         index_run_entity.sharedBy = ""
         index_run_entity.keywords = []
+        index_run_entity.relatedDatasets = []
 
         for key, value in info.items():
             if "identifier" in key:
@@ -195,6 +196,8 @@ class IndexHandler:
                 index_run_entity.license = value[0].lower()
             elif "keywords" in key:
                 index_run_entity.keywords.extend(value)
+            elif "trainedOn" in key:
+                index_run_entity.relatedDatasets.extend(value)
 
         return index_run_entity
 
