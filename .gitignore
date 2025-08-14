@@ -211,3 +211,5 @@ code/extractors/examples/outputs/
 
 deployment/hf_etl/copy_examples/files/kg/10000_HF_models_kg.ttl
 deployment/hf_etl/copy_examples/files/extraction_metadata/10000_HF_models_extraction_metadata_kg.ttl
+
+deployment/ai4life_etl/outputs/*
