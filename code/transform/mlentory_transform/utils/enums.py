@@ -85,6 +85,7 @@ class Platform(str, Enum):
     """
     HUGGING_FACE = "hugging_face"
     OPEN_ML = "open_ml"
+    AI4LIFE = "ai4life"
     PYTORCH_HUB = "pytorch_hub"
     TENSORFLOW_HUB = "tensorflow_hub"
     PAPERS_WITH_CODE = "papers_with_code"
