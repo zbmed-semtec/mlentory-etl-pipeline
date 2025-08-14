@@ -281,7 +281,7 @@ class MlentoryTransformWithGraphBuilder:
         if save_output_in_json:
             current_date = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
             kg_output_path = os.path.join(output_dir, f"{current_date}_unified_kg.nt")
-            unified_graph.serialize(destination=kg_output_path, format="turtle")
+            unified_graph.serialize(destination=kg_output_path, format="nt")
 
         return unified_graph
     
@@ -427,8 +427,8 @@ class MlentoryTransformWithGraphBuilder:
             current_date = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
             kg_output_path = os.path.join(output_dir, f"{current_date}_disambiguated_kg.nt")
             before_disambiguation_kg_output_path = os.path.join(output_dir, f"{current_date}_before_disambiguation_kg.nt")
-            graph.serialize(destination=before_disambiguation_kg_output_path, format="turtle")
-            disambiguated_graph.serialize(destination=kg_output_path, format="turtle")
+            graph.serialize(destination=before_disambiguation_kg_output_path, format="nt")
+            disambiguated_graph.serialize(destination=kg_output_path, format="nt")
         
         return disambiguated_graph
 
