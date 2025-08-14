@@ -262,8 +262,27 @@ def parse_args() -> argparse.Namespace:
 
     Returns:
         argparse.Namespace: The parsed arguments.
+    
+    Usage modes:
+        1. Full ETL: Extract, transform, and load new data
+        2. Dummy data: Load pre-existing dummy data for testing
+        3. File loading: Load existing KG and metadata files directly
     """
-    parser = argparse.ArgumentParser(description="HuggingFace ETL Process")
+    parser = argparse.ArgumentParser(
+        description="HuggingFace ETL Process",
+        epilog="""
+Usage examples:
+  # Full ETL with 50 models
+  %(prog)s --num-models 50 --remote-db True
+  
+  # Load from existing files
+  %(prog)s --kg-file-path ./kg.nt --metadata-file-path ./metadata.nt --remote-db True
+  
+  # Use dummy data for testing
+  %(prog)s --use-dummy-data True --chunk-size 500
+        """,
+        formatter_class=argparse.RawDescriptionHelpFormatter
+    )
     parser.add_argument(
         "--save-extraction",
         action="store_true",
@@ -329,12 +348,46 @@ def parse_args() -> argparse.Namespace:
         help="Wheter or not to chunk the data for the uploading step"
     )
     
+    parser.add_argument(
+        "--chunk-size",
+        type=int,
+        default=1000,
+        help="Size of chunks when uploading to remote database (default: 1000, use smaller values for slower connections)"
+    )
+    
+    parser.add_argument(
+        "--upload-timeout",
+        type=int,
+        default=600,
+        help="Timeout in seconds for HTTP uploads to remote database (default: 600 seconds/10 minutes)"
+    )
+    
+    parser.add_argument(
+        "--kg-file-path",
+        type=str,
+        help="Path to an existing KG file .nt to load directly (skips extraction and transformation). Must be used with --metadata-file-path."
+    )
+    
+    parser.add_argument(
+        "--metadata-file-path", 
+        type=str,
+        help="Path to an existing metadata file .nt to load directly (skips extraction and transformation). Must be used with --kg-file-path."
+    )
+    
     return parser.parse_args()
 
 
 def main():
     args = parse_args()
     logger = setup_logging()
+
+    # Validate argument combinations
+    file_loading_mode = args.kg_file_path or args.metadata_file_path
+    if file_loading_mode and args.use_dummy_data:
+        logger.error("Cannot use --kg-file-path/--metadata-file-path with --use-dummy-data. Choose one mode.")
+        return
+    if file_loading_mode and args.model_list_file:
+        logger.warning("--model-list-file is ignored when loading from existing KG files")
 
     # Setup configuration data
     config_path = "./configuration/hf"  # Path to configuration folder
@@ -344,7 +397,39 @@ def main():
     kg_integrated = Graph()  
     extraction_metadata_integrated = Graph()
     
-    if args.use_dummy_data is False:
+    # Check if loading from existing files
+    if args.kg_file_path or args.metadata_file_path:
+        if args.kg_file_path and args.metadata_file_path:
+            logger.info(f"Loading KG from file: {args.kg_file_path}")
+            logger.info(f"Loading metadata from file: {args.metadata_file_path}")
+            
+            # Validate file existence
+            if not os.path.exists(args.kg_file_path):
+                logger.error(f"KG file not found: {args.kg_file_path}")
+                return
+            if not os.path.exists(args.metadata_file_path):
+                logger.error(f"Metadata file not found: {args.metadata_file_path}")
+                return
+            
+            start_time = time.time()
+            
+            # Determine format based on file extension
+            kg_format = "turtle" if args.kg_file_path.endswith(('.ttl', '.turtle')) else "nt"
+            metadata_format = "turtle" if args.metadata_file_path.endswith(('.ttl', '.turtle')) else "nt"
+            
+            kg_integrated.parse(args.kg_file_path, format=kg_format)
+            extraction_metadata_integrated.parse(args.metadata_file_path, format=metadata_format)
+            
+            end_time = time.time()
+            logger.info(f"Loading files took {end_time - start_time:.2f} seconds")
+            logger.info(f"KG loaded with {len(kg_integrated)} triples")
+            logger.info(f"Metadata loaded with {len(extraction_metadata_integrated)} triples")
+            
+        else:
+            logger.error("Both --kg-file-path and --metadata-file-path must be provided together")
+            return
+            
+    elif args.use_dummy_data is False:
 
         # Initialize extractor
         logger.info("Initializing extractor...")
@@ -426,7 +511,7 @@ def main():
         start_time = time.time()
         kg_integrated, extraction_metadata_integrated = transformer.transform_HF_models_with_related_entities(
             extracted_entities=extracted_entities,
-            save_output=False,
+            save_output=True,
             kg_output_dir=args.output_dir+"/kg",
             extraction_metadata_output_dir=args.output_dir+"/extraction_metadata",
         )
@@ -436,9 +521,14 @@ def main():
         # load kg with rdflib
         logger.info("Loading dummy KG TTL file...")
         start_time = time.time()
+        # kg_integrated.parse(
+        #     args.output_dir
+        #     + "/../../copy_examples/files/kg/example_HF_models_kg.nt",
+        #     format="nt",
+        # )
         kg_integrated.parse(
             args.output_dir
-            + "/../../copy_examples/files/kg/example_HF_models_kg.nt",
+            + "/../files/kg/2025-08-12_05-01-12_unified_kg.nt",
             format="turtle",
         )
         end_time = time.time()
@@ -448,9 +538,14 @@ def main():
 
         logger.info("Loading dummy extraction metadata TTL file...")
         start_time = time.time()
+        # extraction_metadata_integrated.parse(
+        #     args.output_dir
+        #     + "/../../copy_examples/files/extraction_metadata/example_HF_models_extraction_metadata_kg.nt",
+        #     format="nt",
+        # )
         extraction_metadata_integrated.parse(
             args.output_dir
-            + "/../../copy_examples/files/extraction_metadata/example_HF_models_extraction_metadata_kg.nt",
+            + "/../files/extraction_metadata/2025-08-12_08-57-58_unified_kg.nt",
             format="turtle",
         )
         end_time = time.time()
@@ -464,6 +559,11 @@ def main():
     loader = initialize_load_processor(kg_files_directory, logger)
     end_time = time.time()
     logger.info(f"Loader initialization took {end_time - start_time:.2f} seconds")
+    
+    # Set upload timeout if using remote database
+    if args.remote_db:
+        loader.set_upload_timeout(args.upload_timeout)
+        logger.info(f"Set upload timeout to {args.upload_timeout} seconds for remote database uploads")
 
     logger.info("Cleaning databases...")
     start_time = time.time()
@@ -475,11 +575,12 @@ def main():
     logger.info("Starting database update with KG...")
     start_time = time.time()
     if args.chunking is True:
+        logger.info(f"Using chunk size: {args.chunk_size}")
         loader.update_dbs_with_kg(kg_integrated,
                               extraction_metadata_integrated,
                               extraction_name="hf_extraction",
                               remote_db=args.remote_db,
-                              kg_chunks_size=3000,
+                              kg_chunks_size=args.chunk_size,
                               save_load_output=True,
                               load_output_dir=args.output_dir+"/chunks")
     else:

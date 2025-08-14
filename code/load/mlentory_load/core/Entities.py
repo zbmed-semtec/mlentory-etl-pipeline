@@ -17,7 +17,7 @@ class Model(Document):
     This class represents a model with all the FAIR4ML properties.
     """
 
-    db_identifier = Text()
+    db_identifier = Keyword()
 
     name = Text(
         analyzer=analyzer(
@@ -88,7 +88,7 @@ class Run(Document):
     This class represents a run with all the FAIR4ML properties.
     """
 
-    db_identifier = Text()
+    db_identifier = Keyword()
 
     name = Text(
         analyzer=analyzer(

@@ -467,7 +467,7 @@ class MlentoryTransform:
                 
             current_date = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
             kg_output_path = os.path.join(output_dir, f"{current_date}_disambiguated_kg.nt")
-            disambiguated_graph.serialize(destination=kg_output_path, format="turtle")
+            disambiguated_graph.serialize(destination=kg_output_path, format="nt")
         
         return disambiguated_graph
 
@@ -501,7 +501,7 @@ class MlentoryTransform:
     def disambiguate_unified_graph(
         input_file_path: str,
         output_file_path: str,
-        format: str = "turtle"
+        format: str = "nt"
     ) -> None:
         """
         Standalone utility method to disambiguate an existing unified RDF graph file.
@@ -512,7 +512,7 @@ class MlentoryTransform:
         Args:
             input_file_path (str): Path to the input graph file
             output_file_path (str): Path where the disambiguated graph will be saved
-            format (str, optional): RDF serialization format. Defaults to "turtle".
+            format (str, optional): RDF serialization format. Defaults to "nt".
             
         Returns:
             None

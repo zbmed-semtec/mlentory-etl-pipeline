@@ -65,9 +65,20 @@ class LoadProcessor:
         self.GraphHandler = GraphHandler
         self.kg_files_directory = kg_files_directory
         self.remote_api_base_url = remote_api_base_url
+        self.upload_timeout = 300  # Default 5 minutes
         
         self.META_NS = self.GraphHandler.graph_identifier + "/meta/"
         self.STATEMENT_METADATA = URIRef(str(self.META_NS) + "StatementMetadata")
+
+    def set_upload_timeout(self, timeout_seconds: int) -> None:
+        """
+        Set the timeout for HTTP uploads to remote database.
+        
+        Args:
+            timeout_seconds (int): Timeout in seconds for HTTP uploads
+        """
+        self.upload_timeout = timeout_seconds
+        logger.info(f"Upload timeout set to {timeout_seconds} seconds")
 
     def update_dbs_with_df(self, df: DataFrame):
         """
@@ -479,8 +490,8 @@ class LoadProcessor:
             # Prepare file uploads
             with open(kg_file_path, 'rb') as kg_f, open(metadata_file_path, 'rb') as meta_f:
                 files = {
-                    'chunk_kg_data': (os.path.basename(kg_file_path), kg_f, 'text/turtle'),
-                    'chunk_extraction_metadata': (os.path.basename(metadata_file_path), meta_f, 'text/turtle')
+                    'chunk_kg_data': (os.path.basename(kg_file_path), kg_f, 'text/nt'),
+                    'chunk_extraction_metadata': (os.path.basename(metadata_file_path), meta_f, 'text/nt')
                 }
                 
                 data = {
@@ -498,7 +509,7 @@ class LoadProcessor:
                     upload_url,
                     files=files,
                     data=data,
-                    timeout=300  # 5 minute timeout
+                    timeout=self.upload_timeout
                 )
                 
                 response.raise_for_status()
