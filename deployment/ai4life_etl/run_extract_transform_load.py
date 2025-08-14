@@ -1,3 +1,4 @@
+import shutil
 import pandas as pd
 import logging
 import datetime
@@ -84,6 +85,20 @@ def initialize_transform(config_path: str) -> MlentoryTransform:
 
     return transformer
 
+def intialize_folder_structure(output_dir: str, clean_folders: bool = False) -> None:
+    """
+    Initializes the folder structure.
+    """
+    if clean_folders:
+        shutil.rmtree(output_dir, ignore_errors=True)
+    os.makedirs(output_dir, exist_ok=True)
+    os.makedirs(output_dir+"/models", exist_ok=True)
+    os.makedirs(output_dir+"/datasets", exist_ok=True)
+    os.makedirs(output_dir+"/articles", exist_ok=True)
+    os.makedirs(output_dir+"/kg", exist_ok=True)
+    os.makedirs(output_dir+"/extraction_metadata", exist_ok=True)
+    os.makedirs(output_dir+"/chunks", exist_ok=True)
+    
 def initialize_load_processor(
     kg_files_directory: str, logger: logging.Logger
 ) -> LoadProcessor:
@@ -175,9 +190,12 @@ def parse_args() -> argparse.Namespace:
         help="Directory to save intermediate results",
     )
     return parser.parse_args()
+
+
 def main():
     args = parse_args()
     logger = setup_logging()
+    intialize_folder_structure(args.output_dir,clean_folders=False)
 
     # Setup configuration data
     config_path = "./configuration/ai4life"  # Path to configuration folder
@@ -207,7 +225,7 @@ def main():
     kg_integrated, kg_metadata_integrated = transformer.transform_AI4Life_models_with_related_entities(
         extracted_entities=extracted_entities,
         save_output=True,
-        kg_output_dir=args.output_dir+"/kg",
+        kg_output_dir=args.output_dir,
     )
     end_time = time.time()
     logger.info(f"Transformation process took {end_time - start_time:.2f} seconds")
@@ -221,14 +239,15 @@ def main():
 
     logger.info("Cleaning databases...")
     start_time = time.time()
-    # loader.clean_DBs()
+    loader.clean_DBs()
     end_time = time.time()
     logger.info(f"Database cleaning took {end_time - start_time:.2f} seconds")
 
     # Load data
     logger.info("Starting database update with KG...")
     start_time = time.time()
-    loader.update_dbs_with_kg(kg_integrated, kg_metadata_integrated)
+    loader.update_dbs_with_kg(kg=kg_integrated, extraction_metadata=kg_metadata_integrated, remote_db=False, save_load_output=True, extraction_name="ai4life_models",kg_chunks_size=0,
+                              load_output_dir=args.output_dir+"/chunks")
     end_time = time.time()
     logger.info(f"Database update with KG took {end_time - start_time:.2f} seconds")
     
