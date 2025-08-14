@@ -95,7 +95,9 @@ services:
 
   # Extractor service
   hf_etl_with_gpu:
-    profiles: [gpu]
+    profiles:
+      - gpu
+      - hf_etl_gpu
     container_name: hf_gpu
     build: 
       context: ../
@@ -253,7 +255,7 @@ services:
         - openml_no_gpu
         - ai4life_no_gpu
     image: postgres:14.1-alpine
-    container_name: postgres
+    container_name: postgres_db
     environment:
       POSTGRES_USER: user
       POSTGRES_PASSWORD: password

@@ -4,9 +4,9 @@ import rdflib
 from datetime import datetime
 from tqdm import tqdm
 import os
+import hashlib
 
-
-from ..utils.enums import Platform
+from ..utils.enums import Platform, SchemasURL
 from .GraphBuilderBase import GraphBuilderBase
 from .GraphBuilderFAIR4ML import GraphBuilderFAIR4ML
 from .GraphBuilderCroissant import GraphBuilderCroissant
@@ -227,6 +227,7 @@ class MlentoryTransformWithGraphBuilder:
             [models_kg, datasets_kg, arxiv_kg, keywords_kg, licenses_kg],
             save_output_in_json=save_output,
             output_dir=kg_output_dir,
+            disambiguate_extraction_metadata=False
         )
 
         extraction_metadata_integrated = self.unify_graphs(
@@ -237,6 +238,7 @@ class MlentoryTransformWithGraphBuilder:
              licenses_extraction_metadata],
             save_output_in_json=save_output,
             output_dir=extraction_metadata_output_dir,
+            disambiguate_extraction_metadata=True
         )
         
         return kg_integrated, extraction_metadata_integrated
@@ -324,7 +326,7 @@ class MlentoryTransformWithGraphBuilder:
         graphs: List[rdflib.Graph],
         save_output_in_json: bool = False,
         output_dir: str = None,
-        disambiguate_extraction_metadata: bool = False,
+        disambiguate_extraction_metadata: bool = True,
     ) -> rdflib.Graph:
         """
         Unify the knowledge graph from the current sources.
@@ -358,7 +360,7 @@ class MlentoryTransformWithGraphBuilder:
         if save_output_in_json:
             current_date = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
             kg_output_path = os.path.join(output_dir, f"{current_date}_unified_kg.nt")
-            unified_graph.serialize(destination=kg_output_path, format="turtle")
+            unified_graph.serialize(destination=kg_output_path, format="nt")
 
         return unified_graph
     
@@ -392,12 +394,13 @@ class MlentoryTransformWithGraphBuilder:
             >>> unified_graph = transformer.unify_graphs([graph1, graph2])
             >>> disambiguated_graph = transformer.disambiguate_statement_metadata(unified_graph)
         """
-        # Initialize a new graph for the disambiguated result
-        disambiguated_graph = rdflib.Graph()
+        
+        
+        print("DISAMBIGUATE STATEMENT METADATA ::::::::::: ")
         
         # Define the RDF types and properties we need
-        RDF = rdflib.Namespace("https://www.w3.org/1999/02/22-rdf-syntax-ns#")
-        NS1 = rdflib.Namespace("https://mlentory.de/ns1#")
+        RDF = rdflib.Namespace(SchemasURL.RDF.value)
+        NS1 = rdflib.Namespace(SchemasURL.MLENTORY.value+"meta/")
         TYPE = RDF.type
         STATEMENT_METADATA = NS1.StatementMetadata
         CONFIDENCE = NS1.confidence
@@ -407,10 +410,13 @@ class MlentoryTransformWithGraphBuilder:
         OBJECT = NS1.object
         
         # Find all StatementMetadata instances
-        metadata_nodes = list(graph.subjects(TYPE, STATEMENT_METADATA))
+        metadata_nodes = set(graph.subjects(TYPE, STATEMENT_METADATA))
+        
+        print("NUMBER OF STATEMENT METADATA ::::::::::: ", len(metadata_nodes))
         
         # Group metadata by subject-predicate-object triple
         statement_groups = {}
+        graph_nodes = list()
         
         for node in metadata_nodes:
             # Extract the statement this metadata is about
@@ -421,10 +427,14 @@ class MlentoryTransformWithGraphBuilder:
             # Skip if any component is missing
             if not subjects or not predicates or not objects:
                 continue
-                
-            # Use the first value if there are multiple (should not happen)
-            statement_key = (str(subjects[0]), str(predicates[0]), str(objects[0]))
             
+            # Use the first value if there are multiple (should not happen)
+            statement_hash = hashlib.md5(
+                    (
+                        str(subjects[0].n3()) + str(predicates[0].n3()) + str(objects[0].n3())
+                    ).encode()
+                ).hexdigest()
+
             # Extract confidence and extraction time
             confidences = list(graph.objects(node, CONFIDENCE))
             extraction_times = list(graph.objects(node, EXTRACTION_TIME))
@@ -449,36 +459,55 @@ class MlentoryTransformWithGraphBuilder:
                 extraction_time = datetime.min
             
             # Add to group or replace if better
-            if statement_key not in statement_groups or (
-                (confidence > statement_groups[statement_key]["confidence"]) or
-                (confidence == statement_groups[statement_key]["confidence"] and
-                 extraction_time > statement_groups[statement_key]["extraction_time"])
+            if statement_hash not in statement_groups or (
+                (confidence > statement_groups[statement_hash][CONFIDENCE]) or
+                (confidence == statement_groups[statement_hash][CONFIDENCE] and
+                 extraction_time > statement_groups[statement_hash][EXTRACTION_TIME])
             ):
-                statement_groups[statement_key] = {
+                # if (statement_hash in statement_groups) and (
+                # (confidence > statement_groups[statement_hash][CONFIDENCE]) or
+                # (confidence == statement_groups[statement_hash][CONFIDENCE] and
+                #  extraction_time > statement_groups[statement_hash][EXTRACTION_TIME])
+                # ):
+                #     print("REPEATED TRIPLET ::::::::::: ", statement_hash)
+                #     print("SUBJECTS", subjects)
+                #     print("PREDICATES", predicates)
+                #     print("OBJECTS", objects)
+                #     print(statement_groups[statement_hash])
+                    
+                    
+                statement_groups[statement_hash] = {
                     "node": node,
-                    "confidence": confidence,
-                    "extraction_time": extraction_time
+                    CONFIDENCE: confidence,
+                    EXTRACTION_TIME: extraction_time
                 }
+                
+        # Initialize a new graph for the disambiguated result
+        disambiguated_graph = rdflib.Graph()
         
         # Add all triples from the original graph except StatementMetadata instances
-        for s, p, o in graph:
-            if s not in metadata_nodes:
-                disambiguated_graph.add((s, p, o))
+        for node_info in statement_groups.values():
+            for p, o in graph.predicate_objects(node_info["node"]):
+                disambiguated_graph.add((node_info["node"], p, o))
+            
         
         # Add only the best StatementMetadata for each statement
-        for best_metadata in statement_groups.values():
-            node = best_metadata["node"]
-            for p, o in graph.predicate_objects(node):
-                disambiguated_graph.add((node, p, o))
+        # for best_metadata in statement_groups.values():
+        #     node = best_metadata["node"]
+        #     for p, o in graph.predicate_objects(node):
+        #         disambiguated_graph.add((node, p, o))
         
         # Save the disambiguated graph if requested
+        # save_output_in_json = True
         if save_output_in_json:
             if not output_dir:
                 raise ValueError("output_dir must be provided if save_output_in_json is True")
                 
             current_date = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
             kg_output_path = os.path.join(output_dir, f"{current_date}_disambiguated_kg.nt")
-            disambiguated_graph.serialize(destination=kg_output_path, format="turtle")
+            before_disambiguation_kg_output_path = os.path.join(output_dir, f"{current_date}_before_disambiguation_kg.nt")
+            graph.serialize(destination=before_disambiguation_kg_output_path, format="nt")
+            disambiguated_graph.serialize(destination=kg_output_path, format="nt")
         
         return disambiguated_graph
 

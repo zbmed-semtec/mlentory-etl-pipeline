@@ -26,6 +26,9 @@ PreparedGroupedInput = Dict[int, List[Dict[str, Any]]]
 # {index: {property_name: QAResult}}
 GroupedQAResults = Dict[int, Dict[str, QAResult]]
 
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
+
 
 class ModelCardToSchemaParser:
     """
@@ -79,14 +82,14 @@ class ModelCardToSchemaParser:
             
             if torch.cuda.is_available():
                 self.device = 0
-                print("\nUSING GPU\n")
+                logger.info("\nUSING GPU\n")
             else:
                 self.device = None
-                print("\nNOT USING GPU\n")
+                logger.info("\nNOT USING GPU\n")
         except ModuleNotFoundError:
             # If torch is not available, assume no GPU
             self.device = None
-            print("\nNOT USING GPU\n")
+            logger.info("\nNOT USING GPU\n")
             
         # Store configuration data
         self.tags_language = set(tag.lower() for tag in tags_language) if tags_language else set()
@@ -152,7 +155,7 @@ class ModelCardToSchemaParser:
             return properties
             
         except Exception as e:
-            print(f"Error: Could not load schema file {schema_file}. Using default properties. Error: {str(e)}")
+            logger.error(f"Error: Could not load schema file {schema_file}. Using default properties. Error: {str(e)}")
             # throw error
             raise e
     
@@ -201,8 +204,8 @@ class ModelCardToSchemaParser:
                     model_repo_weight += x.size
             return f"{model_repo_weight/(math.pow(10,9)):.3f} Gbytes"
         except:
-            print(f"Error: Could not calculate repository weight for {model_name}")
-            return "Not available"
+            logger.error(f"Error: Could not calculate repository weight for {model_name}")
+            return "Information not found"
     
     def parse_known_fields_HF(self, HF_df: pd.DataFrame) -> pd.DataFrame:
         """
@@ -409,7 +412,7 @@ class ModelCardToSchemaParser:
                     try:
                         yaml_dict = yaml.safe_load(yaml_text)
                     except yaml.YAMLError as e:
-                        print(f"Error parsing YAML for index {index}: {e}")
+                        logger.error(f"Error parsing YAML for index {index}: {e}")
                         yaml_dict = {"error": f"YAML parsing error: {e}"}
                 else:
                     # print(f"No YAML block found for index {index}")
@@ -506,12 +509,12 @@ class ModelCardToSchemaParser:
         qa_inputs_for_df = []
         properties_to_process = set()
         
-        print("Preparing QA inputs by matching questions to context sections...")
+        logger.info("Preparing QA inputs by matching questions to context sections...")
         for index, row in tqdm(
             HF_df.iterrows(), total=len(HF_df), desc="Matching questions to contexts"
         ):
             context = row.get("card", "") # Use .get for safety
-            # print(f"\n \n Context: {context} \n \n")
+            # logger.info(f"\n \n Context: {context} \n \n")
             if not context or not isinstance(context, str):
                 continue # Skip if no valid context
             
@@ -526,9 +529,9 @@ class ModelCardToSchemaParser:
             
             for question_item, individual_question_match_results in zip(question_items, match_results_for_all_questions):
                 question, property = question_item
-                # print(f"\n \n Question: {question} \n \n")
+                # logger.info(f"\n \n Question: {question} \n \n")
                 new_context = "\n".join([match.section.title + ": " + match.section.content for match in individual_question_match_results])
-                # print(f"\n\n New context for question:\n\n {new_context} \n \n")
+                # logger.info(f"\n\n New context for question:\n\n {new_context} \n \n")
                 match_scores = [match.score for match in individual_question_match_results]
                 
                 qa_inputs_for_df.append(
@@ -546,7 +549,7 @@ class ModelCardToSchemaParser:
 
     def _run_batch_qa(self, qa_inputs_for_df: List[Dict]) -> List[QAResult]:
         """Runs batch inference using the QA engine."""
-        print(f"Performing batch QA inference with {self.qa_engine.model_name}...")
+        logger.info(f"Performing batch QA inference with {self.qa_engine.model_name}...")
         questions = [item["question"] for item in qa_inputs_for_df]
         contexts = [item["context"] for item in qa_inputs_for_df]
 
@@ -554,7 +557,7 @@ class ModelCardToSchemaParser:
             qa_results = self.qa_engine.batch_inference(questions, contexts)
             return qa_results
         except Exception as e:
-            print(f"Error during batch QA inference: {e}. Skipping QA population.")
+            logger.error(f"Error during batch QA inference: {e}. Skipping QA population.")
             return [] # Return empty list on error
 
     def _populate_dataframe_with_qa_results(
@@ -564,9 +567,9 @@ class ModelCardToSchemaParser:
         qa_results: List[QAResult]
     ) -> pd.DataFrame:
         """Populates the DataFrame with QA results and calculated confidence."""
-        print("Populating DataFrame with QA results...")
+        logger.info("Populating DataFrame with QA results...")
         if len(qa_results) != len(qa_inputs_for_df):
-            print(f"Warning: Mismatch between QA inputs ({len(qa_inputs_for_df)}) and results ({len(qa_results)}). Results may be incomplete.")
+            logger.info(f"Warning: Mismatch between QA inputs ({len(qa_inputs_for_df)}) and results ({len(qa_results)}). Results may be incomplete.")
             num_items_to_process = min(len(qa_inputs_for_df), len(qa_results))
         else:
             num_items_to_process = len(qa_inputs_for_df)
@@ -599,7 +602,7 @@ class ModelCardToSchemaParser:
     
     def _populate_dataframe_with_context_matching_results(self, HF_df: pd.DataFrame, matching_results: List[List[RelevantSectionMatch]]) -> pd.DataFrame:
         """Populates the DataFrame with context matching results."""
-        print("Populating DataFrame with context matching results...")
+        logger.info("Populating DataFrame with context matching results...")
         for index, row in tqdm(HF_df.iterrows(), total=len(HF_df), desc="Updating DataFrame"):
             for property_name, context in matching_results.items():
                 matching_section = context[0]
@@ -668,16 +671,16 @@ class ModelCardToSchemaParser:
         """
         # Generate queries for each schema property based on their descriptions
         schema_property_contexts = self.create_schema_property_contexts()
-        print(f"Schema property contexts: {schema_property_contexts}")
+        logger.info(f"Schema property contexts: {schema_property_contexts}")
         if len(schema_property_contexts) == 0:
-            print("No properties identified for text extraction. Skipping.")
+            logger.error("No properties identified for text extraction. Skipping.")
             return HF_df
 
         # 1. Prepare QA inputs
         qa_inputs_for_df, properties_to_process = self._prepare_qa_inputs(HF_df, schema_property_contexts)
 
         if not qa_inputs_for_df:
-            print("No valid question-context pairs found for QA. Skipping QA step.")
+            logger.error("No valid question-context pairs found for QA. Skipping QA step.")
             return HF_df
 
         # 2. Perform batch QA inference
@@ -688,9 +691,9 @@ class ModelCardToSchemaParser:
             HF_df = self._populate_dataframe_with_qa_results(HF_df, qa_inputs_for_df, qa_results)
             # Add processed properties to the list only if population occurred
             self.processed_properties.extend(list(properties_to_process))
-            print(f"Processed text fields via QA: {list(properties_to_process)}")
+            logger.info(f"Processed text fields via QA: {list(properties_to_process)}")
         else:
-             print("QA inference did not produce results. Skipping DataFrame population for QA.")
+             logger.error("QA inference did not produce results. Skipping DataFrame population for QA.")
 
         # Clear GPU memory if possible
         if hasattr(torch.cuda, "empty_cache"):
@@ -732,7 +735,7 @@ class ModelCardToSchemaParser:
             
             for property_name, result in zip(schema_property_contexts.keys(), matching_results):
                 if property_name not in HF_df.columns:
-                    print(f"Warning: Property {property_name} not found in DataFrame.")
+                    logger.error(f"Warning: Property {property_name} not found in DataFrame.")
                     continue
                 
                 row[property_name] = self.add_default_extraction_info(
@@ -762,7 +765,7 @@ class ModelCardToSchemaParser:
         properties_to_process = set()
         input_questions = list(schema_property_questions.keys())
 
-        print("Preparing QA inputs with question grouping...")
+        logger.info("Preparing QA inputs with question grouping...")
         for index, row in tqdm(
             HF_df.iterrows(), total=len(HF_df), desc="Grouping questions and finding sections"
         ):
@@ -776,7 +779,7 @@ class ModelCardToSchemaParser:
                     input_questions, context, top_k=4, max_questions_per_group=max_questions_per_group, max_section_length=500
                 )
             except Exception as e:
-                print(f"Error finding grouped sections for index {index}: {e}")
+                logger.error(f"Error finding grouped sections for index {index}: {e}")
                 continue
 
             prepared_groups_for_index = []
@@ -818,7 +821,7 @@ class ModelCardToSchemaParser:
             if unprocessed_q_indices:
                  # Option 1: Process them individually (less efficient) - requires find_relevant_sections
                  # Option 2: Log a warning or attempt to find context individually here
-                 print(f"Warning: {len(unprocessed_q_indices)} questions were not processed in groups for index {index}.")
+                 logger.warning(f"Warning: {len(unprocessed_q_indices)} questions were not processed in groups for index {index}.")
                  # For simplicity, we'll skip them for now, assuming find_grouped_relevant_sections covers all necessary questions.
 
 
@@ -840,10 +843,10 @@ class ModelCardToSchemaParser:
             GroupedQAResults: Dictionary mapping row index to property->QAResult mapping.
         """
         results_data: GroupedQAResults = {}
-        print(f"Running grouped batch QA inference with {self.qa_engine.model_name}...")
-        # print(prepared_data)
-        print(f"Number of groups: {len(prepared_data)}")
-        pprint.pprint(prepared_data)
+        logger.info(f"Running grouped batch QA inference with {self.qa_engine.model_name}...")
+        # logger.info(prepared_data)
+        logger.info(f"Number of groups: {len(prepared_data)}")
+        logger.debug(prepared_data)
 
         for index, groups_for_index in tqdm(prepared_data.items(), desc="Processing QA for grouped questions"):
             results_data[index] = {}
@@ -878,10 +881,10 @@ class ModelCardToSchemaParser:
                             )
                             results_data[index][original_property] = result
                         else:
-                            print(f"Warning: More results in batch ({len(batch_results)}) than properties ({len(group_properties)}) for index {index}, group {group_counter}. Result index {j} is out of bounds.")
+                            logger.warning(f"Warning: More results in batch ({len(batch_results)}) than properties ({len(group_properties)}) for index {index}, group {group_counter}. Result index {j} is out of bounds.")
 
                 except Exception as e:
-                    print(f"Error during QA inference for index {index}, group {group_counter}: {e}")
+                    logger.error(f"Error during QA inference for index {index}, group {group_counter}: {e}")
                     # Log error results for this batch
                     error_time = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
                     for prop in group_properties:
@@ -909,11 +912,11 @@ class ModelCardToSchemaParser:
         Returns:
             pd.DataFrame: Populated DataFrame.
         """
-        print("Populating DataFrame with grouped QA results...")
+        logger.info("Populating DataFrame with grouped QA results...")
 
         for index, property_results in tqdm(results_data.items(), desc="Updating DataFrame with grouped results"):
             if index not in HF_df.index:
-                print(f"Warning: Index {index} from QA results not found in DataFrame.")
+                logger.info(f"Warning: Index {index} from QA results not found in DataFrame.")
                 continue
 
             for property_name, result in property_results.items():
@@ -954,7 +957,7 @@ class ModelCardToSchemaParser:
         schema_property_contexts = self.create_schema_property_contexts()
         
         if not schema_property_contexts:
-            print("No properties identified for text extraction. Skipping.")
+            logger.info("No properties identified for text extraction. Skipping.")
             return HF_df
 
         # 1. Prepare inputs: Group questions by similarity within each row's context
@@ -964,7 +967,7 @@ class ModelCardToSchemaParser:
         )
 
         if not prepared_data:
-            print("No valid question groups found for QA. Skipping QA step.")
+            logger.info("No valid question groups found for QA. Skipping QA step.")
             return HF_df
 
         # 2. Perform batch QA inference on the prepared groups.
@@ -979,9 +982,9 @@ class ModelCardToSchemaParser:
             )
             # Add processed properties to the list
             self.processed_properties.extend(list(properties_to_process))
-            print(f"Processed text fields via similarity-grouped QA: {list(properties_to_process)}")
+            logger.info(f"Processed text fields via similarity-grouped QA: {list(properties_to_process)}")
         else:
-            print("Grouped QA inference did not produce results. Skipping DataFrame population.")
+            logger.info("Grouped QA inference did not produce results. Skipping DataFrame population.")
 
         # Clear GPU memory if possible
         if hasattr(torch.cuda, "empty_cache"):
@@ -1022,11 +1025,11 @@ class ModelCardToSchemaParser:
 
 
         # Apply parsing methods in sequence
-        print("Step 1: Parsing known fields from HF metadata...")
+        logger.info("Step 1: Parsing known fields from HF metadata...")
         HF_df = self.parse_known_fields_HF(HF_df)
-        print("Step 2: Parsing fields from HF tags...")
+        logger.info("Step 2: Parsing fields from HF tags...")
         HF_df = self.parse_fields_from_tags_HF(HF_df)
-        print("Step 3: Parsing fields from YAML section of model card ...")
+        logger.info("Step 3: Parsing fields from YAML section of model card ...")
         HF_df = self.parse_fields_from_yaml_HF(HF_df)
         
         # Step 3: Determine properties for SchemaPropertyExtractor to process
@@ -1035,7 +1038,7 @@ class ModelCardToSchemaParser:
         ]
         
         if properties_for_extractor:
-            print(f"Step 4: Extracting schema properties from model cards using {unstructured_text_strategy} strategy for properties: {properties_for_extractor}")
+            logger.info(f"Step 4: Extracting schema properties from model cards using {unstructured_text_strategy} strategy for properties: {properties_for_extractor}")
             if unstructured_text_strategy != "None":
                 HF_df = self.schema_property_extractor.extract_dataframe_schema_properties(
                     df=HF_df,
@@ -1045,9 +1048,9 @@ class ModelCardToSchemaParser:
                 )
                 self.processed_properties.extend(properties_for_extractor)
             else:
-                print("Step 4: No extraction for model card text.")
+                logger.info("Step 4: No extraction for model card text.")
         else:
-            print("Step 4: No remaining properties for model card text extraction.")
+            logger.info("Step 4: No remaining properties for model card text extraction.")
         
         # Clean up columns if requested
         if clean_columns:
@@ -1068,11 +1071,11 @@ class ModelCardToSchemaParser:
             # Drop columns that exist in the DataFrame
             columns_to_remove = [col for col in columns_to_remove if col in HF_df.columns]
             if columns_to_remove:
-                print(f"Cleaning up columns: {columns_to_remove}")
+                logger.info(f"Cleaning up columns: {columns_to_remove}")
                 HF_df = HF_df.drop(columns=columns_to_remove)
 
 
-        print("DataFrame processing complete.")
+        logger.info("DataFrame processing complete.")
         return HF_df
     
     def add_extraction_metadata_to_fields(
@@ -1136,12 +1139,12 @@ class ModelCardToSchemaParser:
         Args:
             HF_df (pd.DataFrame): DataFrame to print information about
         """
-        print("\n**DATAFRAME**")
-        print("\nColumns:", HF_df.columns.tolist())
-        print("\nShape:", HF_df.shape)
-        print("\nSample Data:")
+        logger.info("\n**DATAFRAME**")
+        logger.info("\nColumns:", HF_df.columns.tolist())
+        logger.info("\nShape:", HF_df.shape)
+        logger.info("\nSample Data:")
         for col in HF_df.columns:
-            print(f"\n{col}:")
+            logger.info(f"\n{col}:")
             for row in HF_df[col].head(3):  # Show only first 3 rows for each column
                 # Limit the text to 100 characters
                 if isinstance(row, list) and row: # Check if list is not empty
@@ -1149,16 +1152,16 @@ class ModelCardToSchemaParser:
                     if isinstance(first_item, dict) and 'data' in first_item:
                         row_data = first_item["data"]
                     if isinstance(row_data, str):
-                        print(row_data[:100])
+                        logger.info(row_data[:100])
                         if isinstance(row_data, list):
-                             print(f"[List: {len(row_data)} items]") # Avoid printing long lists
+                             logger.info(f"[List: {len(row_data)} items]") # Avoid printing long lists
                         else:
-                            print(row_data)
+                            logger.info(row_data)
                     else:
-                        print(f"[List item not dict or missing 'data']: {str(first_item)[:100]}")
+                        logger.info(f"[List item not dict or missing 'data']: {str(first_item)[:100]}")
                 else:
-                     print(str(row)[:100]) # Print other types, truncated
+                     logger.info(str(row)[:100]) # Print other types, truncated
 
-            print()
-        print("\nDataFrame Info:")
-        print(HF_df.info())
+            logger.info("")
+        logger.info("\nDataFrame Info:")
+        logger.info(HF_df.info())

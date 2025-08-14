@@ -57,6 +57,7 @@ class GraphBuilderBase:
             "rdf": RDF,
             "rdfs": RDFS,
             "xsd": XSD,
+            "mlentory": self.meta_namespace
         }
 
         # Bind all namespaces to the graphs
@@ -156,10 +157,14 @@ class GraphBuilderBase:
         # Format extraction time to ISO 8601
         if extraction_time:
             try:
-                # Convert from format like '2025-01-24_20-12-20' to datetime object
-                dt = datetime.strptime(extraction_time, "%Y-%m-%d_%H-%M-%S")
-                # Convert to ISO format
-                iso_time = dt.isoformat()
+                if isinstance(extraction_time, str):
+                    # Convert from format like '2025-01-24_20-12-20' to datetime object
+                    dt = datetime.strptime(extraction_time, "%Y-%m-%d_%H-%M-%S")
+                    # Convert to ISO format
+                    iso_time = dt.isoformat()
+                else:
+                    iso_time = extraction_time
+                    
             except ValueError:
                 # If parsing fails, use current time
                 iso_time = datetime.now().isoformat()
