@@ -77,7 +77,7 @@ class MlentoryTransformWithGraphBuilder:
             Transform the extracted data into a knowledge graph and save it to a file.
             """
             
-            knowledge_graph, extraction_metadata_graph = self.graph_builder_fair4ml.dataframe_to_graph(extracted_df, identifier_column="schema.org:identifier", platform=Platform.AI4LIFE.value)
+            knowledge_graph, extraction_metadata_graph = self.graph_builder_fair4ml.dataframe_to_graph(extracted_df, identifier_column="model_schema.org:identifier", platform=Platform.AI4LIFE.value)
             if save_output:
                 self.save_graph(knowledge_graph, "Transformed_AI4Life_models_kg", output_dir)
                 self.save_graph(extraction_metadata_graph, "Transformed_AI4Life_models_kg_metadata", output_dir)
