@@ -91,7 +91,7 @@ class AI4Life(Document):
     This class represents a model with all the FAIR4ML properties.
     """
 
-    db_identifier = Text()
+    db_identifier = Keyword()
 
     name = Text(
         analyzer=analyzer(
