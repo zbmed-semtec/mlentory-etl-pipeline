@@ -174,7 +174,7 @@ class IndexHandler:
     def create_ai4life_index_entity_with_dict(self, info:Dict, uri:str):
         index_run_entity =  AI4LifeModel()
 
-        index_run_entity.meta.index = self.openml_index
+        index_run_entity.meta.index = self.ai4life_index
 
         index_run_entity.db_identifier = uri
         index_run_entity.name = ""
