@@ -39,28 +39,30 @@ class MlentoryTransformWithGraphBuilder:
         models_kg, models_metadata_kg = self.transform_AI4Life_models(
             extracted_df=extracted_entities["model"],
             save_output= save_output,
-            output_dir=kg_output_dir,
+            output_dir=kg_output_dir+"/models",
 
         )
 
         datasets_kg, datasets_metadata_kg = self.transform_AI4Life_datasets(
             extracted_df=extracted_entities["dataset"],
             save_output= save_output,
-            output_dir=kg_output_dir,
+            output_dir=kg_output_dir+"/datasets"    ,
 
         )
 
         kg_integrated = self.unify_graphs(
             [models_kg, datasets_kg],
             save_output_in_json=save_output,
-            output_dir=kg_output_dir,
+            output_dir=kg_output_dir+"/kg",
+            disambiguate_extraction_metadata=False
         )
 
         kg_metadata_integrated = self.unify_graphs(
             [models_metadata_kg,
              datasets_metadata_kg],
             save_output_in_json=save_output,
-            output_dir=kg_output_dir,
+            output_dir=kg_output_dir+"/extraction_metadata",
+            disambiguate_extraction_metadata=True
         )
         
         return kg_integrated, kg_metadata_integrated
@@ -132,6 +134,7 @@ class MlentoryTransformWithGraphBuilder:
             [runs_kg, datasets_kg],
             save_output_in_json=save_output,
             output_dir=kg_output_dir,
+            disambiguate_extraction_metadata=False
         )
 
         extraction_metadata_integrated = self.unify_graphs(
@@ -139,6 +142,7 @@ class MlentoryTransformWithGraphBuilder:
              datasets_extraction_metadata],
             save_output_in_json=save_output,
             output_dir=extraction_metadata_output_dir,
+            disambiguate_extraction_metadata=True
         )
         
         return kg_integrated, extraction_metadata_integrated
