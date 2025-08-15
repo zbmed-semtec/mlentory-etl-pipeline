@@ -359,7 +359,7 @@ Usage examples:
     parser.add_argument(
         "--upload-timeout",
         type=int,
-        default=600,
+        default=800,
         help="Timeout in seconds for HTTP uploads to remote database (default: 600 seconds/10 minutes)"
     )
     

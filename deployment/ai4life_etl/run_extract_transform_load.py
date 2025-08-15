@@ -239,7 +239,7 @@ def main():
 
     logger.info("Cleaning databases...")
     start_time = time.time()
-    loader.clean_DBs()
+    # loader.clean_DBs()
     end_time = time.time()
     logger.info(f"Database cleaning took {end_time - start_time:.2f} seconds")
 
