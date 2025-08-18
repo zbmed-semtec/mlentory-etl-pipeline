@@ -203,8 +203,11 @@ def initialize_load_processor(kg_files_directory: str, logger: logging.Logger) -
             es_host=ELASTICSEARCH_HOST,
             es_port=ELASTICSEARCH_PORT,
         )
+        # Initialize all indices to prevent conflicts between different data sources
+        elasticsearchHandler.initialize_HF_index(index_name="hf_models")
         elasticsearchHandler.initialize_OpenML_index(index_name="openml_models")
-        logger.info("Successfully connected to Elasticsearch and initialized index")
+        elasticsearchHandler.initialize_AI4Life_index(index_name="ai4life_models")
+        logger.info("Successfully connected to Elasticsearch and initialized all indices")
 
         logger.info("Initializing GraphHandlerForKG")
         graphHandler = GraphHandlerForKG(
@@ -532,6 +535,7 @@ def main():
     logger.info("Cleaning databases...")
     start_time = time.time()
     loader.clean_DBs()
+    # loader = initialize_load_processor(args.output_dir+"/kg", logger)
     end_time = time.time()
     logger.info(f"Database cleaning took {end_time - start_time:.2f} seconds")
 
