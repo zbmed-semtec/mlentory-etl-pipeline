@@ -220,7 +220,10 @@ def initialize_load_processor(
         es_port=elasticsearch_port,
     )
 
+    # Initialize all indices to prevent conflicts between different data sources
     elasticsearchHandler.initialize_HF_index(index_name="hf_models")
+    elasticsearchHandler.initialize_OpenML_index(index_name="openml_models")
+    elasticsearchHandler.initialize_AI4Life_index(index_name="ai4life_models")
 
     # Initializing the graph creator
     graphHandler = GraphHandlerForKG(
@@ -255,6 +258,7 @@ def intialize_folder_structure(output_dir: str, clean_folders: bool = False) -> 
     os.makedirs(output_dir+"/articles", exist_ok=True)
     os.makedirs(output_dir+"/kg", exist_ok=True)
     os.makedirs(output_dir+"/extraction_metadata", exist_ok=True)
+    os.makedirs(output_dir+"/chunks", exist_ok=True)
 
 def parse_args() -> argparse.Namespace:
     """
@@ -358,7 +362,7 @@ Usage examples:
     parser.add_argument(
         "--upload-timeout",
         type=int,
-        default=600,
+        default=800,
         help="Timeout in seconds for HTTP uploads to remote database (default: 600 seconds/10 minutes)"
     )
     
@@ -567,7 +571,7 @@ def main():
 
     logger.info("Cleaning databases...")
     start_time = time.time()
-    loader.clean_DBs()
+    # loader.clean_DBs()
     end_time = time.time()
     logger.info(f"Database cleaning took {end_time - start_time:.2f} seconds")
 

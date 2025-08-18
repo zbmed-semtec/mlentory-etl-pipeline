@@ -1,3 +1,6 @@
+import numpy as np
+np.float_ = np.float64
+
 from elasticsearch import Elasticsearch
 from elasticsearch_dsl import (
     Document,
@@ -83,6 +86,49 @@ class HFModel(Model):
     def props(self):
         return [i for i in self.__dict__.keys() if i[:1] != "_"]
     
+class AI4Life(Document):
+    """
+    This class represents a model with all the FAIR4ML properties.
+    """
+
+    db_identifier = Keyword()
+    
+    name = Text(
+        analyzer=analyzer(
+            "title_analyzer",
+            filter="lowercase",
+            tokenizer=tokenizer("edge_ngram", "edge_ngram", min_gram=3, max_gram=30),
+        ),
+    )
+    relatedDatasets = Text(multi=True)
+    description = Text()
+    license = Text()
+    sharedBy = Text()
+    keywords = Keyword(multi=True)   
+    
+class AI4LifeModel(AI4Life):
+    """
+    This class represents a model from Hugging Face Hub with its properties.
+    """
+
+    class Meta:
+        index = "ai4life_models"  # You can change the index name
+        doc_type = "_doc"
+
+    def __init__(self, **kwargs):
+        # self.meta.index = index
+        super(AI4LifeModel, self).__init__(**kwargs)
+
+    def save(self, **kwargs):
+        return super(AI4LifeModel, self).save(**kwargs)
+
+    def upsert(self):
+        dict_ = self.to_dict()
+        dict_["_index"] = self.meta.index
+        return dict_
+
+    def props(self):
+        return [i for i in self.__dict__.keys() if i[:1] != "_"]   
 class Run(Document):
     """
     This class represents a run with all the FAIR4ML properties.

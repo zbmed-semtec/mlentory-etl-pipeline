@@ -23,7 +23,7 @@ from elasticsearch_dsl import (
 )
 import inspect
 
-from mlentory_load.core.Entities import HFModel, OpenMLRun
+from mlentory_load.core.Entities import HFModel, OpenMLRun, AI4LifeModel
 
 
 class IndexHandler:
@@ -79,6 +79,16 @@ class IndexHandler:
         self.openml_index = index_name
         if not self.es.indices.exists(index=index_name):
             OpenMLRun.init(index=index_name, using=self.es)
+            
+    def initialize_AI4Life_index(self, index_name: str = "ai4life_models"):
+        """
+        Initialize the AI4Life model index.
+        Args:
+            index_name (str): Name for the index
+        """
+        self.ai4life_index = index_name
+        if not self.es.indices.exists(index=index_name):
+            AI4LifeModel.init(index=index_name, using=self.es)
 
     def create_hf_model_index_entity(self, row: pd.Series, model_uri: str):
         """
@@ -158,6 +168,36 @@ class IndexHandler:
                 index_run_entity.keywords.extend(value)
 
         index_run_entity.trainedOn = list(index_run_entity.trainedOn)
+
+        return index_run_entity
+    
+    def create_ai4life_index_entity_with_dict(self, info:Dict, uri:str):
+        index_run_entity =  AI4LifeModel()
+
+        index_run_entity.meta.index = self.ai4life_index
+
+        index_run_entity.db_identifier = uri
+        index_run_entity.name = ""
+        index_run_entity.license = ""
+        index_run_entity.sharedBy = ""
+        index_run_entity.keywords = []
+        index_run_entity.relatedDatasets = []
+
+        for key, value in info.items():
+            if "identifier" in key:
+                index_run_entity.name = (
+                    value[0].split("/")[-2] + "/" + value[0].split("/")[-1]
+                )
+            elif "name" in key:
+                index_run_entity.name = value[0]
+            elif "sharedBy" in key:
+                index_run_entity.sharedBy = value[0]
+            elif "license" in key:
+                index_run_entity.license = value[0].lower()
+            elif "keywords" in key:
+                index_run_entity.keywords.extend(value)
+            elif "trainedOn" in key:
+                index_run_entity.relatedDatasets.extend(value)
 
         return index_run_entity
 

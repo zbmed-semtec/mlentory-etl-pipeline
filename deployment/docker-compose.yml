@@ -7,8 +7,9 @@ services:
     container_name: airflow_scheduler
     profiles:
       # - gpu
-      - no_gpu
-      - openml_no_gpu
+      # - no_gpu
+      # - openml_no_gpu
+      # - ai4life_no_gpu
       - airflow_test
     image: apache/airflow:2.10.1  # Use the latest stable Airflow image
     command: >
@@ -41,8 +42,9 @@ services:
     container_name: airflow_webserver
     profiles:
       # - gpu
-      - no_gpu
-      - openml_no_gpu
+      # - no_gpu
+      # - openml_no_gpu
+      # - ai4life_no_gpu
       - airflow_test
     image: apache/airflow:2.10.1
     command: "webserver"
@@ -72,8 +74,9 @@ services:
   airflow_postgres:
     profiles:
       # - gpu
-      - no_gpu
-      - openml_no_gpu
+      # - no_gpu
+      # - openml_no_gpu
+      # - ai4life_no_gpu
       - airflow_test
     image: postgres:13-alpine
     container_name: airflow_postgres
@@ -95,6 +98,7 @@ services:
     profiles:
       - gpu
       - hf_etl_gpu
+      - combined_extraction
     container_name: hf_gpu
     build: 
       context: ../
@@ -147,7 +151,10 @@ services:
       - mlentory_network
 
   openml_etl_with_no_gpu:
-    profiles: [no_gpu,openml_no_gpu]
+    profiles: 
+      - no_gpu
+      - openml_no_gpu
+      - combined_extraction
     container_name: openml_no_gpu
     build: 
       context: ../
@@ -159,6 +166,29 @@ services:
       - ../code/transform:/app/transform
       - ../code/load:/app/load
       - ./openml_etl:/app/openml_etl
+      - /var/run/docker.sock:/var/run/docker.sock 
+    dns:
+      - 1.1.1.1
+    command: ["tail", "-f", "/dev/null"]
+    networks:
+      - mlentory_network
+    
+  ai4life_etl_with_no_gpu:
+    profiles: 
+      - no_gpu
+      - ai4life_no_gpu
+      - combined_extraction
+    container_name: ai4life_no_gpu
+    build: 
+      context: ../
+      dockerfile: deployment/Dockerfile.ai4life_no_gpu
+      target: no_gpu_ai4life
+    volumes:
+      - ../data/configuration/ai4life:/app/configuration/ai4life
+      - ../code/extractors:/app/extractors 
+      - ../code/transform:/app/transform
+      - ../code/load:/app/load
+      - ./ai4life_etl:/app/ai4life_etl
       - /var/run/docker.sock:/var/run/docker.sock 
     dns:
       - 1.1.1.1
@@ -230,6 +260,8 @@ services:
         - gpu
         - no_gpu
         - openml_no_gpu
+        - ai4life_no_gpu
+        - combined_extraction
     image: postgres:14.1-alpine
     container_name: postgres_db
     environment:
@@ -250,6 +282,8 @@ services:
       - gpu
       - no_gpu
       - openml_no_gpu
+      - ai4life_no_gpu
+      - combined_extraction
     container_name: pgadmin
     image: dpage/pgadmin4:latest
     environment:
@@ -273,6 +307,8 @@ services:
       - gpu
       - no_gpu
       - openml_no_gpu
+      - ai4life_no_gpu
+      - combined_extraction
     image: openlink/virtuoso-opensource-7:latest
     hostname: virtuoso
     container_name: virtuoso_db
@@ -292,6 +328,8 @@ services:
       - gpu
       - no_gpu
       - openml_no_gpu
+      - ai4life_no_gpu
+      - combined_extraction
     image: docker.elastic.co/elasticsearch/elasticsearch:8.18.2
     container_name: elastic_db
     hostname: elastic
@@ -307,6 +345,11 @@ services:
       - "ES_JAVA_OPTS=-Xms256m -Xmx256m"
       # - "bootstrap.system_call_filter=false"   # Is not required for version 8.0 and above
       # - node.max_local_storage_nodes=2
+      # Disk watermark settings to prevent allocation issues when disk is nearly full
+      - "cluster.routing.allocation.disk.watermark.low=85%"  # Start warning at 85% disk usage
+      - "cluster.routing.allocation.disk.watermark.high=97%" # High watermark at 97% as requested
+      - "cluster.routing.allocation.disk.watermark.flood_stage=98%" # Flood stage at 98%
+      - "cluster.info.update.interval=1m" # Update cluster info every minute
     ulimits:
       memlock:
         soft: -1
