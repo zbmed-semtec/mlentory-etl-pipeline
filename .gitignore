@@ -42,6 +42,8 @@ deployment/openml_etl/outputs/
 
 data/datasets/
 
+100k_run*
+
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
