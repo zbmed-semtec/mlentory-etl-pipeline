@@ -1,5 +1,6 @@
 import shutil
 import pandas as pd
+from rdflib import Graph
 import logging
 import datetime
 from typing import List
@@ -133,6 +134,9 @@ def initialize_load_processor(
         es_port=ELASTICSEARCH_PORT,
     )
 
+    # Initialize all indices to prevent conflicts between different data sources
+    elasticsearchHandler.initialize_HF_index(index_name="hf_models")
+    elasticsearchHandler.initialize_OpenML_index(index_name="openml_models")
     elasticsearchHandler.initialize_AI4Life_index(index_name="ai4life_models")
 
     # Initializing the graph creator
@@ -182,12 +186,19 @@ def parse_args() -> argparse.Namespace:
         help="Save the data that will be loaded into the database",
     )
     parser.add_argument(
-        "--num-models", type=int, default=10000, help="Number of models to download"
+        "--num-models", type=int, default=1000, help="Number of models to download"
     )
     parser.add_argument(
         "--output-dir",
         default="./ai4life_etl/outputs/files",
         help="Directory to save intermediate results",
+    )
+    parser.add_argument(
+        "--load-extraction-and-transform-data",
+        "-led",
+        # action="store_true",
+        default=False,
+        help="Load the extraction data into the database",
     )
     return parser.parse_args()
 
@@ -199,37 +210,43 @@ def main():
 
     # Setup configuration data
     config_path = "./configuration/ai4life"  # Path to configuration folder
-    # Extract
-    start_time = time.time()
-    extractor = initialize_extractor(config_path)
-    end_time = time.time()
-    logger.info(f"Initialization time: {end_time - start_time} seconds")
-    start_time = time.time()
-    extracted_entities = extractor.download_modelfiles_with_additional_entities(
-        num_models=args.num_models,
-        output_dir=args.output_dir,
-        additional_entities = ["dataset", "application"]
-    )
-    end_time = time.time()
-    logger.info(f"Extraction time: {end_time - start_time} seconds")
+    kg_integrated, kg_metadata_integrated = Graph(), Graph()
 
-    # Initialize transformer (outside the if/else)
-    logger.info("Initializing transformer...")
-    start_time = time.time()
-    transformer = initialize_transform(config_path)
-    end_time = time.time()
-    logger.info(f"Transformer initialization took {end_time - start_time:.2f} seconds")
+    if args.load_extraction_and_transform_data:
+        kg_integrated.parse(f"./{args.output_dir}/kg/2025-08-15_12-40-32_unified_kg.nt", format="nt")
+        kg_metadata_integrated.parse(f"./{args.output_dir}/extraction_metadata/2025-08-15_12-40-33_unified_kg.nt", format="nt")
+    else:
+        # Extract
+        start_time = time.time()
+        extractor = initialize_extractor(config_path)
+        end_time = time.time()
+        logger.info(f"Initialization time: {end_time - start_time} seconds")
+        start_time = time.time()
+        extracted_entities = extractor.download_modelfiles_with_additional_entities(
+            num_models=args.num_models,
+            output_dir=args.output_dir,
+            additional_entities = ["dataset", "application"]
+        )
+        end_time = time.time()
+        logger.info(f"Extraction time: {end_time - start_time} seconds")
 
-    logger.info("Starting transformation process...")
-    start_time = time.time()
-    kg_integrated, kg_metadata_integrated = transformer.transform_AI4Life_models_with_related_entities(
-        extracted_entities=extracted_entities,
-        save_output=True,
-        kg_output_dir=args.output_dir,
-    )
-    end_time = time.time()
-    logger.info(f"Transformation process took {end_time - start_time:.2f} seconds")
-    
+        # Initialize transformer (outside the if/else)
+        logger.info("Initializing transformer...")
+        start_time = time.time()
+        transformer = initialize_transform(config_path)
+        end_time = time.time()
+        logger.info(f"Transformer initialization took {end_time - start_time:.2f} seconds")
+
+        logger.info("Starting transformation process...")
+        start_time = time.time()
+        kg_integrated, kg_metadata_integrated = transformer.transform_AI4Life_models_with_related_entities(
+            extracted_entities=extracted_entities,
+            save_output=True,
+            kg_output_dir=args.output_dir,
+        )
+        end_time = time.time()
+        logger.info(f"Transformation process took {end_time - start_time:.2f} seconds")
+
     # Initialize loader
     logger.info("Initializing loader...")
     start_time = time.time()
