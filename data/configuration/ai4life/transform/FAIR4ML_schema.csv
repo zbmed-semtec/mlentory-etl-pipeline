@@ -1,8 +1,8 @@
 Source,Property,Range,Real_Range
 FAIR4ML,fair4ml:sharedBy,Person or Organization,Text
-FAIR4ML,fair4ml:evaluatedOn,Dataset or croissant:Dataset,None
-FAIR4ML,fair4ml:testedOn,Dataset or croissant:Dataset,None
-FAIR4ML,fair4ml:trainedOn,Dataset or croissant:Dataset,Text
+FAIR4ML,fair4ml:evaluatedOn,Dataset or croissant:Dataset,Dataset or croissant:Dataset
+FAIR4ML,fair4ml:testedOn,Dataset or croissant:Dataset,Dataset or croissant:Dataset
+FAIR4ML,fair4ml:trainedOn,Dataset or croissant:Dataset,Dataset or croissant:Dataset
 FAIR4ML,fair4ml:fineTunedFrom,fair4ml:MLModel,None
 FAIR4ML,fair4ml:legal,Text,None
 FAIR4ML,fair4ml:ethicalLegalSocial,Text,None
