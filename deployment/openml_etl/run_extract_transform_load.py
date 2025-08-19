@@ -21,6 +21,7 @@ from mlentory_transform.core.MlentoryTransform import (
 )
 from mlentory_load.core import LoadProcessor, GraphHandlerForKG
 from mlentory_load.dbHandler import SQLHandler, RDFHandler, IndexHandler
+from openml_etl_component import OpenMLETLComponent
 
 # Load environment variables with defaults
 POSTGRES_HOST = os.getenv("POSTGRES_HOST", "postgres")
@@ -561,6 +562,10 @@ def main():
     end_time = time.time()
     logger.info("Loading data to db completed successfully")
     logger.info(f"TIME TAKEN FOR LOADING METADATA:  {end_time - start_time} seconds")
+    
+    """Main entry point for OpenML ETL process."""
+    # etl = OpenMLETLComponent()
+    # etl.run()
 
 if __name__ == "__main__":
     main()
