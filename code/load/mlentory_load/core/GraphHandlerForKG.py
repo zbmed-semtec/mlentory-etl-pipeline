@@ -167,6 +167,12 @@ class GraphHandlerForKG(GraphHandler):
             extraction_time = str(
                 metadata_node_dict[URIRef(META_NS + "extractionTime")]
             ).split(".")[0]
+            
+            # Extract platform information (with fallback for backward compatibility)
+            platform = "unknown"  # Default value
+            platform_uri = URIRef(META_NS + "platform")
+            if platform_uri in metadata_node_dict:
+                platform = str(metadata_node_dict[platform_uri])
 
             # Convert datetime format from 2024-02-13T21:24:05+00:00 to our expected format
             extraction_time = datetime.strptime(
@@ -183,6 +189,7 @@ class GraphHandlerForKG(GraphHandler):
                 "confidence": confidence,
                 "extraction_method": extraction_method,
                 "extraction_time": extraction_time,
+                "platform": platform,
             }
 
             # Process the triplet with its metadata

@@ -226,7 +226,7 @@ class GraphHandler:
         Get or create an extraction info ID in the database.
 
         Args:
-            extraction_info (dict): Dictionary containing extraction method and confidence
+            extraction_info (dict): Dictionary containing extraction method, confidence, and platform
 
         Returns:
             int: The extraction info ID
@@ -237,8 +237,13 @@ class GraphHandler:
         extraction_info_id_df = self.SQLHandler.query(
             """SELECT id FROM "Triplet_Extraction_Info" WHERE 
                method_description = %s 
-               AND extraction_confidence = %s""",
-            (extraction_info["extraction_method"], extraction_info["confidence"]),
+               AND extraction_confidence = %s
+               AND platform = %s""",
+            (
+                extraction_info["extraction_method"], 
+                extraction_info["confidence"],
+                extraction_info.get("platform", "unknown")
+            ),
         )
 
         if extraction_info_id_df.empty:
@@ -247,6 +252,7 @@ class GraphHandler:
                 {
                     "method_description": extraction_info["extraction_method"],
                     "extraction_confidence": extraction_info["confidence"],
+                    "platform": extraction_info.get("platform", "unknown"),
                 },
             )
         return extraction_info_id_df.iloc[0]["id"]
@@ -518,19 +524,21 @@ class GraphHandler:
         info_tuples = []
         extraction_methods = []
         extraction_info_hashes = set()
-
         extraction_confidences = []
+        platforms = []
 
         for info in extraction_infos:
             method = info["extraction_method"]
             confidence = round(info["confidence"], 5)
+            platform = info.get("platform", "unknown")
             extraction_info_hash = hashlib.md5(
-                (str(method) + str(confidence)).encode()
+                (str(method) + str(confidence) + str(platform)).encode()
             ).hexdigest()
             extraction_methods.append(method)
             extraction_confidences.append(confidence)
+            platforms.append(platform)
             extraction_info_hashes.add(extraction_info_hash)
-            info_tuples.append((method, confidence, extraction_info_hash))
+            info_tuples.append((method, confidence, platform, extraction_info_hash))
 
         # Use unnest on parallel arrays for a more robust query
         query = """
@@ -554,32 +562,32 @@ class GraphHandler:
 
         # Process results
         for i, info_tuple in enumerate(info_tuples):
-            # Check if the hash (info_tuple[2]) is in the map of existing infos
-            if info_tuple[2] in search_results_map_hash_to_id:
-                info_ids[i] = search_results_map_hash_to_id[info_tuple[2]]
+            # Check if the hash (info_tuple[3]) is in the map of existing infos
+            if info_tuple[3] in search_results_map_hash_to_id:
+                info_ids[i] = search_results_map_hash_to_id[info_tuple[3]]
             else:
                 # Use a map to collect unique new infos
-                if info_tuple[2] not in new_entries_map_hash_to_id:
-                    new_entries_map_hash_to_id[info_tuple[2]] = info_tuple
+                if info_tuple[3] not in new_entries_map_hash_to_id:
+                    new_entries_map_hash_to_id[info_tuple[3]] = info_tuple
 
         if new_entries_map_hash_to_id:
             new_entries_to_insert = list(new_entries_map_hash_to_id.values())
             new_ids = self.SQLHandler.batch_insert(
                 "Triplet_Extraction_Info",
-                ["method_description", "extraction_confidence", "extraction_info_hash"],
+                ["method_description", "extraction_confidence", "platform", "extraction_info_hash"],
                 new_entries_to_insert,
                 batch_size=len(new_entries_to_insert),
             )
 
             # Create a map for newly inserted infos
             new_info_to_id_map = {
-                data[2]: new_id for data, new_id in zip(new_entries_to_insert, new_ids)
+                data[3]: new_id for data, new_id in zip(new_entries_to_insert, new_ids)
             }
 
             # Update info_ids with new IDs
             for i, info_tuple in enumerate(info_tuples):
                 if info_ids[i] == -1:
-                    info_ids[i] = new_info_to_id_map[info_tuple[2]]
+                    info_ids[i] = new_info_to_id_map[info_tuple[3]]
 
         return info_ids
 
