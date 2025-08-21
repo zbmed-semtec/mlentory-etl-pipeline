@@ -21,7 +21,7 @@ from mlentory_transform.core.MlentoryTransform import (
 )
 from mlentory_load.core import LoadProcessor, GraphHandlerForKG
 from mlentory_load.dbHandler import SQLHandler, RDFHandler, IndexHandler
-from openml_etl_component import OpenMLETLComponent
+# from openml_etl_component import OpenMLETLComponent
 
 # Load environment variables with defaults
 POSTGRES_HOST = os.getenv("POSTGRES_HOST", "postgres")
@@ -37,7 +37,8 @@ VIRTUOSO_SPARQL_ENDPOINT = os.getenv("VIRTUOSO_SPARQL_ENDPOINT", f"http://{VIRTU
 ELASTICSEARCH_HOST = os.getenv("ELASTICSEARCH_HOST", "elastic_db")
 ELASTICSEARCH_PORT = int(os.getenv("ELASTICSEARCH_PORT", "9200")) # Env vars are strings
 
-REMOTE_API_BASE_URL = os.getenv("REMOTE_API_BASE_URL", "http://localhost:8000")
+# REMOTE_API_BASE_URL = os.getenv("REMOTE_API_BASE_URL", "http://10.0.7.249:8000")
+REMOTE_API_BASE_URL = os.getenv("REMOTE_API_BASE_URL", "http://backend:8000")
 
 
 def load_tsv_file_to_list(path: str) -> List[str]:
@@ -535,7 +536,7 @@ def main():
     
     logger.info("Cleaning databases...")
     start_time = time.time()
-    loader.clean_DBs()
+    # loader.clean_DBs()
     # loader = initialize_load_processor(args.output_dir+"/kg", logger)
     end_time = time.time()
     logger.info(f"Database cleaning took {end_time - start_time:.2f} seconds")

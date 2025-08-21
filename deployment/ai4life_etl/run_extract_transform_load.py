@@ -17,7 +17,7 @@ from mlentory_transform.core import (
     KnowledgeGraphHandler,
     MlentoryTransformWithGraphBuilder,
 )
-from ai4life_etl_component import AI4LifeETLComponent
+# from ai4life_etl_component import AI4LifeETLComponent
 
 # Load environment variables with defaults
 POSTGRES_HOST = os.getenv("POSTGRES_HOST", "postgres")

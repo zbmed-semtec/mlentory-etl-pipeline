@@ -22,7 +22,7 @@ from mlentory_transform.core import (
     KnowledgeGraphHandler,
     MlentoryTransformWithGraphBuilder,
 )
-from hf_etl_component import HuggingFaceETLComponent
+# from hf_etl_component import HuggingFaceETLComponent
 
 
 # Load environment variables with defaults
@@ -188,7 +188,8 @@ def initialize_load_processor(
     elasticsearch_host = os.getenv("ELASTICSEARCH_HOST", "elastic_db")
     elasticsearch_port = int(os.getenv("ELASTICSEARCH_PORT", "9200"))
     
-    remote_api_base_url = os.getenv("REMOTE_API_BASE_URL", "http://10.0.7.249:8000")
+    # remote_api_base_url = os.getenv("REMOTE_API_BASE_URL", "http://10.0.7.249:8000")
+    remote_api_base_url = os.getenv("REMOTE_API_BASE_URL", "http://backend:8000")
     
     print(f"postgres_host: {postgres_host}")
     print(f"postgres_user: {postgres_user}")
@@ -350,7 +351,7 @@ Usage examples:
     
     parser.add_argument(
         "--chunking",
-        default=True,
+        default=False,
         help="Wheter or not to chunk the data for the uploading step"
     )
     
@@ -574,6 +575,9 @@ def main():
     logger.info("Cleaning databases...")
     start_time = time.time()
     # loader.clean_DBs()
+    # time.sleep(5)
+    # loader = initialize_load_processor(kg_files_directory, logger)
+    # loader = initialize_load_processor(kg_files_directory, logger)
     end_time = time.time()
     logger.info(f"Database cleaning took {end_time - start_time:.2f} seconds")
 
