@@ -31,7 +31,7 @@ class GraphBuilderKeyWords(GraphBuilderBase):
         self,
         df: pd.DataFrame,
         identifier_column: Optional[str] = None,
-        platform: str = "MLentoryKeywords", # Specific platform for these terms
+        platform: str = "mlentory_keywords",  # Default platform for keywords
     ) -> Tuple[Graph, Graph]:
         """
         Convert a DataFrame containing keyword/tag data to a Knowledge Graph.
@@ -43,7 +43,7 @@ class GraphBuilderKeyWords(GraphBuilderBase):
             df (pd.DataFrame): The DataFrame with keyword data.
             identifier_column (Optional[str]): The column containing the unique identifier for the keyword/tag.
                                            Must be provided.
-            platform (str): The platform name, defaults to "MLentoryKeywords".
+            platform (str): The platform name, defaults to "mlentory_keywords".
 
         Returns:
             Tuple[Graph, Graph]: A tuple containing:
@@ -63,21 +63,22 @@ class GraphBuilderKeyWords(GraphBuilderBase):
 
         # Fixed metadata for keywords collected by the MLentory team
         metadata_dict = {
-             "extraction_method": ExtractionMethod.ETL.value,
-             "confidence": 1.0
+            "extraction_method": ExtractionMethod.ETL.value,
+            "confidence": 1.0,
+            "platform": platform
         }
         extraction_time = None # Or set a fixed date if applicable
 
         for idx, row in df.iterrows():
             entity_id = row[identifier_column]
             if not entity_id or not isinstance(entity_id, str):
-                 print(f"Warning: Skipping row {idx} due to missing or invalid identifier '{entity_id}'.")
-                 continue
+                print(f"Warning: Skipping row {idx} due to missing or invalid identifier '{entity_id}'.")
+                continue
 
             entity_id = entity_id.strip().lower()
             if not entity_id:
-                 print(f"Warning: Skipping row {idx} due to empty identifier after stripping/lowercasing.")
-                 continue
+                print(f"Warning: Skipping row {idx} due to empty identifier after stripping/lowercasing.")
+                continue
 
             id_hash = self.generate_entity_hash(platform, "DefinedTerm", entity_id)
             defined_term_uri = self.base_namespace[id_hash]
@@ -101,8 +102,8 @@ class GraphBuilderKeyWords(GraphBuilderBase):
                     extraction_time
                 )
             else:
-                 # Use the identifier as the name if tag_name is missing
-                  self.add_triple_with_metadata(
+                # Use the identifier as the name if tag_name is missing
+                self.add_triple_with_metadata(
                     defined_term_uri,
                     self.namespaces["schema"]["name"],
                     Literal(entity_id, datatype=XSD.string),
@@ -110,15 +111,14 @@ class GraphBuilderKeyWords(GraphBuilderBase):
                     extraction_time
                 )
 
-
             # Add description
             if "description" in row and pd.notna(row["description"]):
                 self.add_triple_with_metadata(
                     defined_term_uri,
                     self.namespaces["schema"]["description"],
                     Literal(row["description"], datatype=XSD.string),
-                     metadata_dict,
-                     extraction_time
+                    metadata_dict,
+                    extraction_time
                 )
 
         return self.graph, self.metadata_graph 

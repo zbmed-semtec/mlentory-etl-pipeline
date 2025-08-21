@@ -115,8 +115,15 @@ class GraphBuilderBase:
             subject (URIRef): Subject of the triple
             predicate (URIRef): Predicate of the triple
             object_ (Union[URIRef, Literal]): Object of the triple
-            metadata (Dict[str, any]): Dictionary containing metadata about the triple
+            metadata (Dict[str, any]): Dictionary containing metadata about the triple.
+                Must contain:
+                - "extraction_method": The method used to extract this triple
+                - "confidence": Confidence score (0.0 to 1.0) in the triple's accuracy
+                - "platform": The platform identifier (e.g., "HF", "open_ml")
             extraction_time (Optional[str]): Timestamp of when the triple was extracted
+
+        Raises:
+            ValueError: If required metadata fields are missing or invalid
         """
         #Check if the triple already exists
         if (subject, predicate, object_) in self.graph:
@@ -151,6 +158,16 @@ class GraphBuilderBase:
                     statement_id,
                     meta["confidence"],
                     Literal(float(metadata["confidence"]), datatype=XSD.float),
+                )
+            )
+
+        # Add platform metadata
+        if "platform" in metadata:
+            self.metadata_graph.add(
+                (
+                    statement_id,
+                    meta["platform"],
+                    Literal(metadata["platform"], datatype=XSD.string),
                 )
             )
 

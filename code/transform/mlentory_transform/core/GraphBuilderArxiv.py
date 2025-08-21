@@ -66,47 +66,51 @@ class GraphBuilderArxiv(GraphBuilderBase):
             id_hash = self.generate_entity_hash(platform, "ScholarlyArticle", entity_id)
             scholarly_article_uri = self.base_namespace[id_hash]
 
+            # Ensure metadata includes platform information
+            metadata = dict(row["extraction_metadata"])
+            metadata["platform"] = platform
+
             # Add entity type with metadata
             self.add_triple_with_metadata(
                 scholarly_article_uri,
                 RDF.type,
                 self.namespaces["schema"]["ScholarlyArticle"],
-                row["extraction_metadata"])
+                metadata)
             
             if row["title"] is not None:
                 self.add_triple_with_metadata(
                     scholarly_article_uri,
                     self.namespaces["schema"]["name"],
                     Literal(row["title"], datatype=XSD.string),
-                    row["extraction_metadata"])
+                    metadata)
             
             
             self.add_triple_with_metadata(
                 scholarly_article_uri,
                 self.namespaces["schema"]["url"],
                 Literal("https://arxiv.org/abs/"+entity_id, datatype=XSD.string),
-                row["extraction_metadata"])
+                metadata)
             
             if row["summary"] is not None:
                 self.add_triple_with_metadata(
                     scholarly_article_uri,
                     self.namespaces["schema"]["abstract"],
                     Literal(row["summary"], datatype=XSD.string),
-                    row["extraction_metadata"])
+                    metadata)
             
             if row["doi"] is not None:
                 self.add_triple_with_metadata(
                     scholarly_article_uri,
                     self.namespaces["schema"]["sameAs"],
                     URIRef(row["doi"]),
-                    row["extraction_metadata"])
+                    metadata)
             
             if row["published"] is not None:
                 self.add_triple_with_metadata(
                     scholarly_article_uri,
                     self.namespaces["schema"]["datePublished"],
                     Literal(row["published"], datatype=XSD.date),
-                    row["extraction_metadata"])
+                    metadata)
             
             if row["categories"] is not None:
                 for category in row["categories"]:
@@ -114,7 +118,7 @@ class GraphBuilderArxiv(GraphBuilderBase):
                         scholarly_article_uri,
                         self.namespaces["schema"]["keywords"],
                         Literal(category, datatype=XSD.string),
-                        row["extraction_metadata"])
+                        metadata)
             
             if row["authors"] is not None:
                 for author in row["authors"]:
@@ -122,7 +126,7 @@ class GraphBuilderArxiv(GraphBuilderBase):
                         scholarly_article_uri,
                         self.namespaces["schema"]["author"],
                         Literal(author, datatype=XSD.string),
-                        row["extraction_metadata"])
+                        metadata)
             
             
         return self.graph, self.metadata_graph

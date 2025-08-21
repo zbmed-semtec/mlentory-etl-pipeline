@@ -31,7 +31,7 @@ class GraphBuilderCroissant(GraphBuilderBase):
         self,
         df: pd.DataFrame,
         identifier_column: Optional[str] = None,
-        platform: str = None,
+        platform: str = "croissant",
     ) -> Tuple[Graph, Graph]:
         """
         Convert a DataFrame to a Knowledge Graph using the Croissant schema.
@@ -74,26 +74,21 @@ class GraphBuilderCroissant(GraphBuilderBase):
             self.delete_unwanted_nodes(temp_graph)
             self.replace_blank_nodes_with_type(temp_graph, row, platform)
             self.delete_remaining_blank_nodes(temp_graph)
-            # self.replace_blank_nodes_with_no_type(temp_graph,row,platform)
-            # self.delete_remaining_blank_nodes(temp_graph)
-            # self.replace_default_nodes(temp_graph, row, platform)
-            
 
             # Go through the triples and add them
             for triple in temp_graph:
-                # print("TRIPLE:", triple)
-                # Transform the triple to the correct format
+                # Create metadata dictionary with all required fields
+                metadata = {
+                    "extraction_method": row["extraction_metadata"]["extraction_method"],
+                    "confidence": row["extraction_metadata"]["confidence"],
+                    "platform": platform
+                }
 
                 self.add_triple_with_metadata(
                     triple[0],
                     triple[1],
                     triple[2],
-                    {
-                        "extraction_method": row["extraction_metadata"][
-                            "extraction_method"
-                        ],
-                        "confidence": row["extraction_metadata"]["confidence"],
-                    },
+                    metadata,
                     row["extraction_metadata"]["extraction_time"],
                 )
 

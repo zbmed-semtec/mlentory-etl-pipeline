@@ -102,7 +102,7 @@ class GraphBuilderFAIR4ML(GraphBuilderBase):
                 entity_uri,
                 RDF.type,
                 self.namespaces["fair4ml"][entity_type],
-                {"extraction_method": ExtractionMethod.ETL.value, "confidence": 1.0},
+                {"extraction_method": ExtractionMethod.ETL.value, "confidence": 1.0, "platform": platform},
             )
 
             # Go through the properties of the model
@@ -131,6 +131,7 @@ class GraphBuilderFAIR4ML(GraphBuilderBase):
                                         "extraction_method"
                                     ],
                                     "confidence": value_info["confidence"],
+                                    "platform": platform,
                                 },
                                 value_info["extraction_time"],
                             )
@@ -147,7 +148,7 @@ class GraphBuilderFAIR4ML(GraphBuilderBase):
                                 entity_uri,
                                 predicate,
                                 rdf_object,
-                                {"extraction_method": "Unknown", "confidence": 0.0}, # Placeholder metadata
+                                {"extraction_method": "Unknown", "confidence": 0.0, "platform": platform}, # Placeholder metadata
                                 None # No extraction time provided
                             )
 
@@ -196,7 +197,7 @@ class GraphBuilderFAIR4ML(GraphBuilderBase):
                 entity_uri,
                 RDF.type,
                 self.namespaces["fair4ml"]["ML_Model"],
-                {"extraction_method": ExtractionMethod.ETL.value, "confidence": 1.0},
+                {"extraction_method": ExtractionMethod.ETL.value, "confidence": 1.0, "platform": platform},
                 self.transformation_time
             )
 
@@ -226,6 +227,7 @@ class GraphBuilderFAIR4ML(GraphBuilderBase):
                                         "extraction_method"
                                     ],
                                     "confidence": value_info["confidence"],
+                                    "platform": platform,
                                 },
                                 self.transformation_time,
                             )
@@ -242,7 +244,7 @@ class GraphBuilderFAIR4ML(GraphBuilderBase):
                                 entity_uri,
                                 predicate,
                                 rdf_object,
-                                {"extraction_method": "Unknown", "confidence": 0.0}, # Placeholder metadata
+                                {"extraction_method": "Unknown", "confidence": 0.0, "platform": platform}, # Placeholder metadata
                                 self.transformation_time
                             )
 
@@ -345,20 +347,20 @@ class GraphBuilderFAIR4ML(GraphBuilderBase):
                         dataset_object_uri, 
                         RDF.type, 
                         self.namespaces["fair4ml"]["DatasetObject"], 
-                        {"extraction_method": ExtractionMethod.ETL.value, "confidence": 1.0}
+                        {"extraction_method": ExtractionMethod.ETL.value, "confidence": 1.0, "platform": platform}
                     )
 
                     self.add_triple_with_metadata(
                         dataset_object_uri, 
                         self.namespaces["schema"]["name"], 
                         Literal(item_value["name"], datatype=XSD.string), 
-                        {"extraction_method": ExtractionMethod.ETL.value, "confidence": 1.0})
+                        {"extraction_method": ExtractionMethod.ETL.value, "confidence": 1.0, "platform": platform})
                     
                     self.add_triple_with_metadata(
                         dataset_object_uri, 
                         self.namespaces["schema"]["url"], 
                         Literal(item_value["url"], datatype=XSD.string), 
-                        {"extraction_method": ExtractionMethod.ETL.value, "confidence": 1.0}
+                        {"extraction_method": ExtractionMethod.ETL.value, "confidence": 1.0, "platform": platform}
                     )
 
                     sub_id_hash = self.generate_entity_hash(platform, "estimationProcedure"+str(id_hash), value["estimationProcedure"])
@@ -369,28 +371,28 @@ class GraphBuilderFAIR4ML(GraphBuilderBase):
                         dataset_object_uri,
                         self.namespaces["fair4ml"]["estimationProcedure"],
                         est_proc_uri,
-                        {"extraction_method": ExtractionMethod.ETL.value, "confidence": 1.0}
+                        {"extraction_method": ExtractionMethod.ETL.value, "confidence": 1.0, "platform": platform}
                     )
 
                     self.add_triple_with_metadata(
                         est_proc_uri,
                         RDF.type,
                         self.namespaces["fair4ml"]["estimationProcedure"],
-                        {"extraction_method": ExtractionMethod.ETL.value, "confidence": 1.0}
+                        {"extraction_method": ExtractionMethod.ETL.value, "confidence": 1.0, "platform": platform}
                     )
 
                     self.add_triple_with_metadata(
                         est_proc_uri,
                         self.namespaces["schema"]["type"],
                         Literal(item_value["estimationProcedure"]["type"], datatype=XSD.string),
-                        {"extraction_method": ExtractionMethod.ETL.value, "confidence": 1.0}
+                        {"extraction_method": ExtractionMethod.ETL.value, "confidence": 1.0, "platform": platform}
                     )
 
                     self.add_triple_with_metadata(
                         est_proc_uri,
                         self.namespaces["schema"]["url"],
                         Literal(item_value["estimationProcedure"]["data_splits_url"], datatype=XSD.anyURI),
-                        {"extraction_method": ExtractionMethod.ETL.value, "confidence": 1.0}
+                        {"extraction_method": ExtractionMethod.ETL.value, "confidence": 1.0, "platform": platform}
                     )
 
                     params = item_value['estimationProcedure']['parameters']
@@ -399,7 +401,7 @@ class GraphBuilderFAIR4ML(GraphBuilderBase):
                             est_proc_uri,
                             self.namespaces["fair4ml"][param_key],
                             Literal(param_val, datatype=XSD.string),
-                            {"extraction_method": ExtractionMethod.ETL.value, "confidence": 1.0}
+                            {"extraction_method": ExtractionMethod.ETL.value, "confidence": 1.0, "platform": platform}
                         )
 
                     objects.append(dataset_object_uri)
@@ -411,7 +413,7 @@ class GraphBuilderFAIR4ML(GraphBuilderBase):
                         dataset_uri,
                         RDF.type,
                         self.namespaces["fair4ml"]["Dataset"],
-                        {"extraction_method": ExtractionMethod.ETL.value, "confidence": 1.0},
+                        {"extraction_method": ExtractionMethod.ETL.value, "confidence": 1.0, "platform": platform},
                         self.transformation_time
                     )
                     
@@ -420,7 +422,7 @@ class GraphBuilderFAIR4ML(GraphBuilderBase):
                             dataset_uri,
                             self.namespaces["schema"]["name"],
                             Literal(item_value_str, datatype=XSD.string),
-                            {"extraction_method": ExtractionMethod.ETL.value, "confidence": 1.0},
+                            {"extraction_method": ExtractionMethod.ETL.value, "confidence": 1.0, "platform": platform},
                             self.transformation_time
                         )
                         if platform == Platform.HUGGING_FACE.value:
@@ -428,7 +430,7 @@ class GraphBuilderFAIR4ML(GraphBuilderBase):
                                 dataset_uri,
                                 self.namespaces["schema"]["url"],
                                 Literal("https://huggingface.co/datasets/"+item_value_str, datatype=XSD.anyURI),
-                                {"extraction_method": ExtractionMethod.ETL.value, "confidence": 1.0},
+                                {"extraction_method": ExtractionMethod.ETL.value, "confidence": 1.0, "platform": platform},
                                 self.transformation_time
                             )
                     else:
@@ -436,14 +438,14 @@ class GraphBuilderFAIR4ML(GraphBuilderBase):
                             dataset_uri,
                             self.namespaces["schema"]["description"],
                             Literal(item_value_str, datatype=XSD.string),
-                            {"extraction_method": ExtractionMethod.ETL.value, "confidence": 1.0},
+                            {"extraction_method": ExtractionMethod.ETL.value, "confidence": 1.0, "platform": platform},
                             self.transformation_time
                         )
                         self.add_triple_with_metadata(
                             dataset_uri,
                             self.namespaces["schema"]["name"],
                             Literal("Extracted model info: "+item_value_str[:50]+"...", datatype=XSD.string),
-                            {"extraction_method": ExtractionMethod.ETL.value, "confidence": 1.0},
+                            {"extraction_method": ExtractionMethod.ETL.value, "confidence": 1.0, "platform": platform},
                             self.transformation_time
                         )
 
@@ -459,7 +461,7 @@ class GraphBuilderFAIR4ML(GraphBuilderBase):
                         evaluation_uri,
                         RDF.type,
                         self.namespaces["fair4ml"]["EvaluationObject"],
-                        {"extraction_method": ExtractionMethod.ETL.value, "confidence": 1.0}
+                        {"extraction_method": ExtractionMethod.ETL.value, "confidence": 1.0, "platform": platform}
                     )
 
                     # Add all evaluation metrics as triples
@@ -468,7 +470,7 @@ class GraphBuilderFAIR4ML(GraphBuilderBase):
                             evaluation_uri,
                             self.namespaces["fair4ml"][metric_key],
                             Literal(metric_val, datatype=XSD.double if isinstance(metric_val, float) else XSD.string),
-                            {"extraction_method": ExtractionMethod.ETL.value, "confidence": 1.0}
+                            {"extraction_method": ExtractionMethod.ETL.value, "confidence": 1.0, "platform": platform}
                         )
 
                     objects.append(evaluation_uri)
@@ -486,14 +488,14 @@ class GraphBuilderFAIR4ML(GraphBuilderBase):
                         scholarly_article_uri,
                         RDF.type,
                         self.namespaces["schema"]["ScholarlyArticle"],
-                        {"extraction_method": ExtractionMethod.ETL.value, "confidence": 1.0},
+                        {"extraction_method": ExtractionMethod.ETL.value, "confidence": 1.0, "platform": platform},
                         self.transformation_time
                     )
                     self.add_triple_with_metadata(
                         scholarly_article_uri,
                         self.namespaces["schema"]["url"],
                         Literal("https://arxiv.org/abs/"+article_id, datatype=XSD.anyURI),
-                        {"extraction_method": ExtractionMethod.ETL.value, "confidence": 1.0},
+                        {"extraction_method": ExtractionMethod.ETL.value, "confidence": 1.0, "platform": platform},
                         self.transformation_time
                     )
                     objects.append(scholarly_article_uri)
@@ -517,7 +519,7 @@ class GraphBuilderFAIR4ML(GraphBuilderBase):
                         person_uri,
                         RDF.type,
                         self.namespaces["schema"]["Person"],
-                        {"extraction_method": ExtractionMethod.ETL, "confidence": 1.0})
+                        {"extraction_method": ExtractionMethod.ETL.value, "confidence": 1.0, "platform": platform})
                     
                     if platform == Platform.OPEN_ML.value:
 
@@ -525,13 +527,13 @@ class GraphBuilderFAIR4ML(GraphBuilderBase):
                         person_uri,
                         self.namespaces["schema"]["name"],
                         Literal(item_value["name"], datatype=XSD.string),
-                        {"extraction_method": ExtractionMethod.ETL, "confidence": 1.0})
+                        {"extraction_method": ExtractionMethod.ETL.value, "confidence": 1.0, "platform": platform})
 
                         self.add_triple_with_metadata(
                             person_uri,
                             self.namespaces["schema"]["url"],
                             Literal(item_value["url"], datatype=XSD.anyURI),
-                            {"extraction_method": ExtractionMethod.ETL, "confidence": 1.0})
+                            {"extraction_method": ExtractionMethod.ETL.value, "confidence": 1.0, "platform": platform})
 
                     if platform == Platform.HUGGING_FACE.value:
 
@@ -539,13 +541,13 @@ class GraphBuilderFAIR4ML(GraphBuilderBase):
                         person_uri,
                         self.namespaces["schema"]["name"],
                         Literal(item_value_str, datatype=XSD.string),
-                        {"extraction_method": ExtractionMethod.ETL.value, "confidence": 1.0})
+                        {"extraction_method": ExtractionMethod.ETL.value, "confidence": 1.0, "platform": platform})
 
                         self.add_triple_with_metadata(
                             person_uri,
                             self.namespaces["schema"]["url"],
                             Literal("https://huggingface.co/"+item_value_str, datatype=XSD.anyURI),
-                            {"extraction_method": ExtractionMethod.ETL.value.value, "confidence": 1.0},
+                            {"extraction_method": ExtractionMethod.ETL.value, "confidence": 1.0, "platform": platform},
                             self.transformation_time
                         )
                     else:
@@ -553,13 +555,13 @@ class GraphBuilderFAIR4ML(GraphBuilderBase):
                         person_uri,
                         self.namespaces["schema"]["name"],
                         Literal(item_value["name"], datatype=XSD.string),
-                        {"extraction_method": ExtractionMethod.ETL.value, "confidence": 1.0})
+                        {"extraction_method": ExtractionMethod.ETL.value, "confidence": 1.0, "platform": platform})
 
                         self.add_triple_with_metadata(
                             person_uri,
                             self.namespaces["schema"]["url"],
                             Literal(item_value["url"], datatype=XSD.anyURI),
-                            {"extraction_method": ExtractionMethod.ETL.value, "confidence": 1.0})
+                            {"extraction_method": ExtractionMethod.ETL.value, "confidence": 1.0, "platform": platform})
                         
                     objects.append(person_uri)
                 
@@ -571,14 +573,14 @@ class GraphBuilderFAIR4ML(GraphBuilderBase):
                         organization_uri,
                         RDF.type,
                         self.namespaces["schema"]["Organization"],
-                        {"extraction_method": ExtractionMethod.ETL.value, "confidence": 1.0},
+                        {"extraction_method": ExtractionMethod.ETL.value, "confidence": 1.0, "platform": platform},
                         self.transformation_time
                     )
                     self.add_triple_with_metadata(
                         organization_uri,
                         self.namespaces["schema"]["name"],
                         Literal(item_value_str, datatype=XSD.string),
-                        {"extraction_method": ExtractionMethod.ETL.value, "confidence": 1.0},
+                        {"extraction_method": ExtractionMethod.ETL.value, "confidence": 1.0, "platform": platform},
                         self.transformation_time
                     )
                     if platform == Platform.HUGGING_FACE.value:
@@ -586,7 +588,7 @@ class GraphBuilderFAIR4ML(GraphBuilderBase):
                             organization_uri,
                             self.namespaces["schema"]["url"],
                             URIRef("https://huggingface.co/"+item_value_str),
-                            {"extraction_method": ExtractionMethod.ETL.value, "confidence": 1.0},
+                            {"extraction_method": ExtractionMethod.ETL.value, "confidence": 1.0, "platform": platform},
                             self.transformation_time
                         )
                     objects.append(organization_uri)
@@ -602,14 +604,14 @@ class GraphBuilderFAIR4ML(GraphBuilderBase):
                             defined_term_uri,
                             RDF.type,
                             self.namespaces["schema"]["DefinedTerm"],
-                            {"extraction_method": ExtractionMethod.ETL.value, "confidence": 1.0},
+                            {"extraction_method": ExtractionMethod.ETL.value, "confidence": 1.0, "platform": platform},
                             self.transformation_time
                         )
                         self.add_triple_with_metadata(
                             defined_term_uri,
                             self.namespaces["schema"]["name"],
                             Literal(item_value_str, datatype=XSD.string),
-                            {"extraction_method": ExtractionMethod.ETL.value, "confidence": 1.0},
+                            {"extraction_method": ExtractionMethod.ETL.value, "confidence": 1.0, "platform": platform},
                             self.transformation_time
                         )
                         objects.append(defined_term_uri)
@@ -625,14 +627,14 @@ class GraphBuilderFAIR4ML(GraphBuilderBase):
                             creative_work_uri,
                             RDF.type,
                             self.namespaces["schema"]["CreativeWork"],
-                            {"extraction_method": ExtractionMethod.ETL.value, "confidence": 1.0},
+                            {"extraction_method": ExtractionMethod.ETL.value, "confidence": 1.0, "platform": platform},
                             self.transformation_time
                         )
                         self.add_triple_with_metadata(
                             creative_work_uri,
                             self.namespaces["schema"]["name"],
                             Literal(item_value_str, datatype=XSD.string),
-                            {"extraction_method": ExtractionMethod.ETL.value, "confidence": 1.0},
+                            {"extraction_method": ExtractionMethod.ETL.value, "confidence": 1.0, "platform": platform},
                             self.transformation_time
                         )
                         objects.append(creative_work_uri)
@@ -644,14 +646,14 @@ class GraphBuilderFAIR4ML(GraphBuilderBase):
                         ml_model_uri,
                         RDF.type,
                         self.namespaces["fair4ml"]["MLModel"],
-                        {"extraction_method": ExtractionMethod.ETL.value, "confidence": 1.0},
+                        {"extraction_method": ExtractionMethod.ETL.value, "confidence": 1.0, "platform": platform},
                         self.transformation_time
                     )
                     self.add_triple_with_metadata(
                         ml_model_uri,
                         self.namespaces["schema"]["name"],
                         Literal(item_value_str, datatype=XSD.string),
-                        {"extraction_method": ExtractionMethod.ETL.value, "confidence": 1.0},
+                        {"extraction_method": ExtractionMethod.ETL.value, "confidence": 1.0, "platform": platform},
                         self.transformation_time
                     )
                     if platform == Platform.HUGGING_FACE.value:
@@ -659,7 +661,7 @@ class GraphBuilderFAIR4ML(GraphBuilderBase):
                             ml_model_uri,
                             self.namespaces["schema"]["url"],
                             URIRef("https://huggingface.co/"+item_value_str),
-                            {"extraction_method": ExtractionMethod.ETL.value, "confidence": 1.0},
+                            {"extraction_method": ExtractionMethod.ETL.value, "confidence": 1.0, "platform": platform},
                             self.transformation_time
                         )
                     objects.append(ml_model_uri)
