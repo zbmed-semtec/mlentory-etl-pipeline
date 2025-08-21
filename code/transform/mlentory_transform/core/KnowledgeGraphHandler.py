@@ -497,7 +497,7 @@ class KnowledgeGraphHandler:
                     self.namespaces["schema"]["name"], 
                     Literal(value, datatype=XSD.string), 
                     {"extraction_method": extraction_method, "confidence": 1.0})
-                url_value = f"https://huggingface.co/{value}" if platform == "hugging_face" else value
+                url_value = f"https://huggingface.co/{value}" if platform == "huggingface" else value
                 self.add_triple_with_metadata(
                     organization_uri, 
                     self.namespaces["schema"]["url"], 
@@ -505,7 +505,7 @@ class KnowledgeGraphHandler:
                     {"extraction_method": extraction_method, "confidence": 1.0})
                 objects.append(organization_uri)
             elif "DefinedTerm" in range_value:
-                if platform == Platform.HUGGING_FACE.value and (":" in value or len(value) <= 2):
+                if platform == Platform.HUGGINGFACE.value and (":" in value or len(value) <= 2):
                     objects.append(Literal(value, datatype=XSD.string))
                 elif platform == Platform.OPEN_ML.value and isinstance(value, list):
                     unique_keywords = {str(item).strip() for item in value if str(item).strip()}

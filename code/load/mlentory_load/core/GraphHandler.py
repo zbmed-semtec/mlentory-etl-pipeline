@@ -34,7 +34,7 @@ class GraphHandler:
         RDFHandler (RDFHandler): Handler for RDF operations
         IndexHandler (IndexHandler): Handler for search index
         kg_files_directory (str): Directory for knowledge graph files
-        platform (str): Platform identifier (e.g., "hugging_face")
+        platform (str): Platform identifier (e.g., "huggingface")
         graph_identifier (str): URI for main graph
         deprecated_graph_identifier (str): URI for deprecated triples
     """
@@ -45,7 +45,7 @@ class GraphHandler:
         RDFHandler: RDFHandler,
         IndexHandler: IndexHandler,
         kg_files_directory: str = "./../kg_files",
-        platform: str = "hugging_face",
+        platform: str = "huggingface",
         graph_identifier: str = "https://example.com/data_1",
         deprecated_graph_identifier: str = "https://example.com/data_2",
         logger: Optional[logging.Logger] = None,

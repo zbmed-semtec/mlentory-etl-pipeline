@@ -425,7 +425,7 @@ class GraphBuilderFAIR4ML(GraphBuilderBase):
                             {"extraction_method": ExtractionMethod.ETL.value, "confidence": 1.0, "platform": platform},
                             self.transformation_time
                         )
-                        if platform == Platform.HUGGING_FACE.value:
+                        if platform == Platform.HUGGINGFACE.value:
                              self.add_triple_with_metadata(
                                 dataset_uri,
                                 self.namespaces["schema"]["url"],
@@ -535,7 +535,7 @@ class GraphBuilderFAIR4ML(GraphBuilderBase):
                             Literal(item_value["url"], datatype=XSD.anyURI),
                             {"extraction_method": ExtractionMethod.ETL.value, "confidence": 1.0, "platform": platform})
 
-                    if platform == Platform.HUGGING_FACE.value:
+                    if platform == Platform.HUGGINGFACE.value:
 
                         self.add_triple_with_metadata(
                         person_uri,
@@ -583,7 +583,7 @@ class GraphBuilderFAIR4ML(GraphBuilderBase):
                         {"extraction_method": ExtractionMethod.ETL.value, "confidence": 1.0, "platform": platform},
                         self.transformation_time
                     )
-                    if platform == Platform.HUGGING_FACE.value:
+                    if platform == Platform.HUGGINGFACE.value:
                         self.add_triple_with_metadata(
                             organization_uri,
                             self.namespaces["schema"]["url"],
@@ -595,7 +595,7 @@ class GraphBuilderFAIR4ML(GraphBuilderBase):
 
                 elif "DefinedTerm" in range_value:
                     # Avoid creating DefinedTerms for HF specific codes like 'en: English'
-                    if platform == Platform.HUGGING_FACE.value and (":" in item_value_str or len(item_value_str) <= 2):
+                    if platform == Platform.HUGGINGFACE.value and (":" in item_value_str or len(item_value_str) <= 2):
                         objects.append(Literal(item_value_str, datatype=XSD.string))
                     else:
                         id_hash = self.generate_entity_hash(platform, "DefinedTerm", item_value_str.lower().strip())
@@ -617,7 +617,7 @@ class GraphBuilderFAIR4ML(GraphBuilderBase):
                         objects.append(defined_term_uri)
 
                 elif "CreativeWork" in range_value:
-                    if platform == Platform.HUGGING_FACE.value and ":" in item_value_str:
+                    if platform == Platform.HUGGINGFACE.value and ":" in item_value_str:
                         objects.append(Literal(item_value_str, datatype=XSD.string))
                     else:
                         print(f"Creating in FAIR4ML CreativeWork for {item_value_str}")
@@ -656,7 +656,7 @@ class GraphBuilderFAIR4ML(GraphBuilderBase):
                         {"extraction_method": ExtractionMethod.ETL.value, "confidence": 1.0, "platform": platform},
                         self.transformation_time
                     )
-                    if platform == Platform.HUGGING_FACE.value:
+                    if platform == Platform.HUGGINGFACE.value:
                         self.add_triple_with_metadata(
                             ml_model_uri,
                             self.namespaces["schema"]["url"],

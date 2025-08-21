@@ -107,7 +107,7 @@ class MlentoryTransform:
 
         Args:
             extracted_df (pd.DataFrame): DataFrame containing extracted data
-            platform (str): Platform name (e.g., Platform.OPEN_ML.value or Platform.HUGGING_FACE.value)
+            platform (str): Platform name (e.g., Platform.OPEN_ML.value or Platform.HUGGINGFACE.value)
             save_output_in_json (bool, optional): Whether to save the transformed data.
                 Defaults to False.
             output_dir (str, optional): Directory to save the transformed data.
@@ -176,7 +176,7 @@ class MlentoryTransform:
     def transform_HF_models(self, extracted_df, save_output_in_json=False, output_dir=None):
         return self.transform_data(
             extracted_df=extracted_df,
-            platform=Platform.HUGGING_FACE.value,
+            platform=Platform.HUGGINGFACE.value,
             save_output_in_json=save_output_in_json,
             output_dir=output_dir,
             identifier_column="schema.org:name"
@@ -213,12 +213,12 @@ class MlentoryTransform:
             self.kg_handler.dataframe_to_graph_Croissant_schema(
                 df=extracted_df, 
                 identifier_column="datasetId", 
-                platform=Platform.HUGGING_FACE.value
+                platform=Platform.HUGGINGFACE.value
             )
         )
 
-        self.current_sources[f"{Platform.HUGGING_FACE.value}_dataset"] = knowledge_graph
-        self.current_sources[f"{Platform.HUGGING_FACE.value}_dataset_metadata"] = metadata_graph
+        self.current_sources[f"{Platform.HUGGINGFACE.value}_dataset"] = knowledge_graph
+        self.current_sources[f"{Platform.HUGGINGFACE.value}_dataset_metadata"] = metadata_graph
 
         if save_output_in_json:
             current_date = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
@@ -250,12 +250,12 @@ class MlentoryTransform:
             self.kg_handler.dataframe_to_graph_arXiv_schema(
                 df=extracted_df, 
                 identifier_column="arxiv_id", 
-                platform=Platform.HUGGING_FACE.value
+                platform=Platform.HUGGINGFACE.value
             )
         )
         
-        self.current_sources[f"{Platform.HUGGING_FACE.value}_arxiv"] = knowledge_graph
-        self.current_sources[f"{Platform.HUGGING_FACE.value}_arxiv_metadata"] = metadata_graph
+        self.current_sources[f"{Platform.HUGGINGFACE.value}_arxiv"] = knowledge_graph
+        self.current_sources[f"{Platform.HUGGINGFACE.value}_arxiv_metadata"] = metadata_graph
         
         if save_output_in_json:
             current_date = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
@@ -286,12 +286,12 @@ class MlentoryTransform:
             self.kg_handler.dataframe_to_graph_keywords(
                 df=extracted_df, 
                 identifier_column="tag_name", 
-                platform=Platform.HUGGING_FACE.value
+                platform=Platform.HUGGINGFACE.value
             )
         )
         
-        self.current_sources[f"{Platform.HUGGING_FACE.value}_keywords"] = knowledge_graph
-        self.current_sources[f"{Platform.HUGGING_FACE.value}_keywords_metadata"] = metadata_graph
+        self.current_sources[f"{Platform.HUGGINGFACE.value}_keywords"] = knowledge_graph
+        self.current_sources[f"{Platform.HUGGINGFACE.value}_keywords_metadata"] = metadata_graph
         
         if save_output_in_json:
             current_date = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")

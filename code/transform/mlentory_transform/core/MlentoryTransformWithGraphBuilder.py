@@ -257,7 +257,7 @@ class MlentoryTransformWithGraphBuilder:
         Transform the extracted data into a knowledge graph and save it to a file.
         """
         
-        knowledge_graph, extraction_metadata_graph = self.graph_builder_fair4ml.hf_dataframe_to_graph(extracted_df, identifier_column="schema.org:name", platform=Platform.HUGGING_FACE.value)
+        knowledge_graph, extraction_metadata_graph = self.graph_builder_fair4ml.hf_dataframe_to_graph(extracted_df, identifier_column="schema.org:name", platform=Platform.HUGGINGFACE.value)
         
         if save_output:
             self.save_graph(knowledge_graph, "Transformed_HF_models_kg", output_dir)
@@ -272,7 +272,7 @@ class MlentoryTransformWithGraphBuilder:
         output_dir: str = None,
     ) -> Tuple[rdflib.Graph, rdflib.Graph]:
         
-        knowledge_graph, extraction_metadata_graph = self.graph_builder_croissant.hf_dataframe_to_graph(extracted_df, identifier_column="datasetId", platform=Platform.HUGGING_FACE.value)
+        knowledge_graph, extraction_metadata_graph = self.graph_builder_croissant.hf_dataframe_to_graph(extracted_df, identifier_column="datasetId", platform=Platform.HUGGINGFACE.value)
         
         if save_output:
             self.save_graph(knowledge_graph, "Transformed_HF_datasets_kg", output_dir)
@@ -287,7 +287,7 @@ class MlentoryTransformWithGraphBuilder:
         output_dir: str = None,
     ) -> Tuple[rdflib.Graph, rdflib.Graph]:
         
-        knowledge_graph, extraction_metadata_graph = self.graph_builder_arxiv.hf_dataframe_to_graph(extracted_df, identifier_column="arxiv_id", platform=Platform.HUGGING_FACE.value)
+        knowledge_graph, extraction_metadata_graph = self.graph_builder_arxiv.hf_dataframe_to_graph(extracted_df, identifier_column="arxiv_id", platform=Platform.HUGGINGFACE.value)
         
         if save_output:
             self.save_graph(knowledge_graph, "Transformed_HF_kg", output_dir)
@@ -302,7 +302,7 @@ class MlentoryTransformWithGraphBuilder:
         output_dir: str = None,
     ) -> Tuple[rdflib.Graph, rdflib.Graph]:
         
-        knowledge_graph, extraction_metadata_graph = self.graph_builder_licenses.hf_dataframe_to_graph(extracted_df, identifier_column="Name", platform=Platform.HUGGING_FACE.value)
+        knowledge_graph, extraction_metadata_graph = self.graph_builder_licenses.hf_dataframe_to_graph(extracted_df, identifier_column="Name", platform=Platform.HUGGINGFACE.value)
         
         if save_output:
             self.save_graph(knowledge_graph, "Transformed_HF_licenses_kg", output_dir)
@@ -317,7 +317,7 @@ class MlentoryTransformWithGraphBuilder:
         output_dir: str = None,
     ) -> Tuple[rdflib.Graph, rdflib.Graph]:
         
-        knowledge_graph, extraction_metadata_graph = self.graph_builder_keywords.hf_dataframe_to_graph(extracted_df, identifier_column="tag_name", platform=Platform.HUGGING_FACE.value)
+        knowledge_graph, extraction_metadata_graph = self.graph_builder_keywords.hf_dataframe_to_graph(extracted_df, identifier_column="tag_name", platform=Platform.HUGGINGFACE.value)
         
         if save_output:
             self.save_graph(knowledge_graph, "Transformed_HF_keywords_kg", output_dir)

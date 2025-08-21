@@ -79,11 +79,11 @@ class Platform(str, Enum):
         None
 
     Example:
-        >>> platform = Platform.HUGGING_FACE
+        >>> platform = Platform.HUGGINGFACE
         >>> print(platform)
-        'hugging_face'
+        'huggingface'
     """
-    HUGGING_FACE = "hugging_face"
+    HUGGINGFACE = "huggingface"
     OPEN_ML = "open_ml"
     AI4LIFE = "ai4life"
     PYTORCH_HUB = "pytorch_hub"
