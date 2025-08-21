@@ -11,7 +11,8 @@ CREATE TABLE IF NOT EXISTS "Triplet" (
 CREATE TABLE IF NOT EXISTS "Triplet_Extraction_Info" (
     "id" BIGSERIAL PRIMARY KEY,
     "method_description" TEXT NOT NULL,
-    "extraction_confidence" DECIMAL(6,5)
+    "extraction_confidence" DECIMAL(6,5),
+    "platform" VARCHAR(255) NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS "Version_Range" (
