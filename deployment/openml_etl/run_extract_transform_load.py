@@ -21,6 +21,7 @@ from mlentory_transform.core.MlentoryTransform import (
 )
 from mlentory_load.core import LoadProcessor, GraphHandlerForKG
 from mlentory_load.dbHandler import SQLHandler, RDFHandler, IndexHandler
+
 # from openml_etl_component import OpenMLETLComponent
 
 # Load environment variables with defaults
@@ -216,6 +217,7 @@ def initialize_load_processor(kg_files_directory: str, logger: logging.Logger) -
             SQLHandler=sqlHandler,
             RDFHandler=rdfHandler,
             IndexHandler=elasticsearchHandler,
+            platform="openml",
             kg_files_directory=kg_files_directory,
             graph_identifier="https://w3id.org/mlentory/mlentory_graph",
             deprecated_graph_identifier="https://w3id.org/mlentory/deprecated_mlentory_graph",

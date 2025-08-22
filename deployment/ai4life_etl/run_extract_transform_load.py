@@ -146,6 +146,7 @@ def initialize_load_processor(
         RDFHandler=rdfHandler,
         IndexHandler=elasticsearchHandler,
         kg_files_directory=kg_files_directory,
+        platform="ai4life",
         graph_identifier="https://w3id.org/mlentory/mlentory_graph",
         deprecated_graph_identifier="https://w3id.org/mlentory/deprecated_mlentory_graph",
         logger=logger,

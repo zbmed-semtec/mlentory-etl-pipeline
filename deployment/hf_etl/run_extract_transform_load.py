@@ -233,6 +233,7 @@ def initialize_load_processor(
         SQLHandler=sqlHandler,
         RDFHandler=rdfHandler,
         IndexHandler=elasticsearchHandler,
+        platform="huggingface",
         kg_files_directory=kg_files_directory,
         graph_identifier="https://w3id.org/mlentory/mlentory_graph",
         deprecated_graph_identifier="https://w3id.org/mlentory/deprecated_mlentory_graph",
@@ -576,7 +577,6 @@ def main():
     start_time = time.time()
     # loader.clean_DBs()
     # time.sleep(5)
-    # loader = initialize_load_processor(kg_files_directory, logger)
     # loader = initialize_load_processor(kg_files_directory, logger)
     end_time = time.time()
     logger.info(f"Database cleaning took {end_time - start_time:.2f} seconds")
