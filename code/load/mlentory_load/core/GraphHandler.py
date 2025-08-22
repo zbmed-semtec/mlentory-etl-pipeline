@@ -300,18 +300,33 @@ class GraphHandler:
     
     def deprecate_old_triplets_in_batch(self, min_extraction_time: datetime):
         """
-        Deprecate triplets that are older than the minimum extraction time of the current update.
+        Deprecate triplets that are older than the minimum extraction time of the current update
+        and belong to the same platform as this GraphHandler instance.
         
         Args:
             min_extraction_time (datetime): The minimum extraction time
         """
+        # self.SQLHandler.execute_sql(
+        #     """UPDATE "Version_Range" SET deprecated = %s WHERE use_end < %s""",
+        #     (True, min_extraction_time),
+        # )
         self.SQLHandler.execute_sql(
-            """UPDATE "Version_Range" SET deprecated = %s WHERE use_end < %s""",
-            (True, min_extraction_time),
+            """UPDATE "Version_Range" vr
+               SET deprecated = %s 
+               FROM "Triplet_Extraction_Info" tei
+               WHERE vr.extraction_info_id = tei.id
+               AND vr.use_end < %s
+               AND tei.platform = %s""",
+            (True, min_extraction_time, self.platform),
         )
     
     def deprecate_old_triplets_for_model(self, model_uri):
-
+        """
+        Deprecate old triplets for a specific model that belong to the current platform.
+        
+        Args:
+            model_uri: The URI of the model whose old triplets should be deprecated
+        """
         model_uri_json = str(model_uri.n3())
 
         old_triplets_df = self.SQLHandler.query(
@@ -731,7 +746,7 @@ class GraphHandler:
             triplet_ids, extraction_info_ids, extraction_times
         )
         
-        self.deprecate_old_triplets_in_batch(min_extraction_time)
+        # self.deprecate_old_triplets_in_batch(min_extraction_time)
 
         # Add new triplets to the list
         for i, (is_new_triplet, triplet) in enumerate(zip(is_new, triplets)):

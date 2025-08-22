@@ -50,7 +50,7 @@ class GraphHandlerForKG(GraphHandler):
         RDFHandler,
         IndexHandler,
         kg_files_directory: str = "./../kg_files",
-        platform: str = "hugging_face",
+        platform: str = "huggingface",
         graph_identifier: str = "https://w3id.org/mlentory/mlentory_graph",
         deprecated_graph_identifier: str = "https://w3id.org/mlentory/deprecated_mlentory_graph",
         logger=None,
@@ -144,6 +144,7 @@ class GraphHandlerForKG(GraphHandler):
 
         batch_size = 50000
         batch_triplets = []
+        modified_entities = set()
 
         # Get all nodes of type StatementMetadata
         for metadata_node in tqdm(
@@ -158,6 +159,8 @@ class GraphHandlerForKG(GraphHandler):
             subject = metadata_node_dict[URIRef(META_NS + "subject")]
             predicate = metadata_node_dict[URIRef(META_NS + "predicate")]
             object_value = metadata_node_dict[URIRef(META_NS + "object")]
+            
+            modified_entities.add(subject)
 
             # Extract metadata information
             confidence = float(metadata_node_dict[URIRef(META_NS + "confidence")])
@@ -205,9 +208,66 @@ class GraphHandlerForKG(GraphHandler):
         if self.curr_update_date is None:
             # Use the latest extraction time as current update date
             self.curr_update_date = max_extraction_time
+            
+        # Deprecate old triplets for entities that were modified in this update
+        self.logger.info(f"Deprecating old triplets for {len(modified_entities)} modified entities...")
+        for entity_uri in tqdm(modified_entities, desc="Deprecating old triplets for modified entities"):
+            self.deprecate_old_triplets_for_entity(entity_uri)
 
         self.update_triplet_ranges_for_unchanged_models(self.curr_update_date)
         self.curr_update_date = None
+
+    def deprecate_old_triplets_for_entity(self, entity_uri):
+        """
+        Deprecate old triplets for a specific entity (subject).
+        
+        Args:
+            entity_uri: The URI of the entity whose old triplets should be deprecated
+        """
+        entity_uri_json = str(entity_uri.n3())
+        
+        # Convert curr_update_date from 'YYYY-MM-DD_HH-MM-SS' to PostgreSQL timestamp format
+        formatted_date = datetime.strptime(self.curr_update_date, "%Y-%m-%d_%H-%M-%S").strftime(
+            "%Y-%m-%d %H:%M:%S"
+        )
+
+        # Find old triplets for this specific entity
+        old_triplets_df = self.SQLHandler.query(
+            """SELECT t.id, t.subject, t.predicate, t.object, vr.deprecated, vr.use_end
+               FROM "Triplet" t 
+               JOIN "Version_Range" vr ON t.id = vr.triplet_id
+               WHERE t.subject = %s
+               AND vr.deprecated = %s
+               AND vr.use_end < %s""",
+            (entity_uri_json, False, formatted_date),
+        )
+
+        # Add old triplets to the deprecated list for graph updates
+        if not old_triplets_df.empty:
+            for index, old_triplet in old_triplets_df.iterrows():
+                self.old_triplets.append(
+                    (
+                        self.n3_to_term(old_triplet["subject"]),
+                        self.n3_to_term(old_triplet["predicate"]),
+                        self.n3_to_term(old_triplet["object"]),
+                    )
+                )
+
+        # Update the database to mark these triplets as deprecated
+        update_query = """
+            UPDATE "Version_Range" vr2
+            SET deprecated = %s
+            FROM "Triplet" t
+            JOIN "Version_Range" vr ON t.id = vr.triplet_id
+            WHERE vr2.id = vr.id
+            AND t.subject = %s
+            AND vr.use_end < %s
+            AND vr.deprecated = %s
+        """
+        self.SQLHandler.execute_sql(
+            update_query,
+            (True, entity_uri_json, formatted_date, False),
+        )
 
     def _resolve_identifier(self, identifier_n3: str, entities_lookup: Dict[str, Dict[str, List[str]]]) -> Optional[str]:
         """
