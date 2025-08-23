@@ -130,6 +130,7 @@ class GraphHandlerForKG(GraphHandler):
         STATEMENT_METADATA = URIRef(str(META_NS) + "StatementMetadata")
 
         max_extraction_time = None
+        min_extraction_time = None
 
         triplets_metadata = {}
 
@@ -144,6 +145,7 @@ class GraphHandlerForKG(GraphHandler):
 
         batch_size = 50000
         batch_triplets = []
+        kg_subjects = set()
 
         # Get all nodes of type StatementMetadata
         for metadata_node in tqdm(
@@ -158,6 +160,8 @@ class GraphHandlerForKG(GraphHandler):
             subject = metadata_node_dict[URIRef(META_NS + "subject")]
             predicate = metadata_node_dict[URIRef(META_NS + "predicate")]
             object_value = metadata_node_dict[URIRef(META_NS + "object")]
+            
+            kg_subjects.add(subject)
 
             # Extract metadata information
             confidence = float(metadata_node_dict[URIRef(META_NS + "confidence")])
@@ -172,6 +176,11 @@ class GraphHandlerForKG(GraphHandler):
             extraction_time = datetime.strptime(
                 extraction_time, "%Y-%m-%dT%H:%M:%S"
             ).strftime("%Y-%m-%d_%H-%M-%S")
+
+            if min_extraction_time is None:
+                min_extraction_time = extraction_time
+            else:
+                min_extraction_time = min(min_extraction_time, extraction_time)
 
             if max_extraction_time is None:
                 max_extraction_time = extraction_time
@@ -198,6 +207,9 @@ class GraphHandlerForKG(GraphHandler):
         if self.curr_update_date is None:
             # Use the latest extraction time as current update date
             self.curr_update_date = max_extraction_time
+        
+        #Decrate any triplet related to an entity that was not updated
+        self.deprecate_triplet_ranges_for_changed_models(kg_subjects,min_extraction_time,10000)
 
         self.update_triplet_ranges_for_unchanged_models(self.curr_update_date)
         self.curr_update_date = None
