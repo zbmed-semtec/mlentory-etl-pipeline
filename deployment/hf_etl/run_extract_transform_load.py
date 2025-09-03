@@ -229,6 +229,12 @@ def initialize_load_processor(
             es_port=elasticsearch_port,
         )
 
+         # elasticsearchHandler.clean_indices()
+
+        elasticsearchHandler.initialize_HF_index(index_name="hf_models")
+        elasticsearchHandler.initialize_OpenML_index(index_name="openml_models")
+        elasticsearchHandler.initialize_AI4Life_index(index_name="ai4life_models")
+
     # Initializing the graph creator
     graphHandler = GraphHandlerForKG(
         SQLHandler=sqlHandler,
