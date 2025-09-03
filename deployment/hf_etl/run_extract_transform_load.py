@@ -22,6 +22,8 @@ from mlentory_transform.core import (
     KnowledgeGraphHandler,
     MlentoryTransformWithGraphBuilder,
 )
+# from hf_etl_component import HuggingFaceETLComponent
+
 
 # Load environment variables with defaults
 POSTGRES_HOST = os.getenv("POSTGRES_HOST", "postgres")
@@ -161,7 +163,7 @@ def initialize_transform_hf(config_path: str) -> MlentoryTransform:
 
 
 def initialize_load_processor(
-    kg_files_directory: str, logger: logging.Logger
+    kg_files_directory: str, logger: logging.Logger, remote_db: bool = False
 ) -> LoadProcessor:
     """
     Initializes the load processor with the configuration data.
@@ -186,7 +188,8 @@ def initialize_load_processor(
     elasticsearch_host = os.getenv("ELASTICSEARCH_HOST", "elastic_db")
     elasticsearch_port = int(os.getenv("ELASTICSEARCH_PORT", "9200"))
     
-    remote_api_base_url = os.getenv("REMOTE_API_BASE_URL", "http://10.0.7.249:8000")
+    # remote_api_base_url = os.getenv("REMOTE_API_BASE_URL", "http://10.0.7.249:8000")
+    remote_api_base_url = os.getenv("REMOTE_API_BASE_URL", "http://backend:8000")
     
     print(f"postgres_host: {postgres_host}")
     print(f"postgres_user: {postgres_user}")
@@ -199,31 +202,32 @@ def initialize_load_processor(
     print(f"elasticsearch_port: {elasticsearch_port}")
     print(f"remote_api_base_url: {remote_api_base_url}")
     
-    sqlHandler = SQLHandler(
-        host=postgres_host,
-        user=postgres_user,
-        password=postgres_password,
-        database=postgres_db,
-    )
-    sqlHandler.connect()
+    
+    sqlHandler = None
+    rdfHandler = None
+    elasticsearchHandler = None
+    
+    if not remote_db:
+        sqlHandler = SQLHandler(
+            host=postgres_host,
+            user=postgres_user,
+            password=postgres_password,
+            database=postgres_db,
+        )
+        sqlHandler.connect()
 
-    rdfHandler = RDFHandler(
-        container_name=virtuoso_host,
-        kg_files_directory=kg_files_directory,
-        _user="dba",
-        _password=virtuoso_password,
-        sparql_endpoint=f"http://{virtuoso_host}:{virtuoso_http_port}/sparql",
-    )
+        rdfHandler = RDFHandler(
+            container_name=virtuoso_host,
+            kg_files_directory=kg_files_directory,
+            _user="dba",
+            _password=virtuoso_password,
+            sparql_endpoint=f"http://{virtuoso_host}:{virtuoso_http_port}/sparql",
+        )
 
-    elasticsearchHandler = IndexHandler(
-        es_host=elasticsearch_host,
-        es_port=elasticsearch_port,
-    )
-
-    # Initialize all indices to prevent conflicts between different data sources
-    elasticsearchHandler.initialize_HF_index(index_name="hf_models")
-    elasticsearchHandler.initialize_OpenML_index(index_name="openml_models")
-    elasticsearchHandler.initialize_AI4Life_index(index_name="ai4life_models")
+        elasticsearchHandler = IndexHandler(
+            es_host=elasticsearch_host,
+            es_port=elasticsearch_port,
+        )
 
     # Initializing the graph creator
     graphHandler = GraphHandlerForKG(
@@ -348,7 +352,7 @@ Usage examples:
     
     parser.add_argument(
         "--chunking",
-        default=True,
+        default=False,
         help="Wheter or not to chunk the data for the uploading step"
     )
     
@@ -560,7 +564,10 @@ def main():
     # Initialize loader
     logger.info("Initializing loader...")
     start_time = time.time()
-    loader = initialize_load_processor(kg_files_directory, logger)
+    if args.remote_db:
+        loader = initialize_load_processor(kg_files_directory, logger, remote_db=True)
+    else:
+        loader = initialize_load_processor(kg_files_directory, logger, remote_db=False)
     end_time = time.time()
     logger.info(f"Loader initialization took {end_time - start_time:.2f} seconds")
     
@@ -572,6 +579,9 @@ def main():
     logger.info("Cleaning databases...")
     start_time = time.time()
     # loader.clean_DBs()
+    # time.sleep(5)
+    # loader = initialize_load_processor(kg_files_directory, logger)
+    # loader = initialize_load_processor(kg_files_directory, logger)
     end_time = time.time()
     logger.info(f"Database cleaning took {end_time - start_time:.2f} seconds")
 
@@ -597,6 +607,10 @@ def main():
                               load_output_dir=args.output_dir+"/chunks")
     end_time = time.time()
     logger.info(f"Database update with KG took {end_time - start_time:.2f} seconds")
+
+    # """Main entry point for HuggingFace ETL process."""
+    # etl = HuggingFaceETLComponent()
+    # etl.run()
 
 
 if __name__ == "__main__":

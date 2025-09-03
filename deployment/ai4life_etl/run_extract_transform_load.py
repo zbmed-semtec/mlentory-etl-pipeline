@@ -17,6 +17,7 @@ from mlentory_transform.core import (
     KnowledgeGraphHandler,
     MlentoryTransformWithGraphBuilder,
 )
+# from ai4life_etl_component import AI4LifeETLComponent
 
 # Load environment variables with defaults
 POSTGRES_HOST = os.getenv("POSTGRES_HOST", "postgres")
@@ -267,6 +268,11 @@ def main():
                               load_output_dir=args.output_dir+"/chunks")
     end_time = time.time()
     logger.info(f"Database update with KG took {end_time - start_time:.2f} seconds")
+    
+    # """Main entry point for AI4Life ETL process."""
+    # etl = AI4LifeETLComponent()
+    # etl.run()
+
     
 if __name__ == "__main__":
     main()

@@ -59,13 +59,19 @@ class LoadProcessor:
             remote_api_base_url (str, optional): Base URL for remote upload API
         """
         self.SQLHandler = SQLHandler
-        self.SQLHandler.connect()
         self.RDFHandler = RDFHandler
         self.IndexHandler = IndexHandler
         self.GraphHandler = GraphHandler
         self.kg_files_directory = kg_files_directory
         self.remote_api_base_url = remote_api_base_url
         self.upload_timeout = 300  # Default 5 minutes
+        
+        if remote_api_base_url is None:
+            self.SQLHandler.connect()
+            # Initialize all indices to prevent conflicts between different data sources
+            self.IndexHandler.initialize_HF_index(index_name="hf_models")
+            self.IndexHandler.initialize_OpenML_index(index_name="openml_models")
+            self.IndexHandler.initialize_AI4Life_index(index_name="ai4life_models")
         
         self.META_NS = self.GraphHandler.graph_identifier + "/meta/"
         self.STATEMENT_METADATA = URIRef(str(self.META_NS) + "StatementMetadata")
