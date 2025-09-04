@@ -72,15 +72,15 @@ class GraphBuilderFAIR4ML(GraphBuilderBase):
         
         if platform == "open_ml":
             if identifier_column == "schema.org:name":
-                entity_type = "Run"
+                entity_type = "MLModel"
             elif identifier_column == "schema.org:identifier":
                 entity_type = "Dataset" 
         elif identifier_column.startswith("model_"):
                 identifier_column = identifier_column[len("model_"):]
-                entity_type = "AI4Life_Model"
+                entity_type = "MLModel"
         elif identifier_column.startswith("dataset_"):
                 identifier_column = identifier_column[len("dataset_"):]
-                entity_type = "AI4Life_Dataset"
+                entity_type = "Dataset"
         else:
             entity_type = "MLModel"
         
@@ -98,12 +98,20 @@ class GraphBuilderFAIR4ML(GraphBuilderBase):
             entity_uri = self.base_namespace[id_hash]
 
             # Add entity type with metadata
-            self.add_triple_with_metadata(
-                entity_uri,
-                RDF.type,
-                self.namespaces["fair4ml"][entity_type],
-                {"extraction_method": ExtractionMethod.ETL.value, "confidence": 1.0},
-            )
+            if entity_type == "Dataset":
+                self.add_triple_with_metadata(
+                    entity_uri,
+                    RDF.type,
+                    self.namespaces["cr"][entity_type],
+                    {"extraction_method": ExtractionMethod.ETL.value, "confidence": 1.0},
+                )
+            else:
+                self.add_triple_with_metadata(
+                    entity_uri,
+                    RDF.type,
+                    self.namespaces["fair4ml"][entity_type],
+                    {"extraction_method": ExtractionMethod.ETL.value, "confidence": 1.0},
+                )
 
             # Go through the properties of the model
             for column in df.columns:
