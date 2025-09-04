@@ -110,7 +110,7 @@ class AI4Life(Document):
     platform = Keyword()
     dateCreated = Date()
     
-class AI4LifeModel(AI4Life):
+class AI4LifeModel(Model):
     """
     This class represents a model from Hugging Face Hub with its properties.
     """
@@ -156,7 +156,7 @@ class Run(Document):
     platform = Keyword()
     dateCreated = Date()
 
-class OpenMLRun(Run):
+class OpenMLRun(Model):
     """
     This class represents a run from OpenML platform with its properties.
     """
