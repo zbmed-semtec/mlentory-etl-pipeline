@@ -271,7 +271,6 @@ class GraphHandlerForKG(GraphHandler):
         for entity_uri, entity_dict in tqdm(
             entities_in_kg.items(), desc="Processing entities"
         ):
-            # Check if the entity is a model from the entity_dict
 
             if (
                 "ML_Model"
@@ -286,106 +285,42 @@ class GraphHandlerForKG(GraphHandler):
                     else:
                         resolved_entity_dict[predicate_uri_str] = objects_list
 
+                platform = ""
+                
+                if "https://www.openml.org" in entity_dict["<https://schema.org/url>"][0]:
+                    platform = "OpenML"
+                elif "https://bioimage.io" in entity_dict["<https://schema.org/url>"][0]:
+                    platform = "AI4Life"
+                else:
+                    platform = "Hugging Face"
+
                 index_model_entity = (
-                    self.IndexHandler.create_hf_dataset_index_entity_with_dict(
-                        resolved_entity_dict, entity_uri
+                    self.IndexHandler.create_model_index_entity_with_dict(
+                        resolved_entity_dict, entity_uri, 
+                        platform
                     )
                 )
                 
-                search_result = None
+                search_result_final = None
                 
-                #Check if index exists
-                # if not self.IndexHandler.index_exists(self.IndexHandler.hf_index):
-                #     self.IndexHandler.create_index(self.IndexHandler.hf_index)
-                # else:
-                #     # Check if model already exists in elasticsearch
-                #     search_result = self.IndexHandler.search(
-                #         self.IndexHandler.hf_index,
-                #         {"query": {"match_phrase": {"db_identifier": str(entity_uri)}}},
-                #     )
-                
-                search_result = self.IndexHandler.search(
-                        self.IndexHandler.hf_index,
-                        {"query": {"match_phrase": {"db_identifier": str(entity_uri)}}},
-                    )
+                for index in [self.IndexHandler.hf_index, self.IndexHandler.openml_index, self.IndexHandler.ai4life_index]:
+                    search_result = self.IndexHandler.search(
+                            index,
+                            {"query": {"match_phrase": {"db_identifier": str(entity_uri)}}},
+                        )
+                    if search_result:
+                        search_result_final = search_result
+                        break
 
-                if not search_result:
+                if not search_result_final:
                     # Only index if model doesn't exist
                     new_models.append(index_model_entity)
                 else:
                     # If model already exists, update the index
                     self.IndexHandler.update_document(
                         index_model_entity.meta.index,
-                        search_result[0]["_id"],
+                        search_result_final[0]["_id"],
                         index_model_entity.to_dict(),
-                    )
-
-            if ("Run"
-                in entity_dict["<http://www.w3.org/1999/02/22-rdf-syntax-ns#type>"][0]):
-
-                resolved_entity_dict = {}
-                for predicate_uri_str, objects_list in entity_dict.items():
-                    if _PREDICATES_TO_RESOLVE_N3.get(predicate_uri_str, False):
-                        resolved_entity_dict[predicate_uri_str] = self._resolve_identifier_list(objects_list, entities_in_kg)
-                    else:
-                        resolved_entity_dict[predicate_uri_str] = objects_list
-
-                index_run_entity = (
-                    self.IndexHandler.create_openml_index_entity_with_dict(
-                        resolved_entity_dict, entity_uri
-                    )
-                )
-
-                search_result = None
-
-                search_result = self.IndexHandler.search(
-                        self.IndexHandler.openml_index,
-                        {"query": {"match_phrase": {"db_identifier": str(entity_uri)}}},
-                    )
-
-                if not search_result:
-                    # Only index if model doesn't exist
-                    new_models.append(index_run_entity)
-                else:
-                    # If model already exists, update the index
-                    self.IndexHandler.update_document(
-                        index_run_entity.meta.index,
-                        search_result[0]["_id"],
-                        index_run_entity.to_dict(),
-                    )
-                    
-            if ("AI4Life_Model"
-                in entity_dict["<http://www.w3.org/1999/02/22-rdf-syntax-ns#type>"][0]):
-
-                resolved_entity_dict = {}
-                for predicate_uri_str, objects_list in entity_dict.items():
-                    if _PREDICATES_TO_RESOLVE_N3.get(predicate_uri_str, False):
-                        resolved_entity_dict[predicate_uri_str] = self._resolve_identifier_list(objects_list, entities_in_kg)
-                    else:
-                        resolved_entity_dict[predicate_uri_str] = objects_list
-
-                index_run_entity = (
-                    self.IndexHandler.create_ai4life_index_entity_with_dict(
-                        resolved_entity_dict, entity_uri
-                    )
-                )
-
-                search_result = None
-
-                search_result = self.IndexHandler.search(
-                        self.IndexHandler.ai4life_index,
-                        {"query": {"match_phrase": {"db_identifier": str(entity_uri)}}},
-                    )
-
-                if not search_result:
-                    # Only index if model doesn't exist
-                    new_models.append(index_run_entity)
-                else:
-                    # If model already exists, update the index
-                    self.IndexHandler.update_document(
-                        index_run_entity.meta.index,
-                        search_result[0]["_id"],
-                        index_run_entity.to_dict(),
                     )
 
         if len(new_models) > 0:
