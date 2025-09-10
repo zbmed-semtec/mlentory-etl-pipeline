@@ -136,7 +136,7 @@ class OpenMLExtractor:
         self.schema = self._load_schema(schema_file)
         self.logger = logger
         self.browser_pool = None
-        self.scraping_enabled = True
+        self.scraping_enabled = False
         self.request_delays = [1, 2, 3, 5, 8]  # Exponential backoff delays
         self.max_retries = 3
 
