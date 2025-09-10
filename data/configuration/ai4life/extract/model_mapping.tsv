@@ -18,9 +18,9 @@ schema.org:conditionsOfAccess	config.zenodo.metadata.access_right
 schema.org:dateCreated	created_at
 schema.org:dateModified	last_modified
 fair4ml:usageInstructions	config.zenodo.links.latest_html
-schema.org:archivedAt	config.zenodo.links.record_html
+schema.org:archivedAt	url,config.zenodo.links.record_html
 codemeta:buildInstructions	manifest.badges.url
 codemeta:developmentStatus	manifest.test_reports.status
 schema.org:releaseNotes	config.zenodo.notes
-schema.org:url	config.zenodo.links.html
+schema.org:url	url,config.zenodo.links.html
 schema.org:description	manifest.description

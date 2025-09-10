@@ -570,10 +570,7 @@ def main():
     # Initialize loader
     logger.info("Initializing loader...")
     start_time = time.time()
-    if args.remote_db:
-        loader = initialize_load_processor(kg_files_directory, logger, remote_db=True)
-    else:
-        loader = initialize_load_processor(kg_files_directory, logger, remote_db=False)
+    loader = initialize_load_processor(kg_files_directory, logger, remote_db=args.remote_db)
     end_time = time.time()
     logger.info(f"Loader initialization took {end_time - start_time:.2f} seconds")
     
