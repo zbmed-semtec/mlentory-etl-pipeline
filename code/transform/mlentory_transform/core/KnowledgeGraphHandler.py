@@ -460,7 +460,27 @@ class KnowledgeGraphHandler:
                 objects.append(Literal(int(value), datatype=XSD.integer))
 
             elif "URL" in range_value:
-                objects.append(URIRef(value))
+                # Special handling for license values that might not be valid URIs
+                if "license" in predicate.lower():
+                    # Check if it's a valid URI
+                    try:
+                        # Try to validate if it's a URI-like string
+                        if isinstance(value, str) and value.startswith(('http://', 'https://', 'ftp://', 'file://')):
+                            # It looks like a URI, try to create URIRef
+                            objects.append(URIRef(value))
+                        else:
+                            # It's a license identifier like "CC BY-NC 4.0" or "Open Database License (ODbL)", treat as literal
+                            objects.append(Literal(value, datatype=XSD.string))
+                    except Exception as e:
+                        print(f"Warning: Could not process license value '{value}' as URI for predicate '{predicate}': {e}. Treating as string.")
+                        objects.append(Literal(value, datatype=XSD.string))
+                else:
+                    # For non-license URLs, try to create URIRef with fallback to Literal
+                    try:
+                        objects.append(URIRef(value))
+                    except Exception as e:
+                        print(f"Warning: Value '{value}' is not a valid URI for predicate '{predicate}': {e}. Treating as string.")
+                        objects.append(Literal(value, datatype=XSD.string))
 
             elif "Person" in range_value:
                 id_hash = self.generate_entity_hash(platform, "Person", value)
