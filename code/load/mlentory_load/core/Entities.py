@@ -36,6 +36,8 @@ class Model(Document):
     keywords = Keyword(multi=True)  
     relatedDatasets = Text(multi=True)
     baseModels = Text(multi=True)
+    platform = Keyword()
+    dateCreated = Date()
     # citation = Text()
     # version = Text()
     # ethicalLegalSocial = Text()
@@ -104,7 +106,9 @@ class AI4Life(Document):
     description = Text()
     license = Text()
     sharedBy = Text()
-    keywords = Keyword(multi=True)   
+    keywords = Keyword(multi=True)
+    platform = Keyword()
+    dateCreated = Date()
     
 class AI4LifeModel(AI4Life):
     """
@@ -149,6 +153,8 @@ class Run(Document):
     modelCategory = Keyword(multi=True)
     trainedOn = Text(multi=True)
     keywords = Keyword(multi=True) 
+    platform = Keyword()
+    dateCreated = Date()
 
 class OpenMLRun(Run):
     """
