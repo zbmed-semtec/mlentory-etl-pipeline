@@ -60,4 +60,4 @@ schema.org,schema.org:status,Text,Text
 custom,likes,Integer,Integer
 custom,downloads,Integer,Integer
 custom,issues,Integer,Integer
-
+schema.org,schema.org:license,CreativeWork or URL,CreativeWork
