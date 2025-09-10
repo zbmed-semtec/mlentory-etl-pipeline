@@ -685,7 +685,10 @@ class GraphBuilderFAIR4ML(GraphBuilderBase):
                     print(f"Warning: Unhandled range type '{range_value}' for predicate '{predicate}'. Treating value '{item_value_str}' as string.")
                     objects.append(Literal(item_value_str, datatype=XSD.string))
             except Exception as e:
-                 print(f"Error processing value '{item_value_str}' for predicate '{predicate}' with range '{range_value}': {e}. Treating as string.")
-                 objects.append(Literal(item_value_str, datatype=XSD.string))
+                import traceback
+                print(f"Error processing value '{item_value_str}' for predicate '{predicate}' with range '{range_value}': {e}")
+                print("Full stack trace:")
+                print(traceback.format_exc())
+                objects.append(Literal(item_value_str, datatype=XSD.string))
 
         return objects 

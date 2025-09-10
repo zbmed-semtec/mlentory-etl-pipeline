@@ -54,6 +54,9 @@ class IndexHandler:
             [{"host": es_host, "port": es_port, "scheme": "http"}],
             basic_auth=("elastic", "changeme"),
         )
+        self.hf_index = None
+        self.openml_index = None
+        self.ai4life_index = None
 
     def initialize_HF_index(self, index_name: str = "hf_models"):
         """
