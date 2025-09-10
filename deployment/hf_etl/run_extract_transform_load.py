@@ -188,8 +188,8 @@ def initialize_load_processor(
     elasticsearch_host = os.getenv("ELASTICSEARCH_HOST", "elastic_db")
     elasticsearch_port = int(os.getenv("ELASTICSEARCH_PORT", "9200"))
     
-    # remote_api_base_url = os.getenv("REMOTE_API_BASE_URL", "http://10.0.7.249:8000")
-    remote_api_base_url = os.getenv("REMOTE_API_BASE_URL", "http://backend:8000")
+    remote_api_base_url = os.getenv("REMOTE_API_BASE_URL", "http://10.0.7.249:8000")
+    # remote_api_base_url = os.getenv("REMOTE_API_BASE_URL", "http://backend:8000")
     
     print(f"postgres_host: {postgres_host}")
     print(f"postgres_user: {postgres_user}")
@@ -421,11 +421,11 @@ def main():
             start_time = time.time()
             
             # Determine format based on file extension
-            kg_format = "turtle" if args.kg_file_path.endswith(('.ttl', '.turtle')) else "nt"
-            metadata_format = "turtle" if args.metadata_file_path.endswith(('.ttl', '.turtle')) else "nt"
+            # kg_format = "turtle" if args.kg_file_path.endswith(('.ttl', '.turtle')) else "nt"
+            # metadata_format = "turtle" if args.metadata_file_path.endswith(('.ttl', '.turtle')) else "nt"
             
-            kg_integrated.parse(args.kg_file_path, format=kg_format)
-            extraction_metadata_integrated.parse(args.metadata_file_path, format=metadata_format)
+            kg_integrated.parse(args.kg_file_path, format="nt")
+            extraction_metadata_integrated.parse(args.metadata_file_path, format="nt")
             
             end_time = time.time()
             logger.info(f"Loading files took {end_time - start_time:.2f} seconds")
@@ -575,8 +575,7 @@ def main():
     logger.info("Cleaning databases...")
     start_time = time.time()
     # loader.clean_DBs()
-    # time.sleep(5)
-    # loader = initialize_load_processor(kg_files_directory, logger)
+    # time.sleep(50)
     # loader = initialize_load_processor(kg_files_directory, logger)
     end_time = time.time()
     logger.info(f"Database cleaning took {end_time - start_time:.2f} seconds")
