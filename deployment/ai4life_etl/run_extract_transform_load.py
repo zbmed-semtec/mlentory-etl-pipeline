@@ -33,8 +33,8 @@ VIRTUOSO_SPARQL_ENDPOINT = os.getenv("VIRTUOSO_SPARQL_ENDPOINT", f"http://{VIRTU
 ELASTICSEARCH_HOST = os.getenv("ELASTICSEARCH_HOST", "elastic_db")
 ELASTICSEARCH_PORT = int(os.getenv("ELASTICSEARCH_PORT", "9200")) # Env vars are strings
 
-REMOTE_API_BASE_URL = os.getenv("REMOTE_API_BASE_URL", "http://10.0.7.249:8000")
-# REMOTE_API_BASE_URL = os.getenv("REMOTE_API_BASE_URL", "http://backend:8000")
+# REMOTE_API_BASE_URL = os.getenv("REMOTE_API_BASE_URL", "http://10.0.7.249:8000")
+REMOTE_API_BASE_URL = os.getenv("REMOTE_API_BASE_URL", "http://backend:8000")
 
 def setup_logging() -> logging.Logger:
     """

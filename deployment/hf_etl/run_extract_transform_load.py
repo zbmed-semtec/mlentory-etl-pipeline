@@ -188,8 +188,8 @@ def initialize_load_processor(
     elasticsearch_host = os.getenv("ELASTICSEARCH_HOST", "elastic_db")
     elasticsearch_port = int(os.getenv("ELASTICSEARCH_PORT", "9200"))
     
-    remote_api_base_url = os.getenv("REMOTE_API_BASE_URL", "http://10.0.7.249:8000")
-    # remote_api_base_url = os.getenv("REMOTE_API_BASE_URL", "http://backend:8000")
+    # remote_api_base_url = os.getenv("REMOTE_API_BASE_URL", "http://10.0.7.249:8000")
+    remote_api_base_url = os.getenv("REMOTE_API_BASE_URL", "http://backend:8000")
     
     print(f"postgres_host: {postgres_host}")
     print(f"postgres_user: {postgres_user}")
