@@ -203,7 +203,7 @@ class GraphBuilderFAIR4ML(GraphBuilderBase):
             self.add_triple_with_metadata(
                 entity_uri,
                 RDF.type,
-                self.namespaces["fair4ml"]["ML_Model"],
+                self.namespaces["fair4ml"]["MLModel"],
                 {"extraction_method": ExtractionMethod.ETL.value, "confidence": 1.0},
                 self.transformation_time
             )
@@ -298,6 +298,7 @@ class GraphBuilderFAIR4ML(GraphBuilderBase):
                  # Default case: treat as string if predicate not found in schema
                  for v in values_list:
                      if isinstance(v, str) and v.strip() in ["", "None", "No context to answer the question", "Information not found"]:
+                         continue
                          objects.append(Literal("Information not found", datatype=XSD.string))
                      elif v is not None:
                          objects.append(Literal(str(v), datatype=XSD.string))
@@ -310,6 +311,7 @@ class GraphBuilderFAIR4ML(GraphBuilderBase):
             # Default to string if schema lookup fails
             for v in values_list:
                  if isinstance(v, str) and v.strip() in ["", "None", "No context to answer the question", "Information not found"]:
+                     continue
                      objects.append(Literal("Information not found", datatype=XSD.string))
                  elif v is not None:
                      objects.append(Literal(str(v), datatype=XSD.string))
@@ -321,11 +323,11 @@ class GraphBuilderFAIR4ML(GraphBuilderBase):
             if isinstance(item_value, str):
                 # Handle common non-informative strings
                 if item_value.strip() in ["", "None", "No context to answer the question", "Information not found"]:
-                    objects.append(Literal("Information not found", datatype=XSD.string))
                     continue # Skip further processing for this value
+                    objects.append(Literal("Information not found", datatype=XSD.string))
             elif item_value is None:
-                 objects.append(Literal("Information not found", datatype=XSD.string))
                  continue
+                 objects.append(Literal("Information not found", datatype=XSD.string))
 
             item_value_str = str(item_value) # Use string representation for processing
 

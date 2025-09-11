@@ -285,7 +285,7 @@ class GraphHandlerForKG(GraphHandler):
         ):
 
             if (
-                "ML_Model"
+                "MLModel"
                 in entity_dict["<http://www.w3.org/1999/02/22-rdf-syntax-ns#type>"][0]
             ):
 
