@@ -182,7 +182,7 @@ class KnowledgeGraphHandler:
         if platform == "open_ml":
             extraction_method = "openml_python_package"
             if identifier_column == "schema.org:name":
-                entity_type = "Run"
+                entity_type = "MLModel"
             elif identifier_column == "schema.org:identifier":
                 entity_type = "Dataset"
         else:
