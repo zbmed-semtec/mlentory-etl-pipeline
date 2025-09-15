@@ -278,6 +278,8 @@ class IndexHandler:
                 index_model_entity.name = (
                     value[0].split("/")[-2] + "/" + value[0].split("/")[-1]
                 )
+            elif "name" in key:
+                index_model_entity.name = value[0]
             elif "description" in key:
                 index_model_entity.description = value[0]
             elif "sharedBy" in key:
