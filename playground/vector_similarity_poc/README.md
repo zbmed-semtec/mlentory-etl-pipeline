@@ -1,67 +1,68 @@
-# Vector Similarity POC - Complete Guide
+# Vector Similarity POC
 
-## 🎯 What is This?
+A Proof of Concept for implementing vector similarity search in the MLentory project, enabling semantic search capabilities to find ML models based on meaning rather than using only text matches.
 
-This is a **Proof of Concept (POC)** for implementing **vector similarity search** in the MLentory project. It adds semantic search capabilities to find ML models based on meaning, not just exact text matches.
+## 🚀 Quick Start
 
-### **The Problem We're Solving**
-- **Current search**: "Show me models with 'BERT' in the name" → Only finds models with exact word "BERT"
-- **Vector search**: "Show me models for language understanding" → Finds BERT, GPT, RoBERTa, etc. even if they don't contain those exact words
+### Prerequisites
+- Python 3.8+
+- Elasticsearch running on localhost:9200
 
-## 🚀 Quick Start Guide
-
-### **Step 1: Install Dependencies**
+### Installation
 ```bash
-cd /home/ubuntu/suhasini/mlentory-etl-pipeline/playground/vector_similarity_poc
-conda create --name vs_poc
-conda activate vs_poc
+# Install dependencies
 pip install -r requirements.txt
-```
 
-### **Step 2: Make Sure Elasticsearch is Running**
-```bash
-# Check if Elasticsearch is running
+# Verify Elasticsearch
 curl http://localhost:9200
-# Should return: {"name":"elastic","cluster_name":"es-docker-cluster",...}
 ```
 
-### **Step 3: Test the System**
+### Usage
 ```bash
-# Test with real data (all search methods)
-python3 test_real_data.py
+# 1. Create vector indices
+python scripts/index_creation/create_multi_vector_index.py
+
+# 2. Run searches
+python scripts/search/search_cli_native.py "language understanding"
+python scripts/search/search_cli_native.py --interactive
+
+# 3. Multi-vector search
+python scripts/search/search_multi_cli_native.py "transformer model"
+
+# 4. N-gram enhanced search
+python scripts/search/search_multi_ngram_cli_native.py "computer vision"
 ```
 
-### **Step 4: Test Command Line Search**
-```bash
-# Quick search test
-python3 search_cli.py "language understanding model"
+## 🔍 Search Methods
 
-# Interactive mode for multiple queries
-python3 search_cli.py --interactive
+- **Text Search**: Fast keyword matching with fuzzy search
+- **Vector Search**: Semantic similarity using embeddings  
+- **Hybrid Search**: Combines both approaches (recommended)
 
-# More results
-python3 search_cli.py "transformer model" --top-k 10
-```
+## ⚙️ Configuration
 
-## Model Evaluation
+Configuration is in `src/config.py`. Key settings:
+- Embedding model: `sentence-transformers/all-mpnet-base-v2`
+- Elasticsearch: `localhost:9200`
+- Search size: 10 results default
 
-### **Dimension-Grouped Model Evaluation**
+## 🧪 Available Scripts
 
-For comprehensive testing of different embedding models, use the dimension-grouped evaluation script:
+### Search Scripts
+- **`search_cli_native.py`** - Basic native Elasticsearch search
+- **`search_multi_cli_native.py`** - Multi-vector search implementation  
+- **`search_multi_ngram_cli_native.py`** - N-gram enhanced search
 
-```bash
-# Run complete evaluation of multiple embedding models
-python3 dimension_grouped_evaluation.py
-```
+### Index Creation Scripts
+- **`create_single_vector_index.py`** - Single vector per model
+- **`create_multi_vector_index.py`** - Multiple vectors per model (recommended)
+- **`create_multi_ngrams_vector_index.py`** - N-gram enhanced vectors
 
-**What it does:**
-- Tests multiple embedding models grouped by their vector dimensions (384D, 768D)
-- Compares text search, vector search, and hybrid search methods
-- Evaluates models on semantic queries like "language understanding model"
-- Generates detailed performance reports and rankings
-- Saves results to timestamped JSON files
+## 🆘 Troubleshooting
 
-**Models tested:**
-- **384D Models**: `all-MiniLM-L6-v2`, `all-MiniLM-L12-v2` (fast, good quality)
-- **768D Models**: `all-mpnet-base-v2`, `paraphrase-multilingual-mpnet-base-v2` (best quality)
+- **Elasticsearch not running**: `curl http://localhost:9200`
+- **Import errors**: `pip install -r requirements.txt`
+- **Index not found**: Run index creation scripts first
+- **Search not working**: Check if vector indices exist in Elasticsearch
+
 
