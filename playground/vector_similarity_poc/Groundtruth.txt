@@ -1,0 +1,198 @@
+Query: Qwen2.5-0.5B-Instruct
+
+Results:
+unsloth/Qwen2.5-0.5B-Instruct - Text Generation
+zhaozile/Qwen2.5-0.5B-Instruct-Gensyn-Swarm-flapping_silky_antelope - Text Generation
+Contenidoscall/Qwen2.5-0.5B-Instruct-Gensyn-Swarm-bold_twitchy_cougar - Text Generation
+Sonyabu/Qwen2.5-0.5B-Instruct-Gensyn-Swarm-carnivorous_scampering_macaque - Text Generation
+Raisontom/Qwen2.5-0.5B-Instruct-Gensyn-Swarm-robust_bold_ibis - Text Generation
+Mahdikppp/Qwen2.5-0.5B-Instruct-Gensyn-Swarm-chattering_roaring_kiwi - Text Generation
+shirin00/Qwen2.5-0.5B-Instruct-Gensyn-Swarm-tricky_bellowing_panther - Text Generation
+Abdelmnam/Qwen2.5-0.5B-Instruct-Gensyn-Swarm-mangy_hulking_dingo - Text Generation
+Verney/Qwen2.5-0.5B-Instruct-Gensyn-Swarm-agile_fast_koala - Text Generation
+
+--------------------------------------------------------------------------------
+
+Query: whisper-base whisper-small
+
+Results:
+openai/whisper-base - Automatic Speech Recognition
+openai/whisper-small - Automatic Speech Recognition
+Baselhany/Graduation_Project_distillation_Whisper_base - Automatic Speech Recognition
+Baselhany/Graduation_Project_distillation_Whisper_base2 - Automatic Speech Recognition
+jankoko/PALF-Whisper-small - Automatic Speech Recognition
+
+--------------------------------------------------------------------------------
+
+Query: RT-DETR object detection
+
+Results:
+PekingU/rtdetr_r101vd_coco_o365 - Object Detection
+goodcasper/see_ai_rt-detr_r18_4090 - Object Detection
+goodcasper/see_ai_rt-detr_r18 - Object Detection
+goodcasper/see_ai_rt-detr_r101 - Object Detection
+
+--------------------------------------------------------------------------------
+
+Query: Gensyn-Swarm
+
+Results:
+zhaozile/Qwen2.5-0.5B-Instruct-Gensyn-Swarm-flapping_silky_antelope - Text Generation
+Contenidoscall/Qwen2.5-0.5B-Instruct-Gensyn-Swarm-bold_twitchy_cougar - Text Generation
+Sonyabu/Qwen2.5-0.5B-Instruct-Gensyn-Swarm-carnivorous_scampering_macaque - Text Generation
+Raisontom/Qwen2.5-0.5B-Instruct-Gensyn-Swarm-robust_bold_ibis - Text Generation
+redotpaybiz/Qwen2.5-0.5B-Instruct-Gensyn-Swarm-prickly_scurrying_lobster - Text Generation
+Jurekin/Qwen2.5-0.5B-Instruct-Gensyn-Swarm-wary_giant_grasshopper - Text Generation 
+AchyutaGH/Qwen2.5-0.5B-Instruct-Gensyn-Swarm-slender_grazing_ladybug - Text Generation
+Baximenyera/Qwen2.5-0.5B-Instruct-Gensyn-Swarm-finicky_prickly_caterpillar - Text Generation
+gitas/Qwen2.5-0.5B-Instruct-Gensyn-Swarm-miniature_silent_starfish - Text Generation
+🎯 zhaozile/Qwen2.5-0.5B-Instruct-Gensyn-Swarm-flapping_silky_antelope - Text Generation
+
+--------------------------------------------------------------------------------
+
+Query: vision transformer detection
+
+Results:
+PekingU/rtdetr_r101vd_coco_o365 - Object Detection
+goodcasper/see_ai_rt-detr_r18_4090 - Object Detection
+goodcasper/see_ai_rt-detr_r18 - Object Detection
+wangzeze/ObjectRelator-Ego2Exo-Full - Image Segmentation
+black-forest-labs/FLUX.1-dev - text to image
+Minthy/RouWei-0.6 - text to image
+RouWei/RouWei-0.7 -  text to image
+
+--------------------------------------------------------------------------------
+
+Query: distillation whisper base
+
+Results:
+Baselhany/Graduation_Project_distillation_Whisper_base - Automatic Speech Recognition
+Baselhany/Graduation_Project_distillation_Whisper_base2 - Automatic Speech Recognition
+openai/whisper-base - Automatic Speech Recognition
+
+--------------------------------------------------------------------------------
+
+Query: kawaii kitsune catelier
+
+Results:
+Miyuutsu/Kawaii_Kitsune_Catelier - Text to Image
+--------------------------------------------------------------------------------
+
+Query: flux black-forest-labs
+
+Results:
+black-forest-labs/FLUX.1-dev - Text to Image
+BootesVoid/cmc4116fc006ubfif0qbkofgw_cmc41ejgw007ubfifnnvgw2qo - Text to Image
+BootesVoid/cmbgtk63y052tkfxsx1r4aht4_cmc40ms4h0065bfifo1vyit9i - Text to Image
+
+--------------------------------------------------------------------------------
+
+Query: RouWei-0.6 RouWei-0.7
+
+Results:
+Minthy/RouWei-0.6 - Text Generation
+Minthy/RouWei-0.7 - Text Generation
+
+--------------------------------------------------------------------------------
+
+Query: Qwen2.5 instruction tuned model
+
+Results:
+unsloth/Qwen2.5-0.5B-Instruct - Text Generation
+zhaozile/Qwen2.5-0.5B-Instruct-Gensyn-Swarm-flapping_silky_antelope - Text Generation
+Contenidoscall/Qwen2.5-0.5B-Instruct-Gensyn-Swarm-bold_twitchy_cougar - Text Generation
+Sonyabu/Qwen2.5-0.5B-Instruct-Gensyn-Swarm-carnivorous_scampering_macaque - Text Generation
+Raisontom/Qwen2.5-0.5B-Instruct-Gensyn-Swarm-robust_bold_ibis - Text Generation
+Mahdikppp/Qwen2.5-0.5B-Instruct-Gensyn-Swarm-chattering_roaring_kiwi - Text Generation
+shirin00/Qwen2.5-0.5B-Instruct-Gensyn-Swarm-tricky_bellowing_panther - Text Generation
+Abdelmnam/Qwen2.5-0.5B-Instruct-Gensyn-Swarm-mangy_hulking_dingo - Text Generation
+
+--------------------------------------------------------------------------------
+
+Query: huggingface unsloth Qwen
+
+Results:
+unsloth/Qwen2.5-0.5B-Instruct - Text Generation
+Mahdikppp/Qwen2.5-0.5B-Instruct-Gensyn-Swarm-sturdy_grassy_ant - Text Generation
+RyzenXT/Qwen2.5-0.5B-Instruct-Gensyn-Swarm-grassy_patterned_bison - Text Generation
+Abdelmnam/Qwen2.5-0.5B-Instruct-Gensyn-Swarm-mangy_hulking_dingo - Text Generation
+tranbaninh/Qwen2.5-0.5B-Instruct-Gensyn-Swarm-hoarse_sedate_marmot - Text Generation
+TOBEAI/ORPO_test_qwen3-30B_0911 - Text Generation
+kevinshin/qwen3-1.7b-sft-wildchat-cw-3k-neg-rethink-pos-sft-rethink-pos - Text Generation
+kevinshin/Qwen3-1.7B-SFT-lr_1e-5_batch_16 - Text Generation
+Qwen/Qwen3-1.7B - Text Generation
+
+--------------------------------------------------------------------------------
+
+Query: Qwen3 Instruction tuned
+
+Results: 
+Qwen/Qwen3-1.7B - Text Generation
+kevinshin/Qwen3-1.7B-SFT-lr_1e-5_batch_16 - Text Generation
+kevinshin/qwen3-1.7b-sft-wildchat-cw-3k-neg-rethink-pos-sft-rethink-pos - Text Generation
+TOBEAI/ORPO_test_qwen3-30B_0911 - Text Generation
+
+--------------------------------------------------------------------------------
+
+Query: text generation instruction following
+
+Results:
+unsloth/Qwen2.5-0.5B-Instruct - Text Generation
+Mahdikppp/Qwen2.5-0.5B-Instruct-Gensyn-Swarm-sturdy_grassy_ant - Text Generation
+RyzenXT/Qwen2.5-0.5B-Instruct-Gensyn-Swarm-grassy_patterned_bison - Text Generation
+Abdelmnam/Qwen2.5-0.5B-Instruct-Gensyn-Swarm-mangy_hulking_dingo - Text Generation
+tranbaninh/Qwen2.5-0.5B-Instruct-Gensyn-Swarm-hoarse_sedate_marmot - Text Generation
+TOBEAI/ORPO_test_qwen3-30B_0911 - Text Generation
+kevinshin/qwen3-1.7b-sft-wildchat-cw-3k-neg-rethink-pos-sft-rethink-pos - Text Generation
+kevinshin/Qwen3-1.7B-SFT-lr_1e-5_batch_16 - Text Generation
+Qwen/Qwen3-1.7B - Text Generation
+Vortex5/Clockwork-Flower-24B - Text Generation
+Vortex5/Notyetnamed-24B - Text Generation
+
+--------------------------------------------------------------------------------
+
+Query: 1.7B parameter model
+
+Results:
+kevinshin/Qwen3-1.7B-SFT-lr_1e-5_batch_16 - Text Generation
+kevinshin/qwen3-1.7b-sft-wildchat-cw-3k-neg-rethink-pos-sft-rethink-pos - Text Generation
+Qwen/Qwen3-1.7B - Text Generation
+
+--------------------------------------------------------------------------------
+
+Query: Anime-style text-to-image models with diffusers
+
+Results:
+Minthy/RouWei-0.6 - Text to Image
+Minthy/RouWei-0.7 - Text to Image
+Miyuutsu/Kawaii_Kitsune_Catelier - Text to Image
+
+--------------------------------------------------------------------------------
+
+Query: Whisper-based models for automatic speech recognition with Safetensors
+
+Results:
+openai/whisper-base - Automatic Speech Recognition
+openai/whisper-small - Automatic Speech Recognition
+Baselhany/Graduation_Project_distillation_Whisper_base - Automatic Speech Recognition
+Baselhany/Graduation_Project_distillation_Whisper_base2 - Automatic Speech Recognition
+jankoko/PALF-Whisper-small - Automatic Speech Recognition
+
+--------------------------------------------------------------------------------
+
+Query: Mistral-based conversational models for storytelling and roleplay
+
+Results: 
+arcee-ai/Arcee-Blitz - Text Generation
+Vortex5/ChaosFlowerRP-24B - Text Generation
+Vortex5/Clockwork-Flower-24B - Text Generation
+OddTheGreat/Cogwheel_24b_V.2 - Text Generation
+
+--------------------------------------------------------------------------------
+
+Query: state-of-the art image segmentation models
+
+Results:
+wangzeze/ObjectRelator-Ego2Exo-Full - Image Segmentation
+
+--------------------------------------------------------------------------------
