@@ -50,7 +50,7 @@ class VectorSimilarityConfig:
     # Names of our new vector indices (where we'll store the vector embeddings)
     VECTOR_INDEX_PREFIX = "vector_"
     VECTOR_INDICES = {
-        "hf_models": "vector_hf_models",
+        "hf_models": "vector_multi_hf_models",  # Use multi-vector index
         "openml_models": "vector_openml_models", 
         "ai4life_models": "vector_ai4life_models"
     }
@@ -64,6 +64,9 @@ class VectorSimilarityConfig:
     
     # Similarity threshold (0.0 = return everything, 1.0 = only identical matches)
     SIMILARITY_THRESHOLD = 0.3
+    
+    # Vector search candidates (higher = better quality, slower)
+    VECTOR_SEARCH_CANDIDATES = 100
     
     # ==================== TEXT PROCESSING SETTINGS ====================
     # Which fields from the original models we want to include in our vector search

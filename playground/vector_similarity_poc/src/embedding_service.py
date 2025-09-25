@@ -63,7 +63,8 @@ class EmbeddingService:
             start_time = time.time()
             
             # Load the model (this will download it if not cached)
-            self.model = SentenceTransformer(self.model_name)
+            # Force CPU usage to avoid CUDA memory issues
+            self.model = SentenceTransformer(self.model_name, device='cpu')
             
             load_time = time.time() - start_time
             
