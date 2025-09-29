@@ -5,8 +5,8 @@ from typing import List, Dict, Any, Set
 from tqdm import tqdm
 from datetime import datetime
 
-# Add the src directory to the path so we can import our modules
-sys.path.append(os.path.join(os.path.dirname(__file__), 'src'))
+# Add parent directory to path for imports
+sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..'))
 
 from src.embedding_service import EmbeddingService
 from src.config import config

@@ -10,9 +10,14 @@ Usage:
 """
 
 import sys
+import os
 import time
 from elasticsearch import Elasticsearch
 from elasticsearch_dsl import Document, Text, Keyword, DenseVector, Date, Index
+
+# Add parent directory to path for imports
+sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..'))
+
 from src.embedding_service import EmbeddingService
 from src.config import config
 
