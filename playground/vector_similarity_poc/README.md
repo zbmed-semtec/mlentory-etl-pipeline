@@ -20,7 +20,7 @@ curl http://localhost:9200
 ### Usage
 ```bash
 # 1. Create vector indices
-python scripts/index_creation/create_multi_vector_index.py
+python scripts/index_creation/create_single_vector_index.py
 
 # 2. Run searches
 python scripts/search/search_cli_native.py "language understanding"
