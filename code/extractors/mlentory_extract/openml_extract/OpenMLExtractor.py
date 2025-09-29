@@ -461,13 +461,15 @@ class OpenMLExtractor:
                             obj = obj_map.get(obj_name)
                             if obj:
                                 result = getattr(obj, attr)
+                                if isinstance(result, str):
+                                    result = result.split(",")
                             else:
                                 result = None
                         
                         # Combine results
                         if result is not None:
                             if combined_result is None:
-                                combined_result = result
+                                combined_result = [result]
                             else:
                                 # If both are strings, combine with space
                                 if isinstance(combined_result, str) and isinstance(result, str):
