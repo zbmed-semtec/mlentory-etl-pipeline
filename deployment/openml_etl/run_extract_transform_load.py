@@ -271,14 +271,14 @@ Usage examples:
     parser.add_argument(
         "--save-extraction",
         action="store_true",
-        default=True,
+        default=False,
         help="Save the results of the extraction phase",
     )
     
     parser.add_argument(
         "--save-transformation", "-st",
         action="store_true",
-        default=False,
+        default=True,
         help="Save the results of the transformation phase",
     )
     
@@ -421,11 +421,11 @@ def main():
             start_time = time.time()
             
             # Determine format based on file extension
-            kg_format = "turtle" if args.kg_file_path.endswith(('.ttl', '.turtle')) else "nt"
-            metadata_format = "turtle" if args.metadata_file_path.endswith(('.ttl', '.turtle')) else "nt"
+            # kg_format = "turtle" if args.kg_file_path.endswith(('.ttl', '.turtle')) else "nt"
+            # metadata_format = "turtle" if args.metadata_file_path.endswith(('.ttl', '.turtle')) else "nt"
             
-            kg_integrated.parse(args.kg_file_path, format=kg_format)
-            extraction_metadata_integrated.parse(args.metadata_file_path, format=metadata_format)
+            kg_integrated.parse(args.kg_file_path, format="nt")
+            extraction_metadata_integrated.parse(args.metadata_file_path, format="nt")
             
             end_time = time.time()
             logger.info(f"Loading files took {end_time - start_time:.2f} seconds")

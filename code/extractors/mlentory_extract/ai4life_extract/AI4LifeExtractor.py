@@ -166,6 +166,13 @@ class AI4LifeExtractor:
                 str(x) for x in mapped["schema.org:identifier"] if x is not None
             )
         
+        mapped["schema.org:identifier"] = mapped["schema.org:identifier"].split(" ")[0]
+        
+        # Handle additional urls
+        ai4life_url = f"https://bioimage.io/#/artifacts/{mapped['schema.org:identifier']}"
+        mapped["schema.org:url"] = [mapped["schema.org:url"], ai4life_url]
+        mapped["schema.org:archivedAt"] = [mapped["schema.org:archivedAt"], ai4life_url]
+        
         # Process dates
         for date_field in ["schema.org:dateCreated", "schema.org:dateModified"]:
             if date_field in mapped and mapped[date_field] is not None:

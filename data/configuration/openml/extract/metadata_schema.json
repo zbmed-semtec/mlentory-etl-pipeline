@@ -4,7 +4,6 @@
     "schema.org:url": "run.openml_url",
     "schema.org:version": "flow.version",
     "schema.org:description": "flow.description",
-    "fair4ml:intendedUse": "flow.description",
     "fair4ml:mlTask": "task.task_type",
     "fair4ml:modelCategory": "run.flow_name",
     "fair4ml:evaluatedOn": "dataset.name",
@@ -46,18 +45,14 @@
   "dataset":{
       "schema.org:identifier": "dataset.id",
       "schema.org:name" : "dataset.name", 
-      "schema.org:WebPage": "dataset.openml_url",
+      "schema.org:url": "dataset.openml_url",
       "schema.org:fileFormat": "dataset.format",
-      "schema.org:licence": "dataset.licence",
+      "schema.org:license": "dataset.licence",
       "schema.org:citation": "dataset.citation",
       "schema.org:inLanguage": "dataset.language",
       "schema.org:uploadDate": "dataset.upload_date",
       "schema.org:version": "dataset.version",
       "schema.org:distribution": "dataset.url",
-      "schema.org:description": "dataset.description",
-      "schema.org:status": "NA",
-      "likes": "NA",
-      "downloads": "NA",
-      "issues": "NA"
+      "schema.org:description": "dataset.description"
    }
  }

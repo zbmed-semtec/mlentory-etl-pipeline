@@ -44,7 +44,7 @@ schema.org,schema.org:funding,Grant,Grant
 schema.org,schema.org:inLanguage,Language or Text,Language or Text
 schema.org,schema.org:isAccessibleForFree,Boolean,Boolean
 schema.org,schema.org:keywords,DefinedTerm or Text or URL,DefinedTerm
-schema.org,schema.org:licence,CreativeWork or URL,CreativeWork or URL
+schema.org,schema.org:license,CreativeWork or URL,CreativeWork or URL
 schema.org,schema.org:maintainer,Person,Person
 schema.org,schema.org:version,Text,Text
 schema.org,schema.org:description,Text or TextObject,Text or TextObject
@@ -60,4 +60,4 @@ schema.org,schema.org:status,Text,Text
 custom,likes,Integer,Integer
 custom,downloads,Integer,Integer
 custom,issues,Integer,Integer
-
+schema.org,schema.org:license,CreativeWork or URL,CreativeWork

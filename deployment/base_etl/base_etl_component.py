@@ -252,11 +252,11 @@ class BaseETLComponent(ABC):
         extraction_metadata_integrated = Graph()
         
         # Determine format based on file extension
-        kg_format = "turtle" if kg_path.endswith(('.ttl', '.turtle')) else "nt"
-        metadata_format = "turtle" if metadata_path.endswith(('.ttl', '.turtle')) else "nt"
+        # kg_format = "turtle" if kg_path.endswith(('.ttl', '.turtle')) else "nt"
+        # metadata_format = "turtle" if metadata_path.endswith(('.ttl', '.turtle')) else "nt"
         
-        kg_integrated.parse(kg_path, format=kg_format)
-        extraction_metadata_integrated.parse(metadata_path, format=metadata_format)
+        kg_integrated.parse(kg_path, format="nt")
+        extraction_metadata_integrated.parse(metadata_path, format="nt")
         
         end_time = time.time()
         self.logger.info(f"Loading files took {end_time - start_time:.2f} seconds")

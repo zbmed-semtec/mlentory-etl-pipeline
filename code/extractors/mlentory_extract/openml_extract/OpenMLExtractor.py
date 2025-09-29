@@ -136,7 +136,7 @@ class OpenMLExtractor:
         self.schema = self._load_schema(schema_file)
         self.logger = logger
         self.browser_pool = None
-        self.scraping_enabled = True
+        self.scraping_enabled = False
         self.request_delays = [1, 2, 3, 5, 8]  # Exponential backoff delays
         self.max_retries = 3
 
@@ -461,13 +461,15 @@ class OpenMLExtractor:
                             obj = obj_map.get(obj_name)
                             if obj:
                                 result = getattr(obj, attr)
+                                if isinstance(result, str):
+                                    result = result.split(",")
                             else:
                                 result = None
                         
                         # Combine results
                         if result is not None:
                             if combined_result is None:
-                                combined_result = result
+                                combined_result = [result]
                             else:
                                 # If both are strings, combine with space
                                 if isinstance(combined_result, str) and isinstance(result, str):

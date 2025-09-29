@@ -428,11 +428,11 @@ def main():
             start_time = time.time()
             
             # Determine format based on file extension
-            kg_format = "turtle" if args.kg_file_path.endswith(('.ttl', '.turtle')) else "nt"
-            metadata_format = "turtle" if args.metadata_file_path.endswith(('.ttl', '.turtle')) else "nt"
+            # kg_format = "turtle" if args.kg_file_path.endswith(('.ttl', '.turtle')) else "nt"
+            # metadata_format = "turtle" if args.metadata_file_path.endswith(('.ttl', '.turtle')) else "nt"
             
-            kg_integrated.parse(args.kg_file_path, format=kg_format)
-            extraction_metadata_integrated.parse(args.metadata_file_path, format=metadata_format)
+            kg_integrated.parse(args.kg_file_path, format="nt")
+            extraction_metadata_integrated.parse(args.metadata_file_path, format="nt")
             
             end_time = time.time()
             logger.info(f"Loading files took {end_time - start_time:.2f} seconds")
@@ -570,10 +570,7 @@ def main():
     # Initialize loader
     logger.info("Initializing loader...")
     start_time = time.time()
-    if args.remote_db:
-        loader = initialize_load_processor(kg_files_directory, logger, remote_db=True)
-    else:
-        loader = initialize_load_processor(kg_files_directory, logger, remote_db=False)
+    loader = initialize_load_processor(kg_files_directory, logger, remote_db=args.remote_db)
     end_time = time.time()
     logger.info(f"Loader initialization took {end_time - start_time:.2f} seconds")
     
@@ -585,8 +582,7 @@ def main():
     logger.info("Cleaning databases...")
     start_time = time.time()
     # loader.clean_DBs()
-    # time.sleep(5)
-    # loader = initialize_load_processor(kg_files_directory, logger)
+    # time.sleep(50)
     # loader = initialize_load_processor(kg_files_directory, logger)
     end_time = time.time()
     logger.info(f"Database cleaning took {end_time - start_time:.2f} seconds")

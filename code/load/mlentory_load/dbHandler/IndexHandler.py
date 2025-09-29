@@ -22,6 +22,7 @@ from elasticsearch_dsl import (
     Index,
 )
 import inspect
+import datetime 
 
 from mlentory_load.core.Entities import HFModel, OpenMLRun, AI4LifeModel
 
@@ -141,7 +142,7 @@ class IndexHandler:
 
         index_run_entity.db_identifier = uri
         index_run_entity.name = ""
-        index_run_entity.license = ""
+        index_run_entity.license = "information not found"
         index_run_entity.mlTask = []
         index_run_entity.sharedBy = ""
         index_run_entity.modelCategory = []
@@ -158,7 +159,7 @@ class IndexHandler:
             elif "sharedBy" in key:
                 index_run_entity.sharedBy = value[0]
             elif "license" in key:
-                index_run_entity.license = value[0].lower()
+                index_run_entity.license = "information not found"
             elif "mlTask" in key:
                 value = [v.lower() for v in value]
                 index_run_entity.mlTask.extend(value)
@@ -244,6 +245,63 @@ class IndexHandler:
         
         index_model_entity.relatedDatasets = list(index_model_entity.relatedDatasets)
         
+        return index_model_entity
+
+    def create_model_index_entity_with_dict(self, info: Dict, model_uri: str, platform: str):
+        index_model_entity = None
+        if platform == "Hugging Face":
+            index_model_entity = HFModel()
+            index_model_entity.meta.index = self.hf_index
+            index_model_entity.platform = "Hugging Face"
+        elif platform == "OpenML":
+            index_model_entity = OpenMLRun()
+            index_model_entity.meta.index = self.openml_index
+            index_model_entity.platform = "OpenML"
+        elif platform == "AI4Life":
+            index_model_entity = AI4LifeModel()
+            index_model_entity.meta.index = self.ai4life_index
+            index_model_entity.platform = "AI4Life"
+            
+        index_model_entity.db_identifier = model_uri
+        index_model_entity.name = ""
+        index_model_entity.sharedBy = ""
+        index_model_entity.releaseNotes = ""
+        index_model_entity.license = ""
+        index_model_entity.mlTask = []
+        index_model_entity.keywords = []
+        index_model_entity.relatedDatasets = set()
+        index_model_entity.baseModels = []
+        index_model_entity.dateCreated = datetime.datetime.now()
+
+        for key, value in info.items():
+            if "identifier" in key:
+                index_model_entity.name = (
+                    value[0].split("/")[-2] + "/" + value[0].split("/")[-1]
+                )
+            elif "name" in key:
+                index_model_entity.name = value[0]
+            elif "description" in key:
+                index_model_entity.description = value[0]
+            elif "sharedBy" in key:
+                index_model_entity.sharedBy = value[0]
+            elif "license" in key:
+                index_model_entity.license = value[0].lower()
+            elif "mlTask" in key:
+                value = [v.lower() for v in value]
+                index_model_entity.mlTask.extend(value)
+            elif "trainedOn" in key:
+                index_model_entity.relatedDatasets.update(value)
+            elif "testedOn" in key:
+                index_model_entity.relatedDatasets.update(value)
+            elif "keywords" in key:
+                index_model_entity.keywords.extend(value)
+            elif "fineTunedFrom" in key:
+                index_model_entity.baseModels.extend(value)
+            elif "dateCreated" in key:
+                index_model_entity.dateCreated = value[0]
+
+        index_model_entity.relatedDatasets = list(index_model_entity.relatedDatasets)
+
         return index_model_entity
 
     def handle_raw_data(self, raw_data: Any):
