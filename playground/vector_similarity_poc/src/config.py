@@ -23,11 +23,34 @@ class VectorSimilarityConfig:
     # We're starting with a simple, fast model that's easy to replace
 
     # EMBEDDING_MODEL = "sentence-transformers/all-MiniLM-L6-v2"  # 384D, Very Fast
-    # EMBEDDING_MODEL = "sentence-transformers/all-MiniLM-L12-v2"  # 384D, Better quality
-    EMBEDDING_MODEL = "sentence-transformers/all-mpnet-base-v2"  # 768D, Best quality
+    # EMBEDDING_MODEL = "sentence-transfEMBEDDING_MODEL = "sentence-transformers/all-mpnet-base-v2" ormers/all-MiniLM-L12-v2"  # 384D, Better quality
+     # 768D, Best quality
 
     EMBEDDING_DIMENSION = 768  # This model produces 768-dimensional vectors
     MAX_SEQUENCE_LENGTH = 512  # Maximum text length the model can handle
+    
+    # ==================== MULTI-MODEL EMBEDDING SETTINGS ====================
+    # Configuration for multiple embedding models
+    MULTI_MODEL_CONFIGS = {
+        "mpnet": {
+            "model_name": "sentence-transformers/all-mpnet-base-v2",
+            "dimension": 768,
+            "index_suffix": "mpnet",
+            "description": "MPNet - High quality general purpose embeddings"
+        },
+        "e5": {
+            "model_name": "intfloat/e5-base-v2", 
+            "dimension": 768,
+            "index_suffix": "e5",
+            "description": "E5 - Optimized for retrieval tasks"
+        },
+        "bge": {
+            "model_name": "BAAI/bge-base-en-v1.5",
+            "dimension": 768,
+            "index_suffix": "bge", 
+            "description": "BGE - Balanced general embeddings"
+        }
+    }
 
     # ==================== ELASTICSEARCH SETTINGS ====================
     # How to connect to our existing Elasticsearch container
@@ -78,6 +101,16 @@ class VectorSimilarityConfig:
         "keywords",       # Keywords/tags
         "sharedBy"        # Who created/shared the model
     ]
+    
+    # Field weights for search and embedding generation
+    # Higher weights = more important in search results
+    FIELD_WEIGHTS = {
+        "name": 3.0,        # Model name is most important
+        "description": 2.5,  # Description is very important
+        "mlTask": 2.0,      # ML tasks are important
+        "keywords": 1.5,    # Keywords are somewhat important
+        "sharedBy": 0.5     # Creator is least important
+    }
     
     # How to combine these fields into one searchable text
     FIELD_SEPARATOR = " | "  # Separator between fields
@@ -142,6 +175,110 @@ class VectorSimilarityConfig:
             "max_length": cls.MAX_SEQUENCE_LENGTH,
             "description": "Sentence transformer model for general text embeddings"
         }
+    
+    @classmethod
+    def get_multi_model_config(cls, model_key: str) -> Dict[str, Any]:
+        """
+        Get configuration for a specific multi-model.
+        
+        Args:
+            model_key: Key for the model (e.g., "mpnet", "e5", "bge")
+            
+        Returns:
+            Dict: Model configuration
+        """
+        return cls.MULTI_MODEL_CONFIGS.get(model_key, {})
+    
+    @classmethod
+    def get_all_multi_models(cls) -> Dict[str, Dict[str, Any]]:
+        """
+        Get all multi-model configurations.
+        
+        Returns:
+            Dict: All model configurations
+        """
+        return cls.MULTI_MODEL_CONFIGS
+    
+    @classmethod
+    def get_multi_model_index_name(cls, model_key: str, source_index: str = "hf_models") -> str:
+        """
+        Get the vector index name for a specific multi-model.
+        
+        Args:
+            model_key: Key for the model (e.g., "mpnet", "e5", "bge")
+            source_index: The source index name
+            
+        Returns:
+            str: The vector index name (e.g., "vector_mpnet_hf_models")
+        """
+        model_config = cls.get_multi_model_config(model_key)
+        if not model_config:
+            raise ValueError(f"Unknown model key: {model_key}")
+        
+        suffix = model_config.get("index_suffix", model_key)
+        return f"vector_{suffix}_{source_index}"
+    
+    @classmethod
+    def get_field_weight(cls, field_name: str) -> float:
+        """
+        Get the weight for a specific field.
+        
+        Args:
+            field_name: Name of the field
+            
+        Returns:
+            float: Field weight (default 1.0 if not configured)
+        """
+        return cls.FIELD_WEIGHTS.get(field_name, 1.0)
+    
+    @classmethod
+    def get_weighted_fields_for_search(cls) -> List[str]:
+        """
+        Get fields with their weights for Elasticsearch search queries.
+        
+        Returns:
+            List[str]: Fields with weight notation (e.g., ["name^3.0", "description^2.5"])
+        """
+        weighted_fields = []
+        for field in cls.EMBEDDING_FIELDS:
+            weight = cls.get_field_weight(field)
+            weighted_fields.append(f"{field}^{weight}")
+        return weighted_fields
+    
+    @classmethod
+    def prepare_weighted_searchable_text(cls, model_data: Dict[str, Any]) -> str:
+        """
+        Prepare searchable text with field weights applied.
+        
+        Args:
+            model_data: Dictionary containing model information
+            
+        Returns:
+            str: Weighted searchable text
+        """
+        text_parts = []
+        
+        for field in cls.EMBEDDING_FIELDS:
+            value = model_data.get(field, "")
+            weight = cls.get_field_weight(field)
+            
+            if isinstance(value, list):
+                # Join list items with spaces
+                field_text = " ".join(str(item) for item in value if item)
+            elif value:
+                field_text = str(value)
+            else:
+                continue
+            
+            # Repeat text based on weight (simple weighting approach)
+            # Higher weight = more repetitions in the text
+            repetitions = max(1, int(weight))
+            weighted_text = " ".join([field_text] * repetitions)
+            text_parts.append(weighted_text)
+        
+        # Combine all text parts
+        combined_text = " ".join(text_parts)
+        return combined_text.strip()
 
 # Create a global config instance that we can import elsewhere
 config = VectorSimilarityConfig()
