@@ -15,8 +15,8 @@ import re
 from mlentory_extract.hf_extract import HFDatasetManager
 from mlentory_extract.hf_extract import HFExtractor
 from mlentory_extract.core import ModelCardToSchemaParser
-from mlentory_load.core import LoadProcessor, GraphHandlerForKG
-from mlentory_load.dbHandler import RDFHandler, SQLHandler, IndexHandler
+from mlentory_load.core import LoadProcessor, GraphHandler
+from mlentory_load.dbHandler import RDFHandler, SQLHandler, IndexHandler, Neo4jHandler
 from mlentory_transform.core import (
     MlentoryTransform,
     KnowledgeGraphHandler,
@@ -181,9 +181,11 @@ def initialize_load_processor(
     postgres_password = os.getenv("POSTGRES_PASSWORD", "password")
     postgres_db = os.getenv("POSTGRES_DB", "history_DB")
     
-    virtuoso_host = os.getenv("VIRTUOSO_HOST", "virtuoso_db")
-    virtuoso_http_port = os.getenv("VIRTUOSO_HTTP_PORT", "8890")
-    virtuoso_password = os.getenv("VIRTUOSO_DBA_PASSWORD", "my_strong_password")
+    # Neo4j configuration (replacing Virtuoso)
+    neo4j_uri = os.getenv("NEO4J_URI", "bolt://neo4j_db:7687")
+    neo4j_database = os.getenv("NEO4J_DATABASE", "neo4j")
+    neo4j_user = os.getenv("NEO4J_USER", "neo4j")
+    neo4j_password = os.getenv("NEO4J_PASSWORD", "password")
     
     elasticsearch_host = os.getenv("ELASTICSEARCH_HOST", "elastic_db")
     elasticsearch_port = int(os.getenv("ELASTICSEARCH_PORT", "9200"))
@@ -195,9 +197,9 @@ def initialize_load_processor(
     print(f"postgres_user: {postgres_user}")
     print(f"postgres_password: {postgres_password}")
     print(f"postgres_db: {postgres_db}")
-    print(f"virtuoso_host: {virtuoso_host}")
-    print(f"virtuoso_http_port: {virtuoso_http_port}")
-    print(f"virtuoso_password: {virtuoso_password}")
+    print(f"neo4j_uri: {neo4j_uri}")
+    print(f"neo4j_database: {neo4j_database}")
+    print(f"neo4j_user: {neo4j_user}")
     print(f"elasticsearch_host: {elasticsearch_host}")
     print(f"elasticsearch_port: {elasticsearch_port}")
     print(f"remote_api_base_url: {remote_api_base_url}")
@@ -216,12 +218,13 @@ def initialize_load_processor(
         )
         sqlHandler.connect()
 
-        rdfHandler = RDFHandler(
-            container_name=virtuoso_host,
+        rdfHandler = Neo4jHandler(
+            uri=neo4j_uri,
+            user=neo4j_user,
+            password=neo4j_password,
+            database=neo4j_database,
             kg_files_directory=kg_files_directory,
-            _user="dba",
-            _password=virtuoso_password,
-            sparql_endpoint=f"http://{virtuoso_host}:{virtuoso_http_port}/sparql",
+            batching=True,
         )
 
         elasticsearchHandler = IndexHandler(
@@ -236,7 +239,7 @@ def initialize_load_processor(
         elasticsearchHandler.initialize_AI4Life_index(index_name="ai4life_models")
 
     # Initializing the graph creator
-    graphHandler = GraphHandlerForKG(
+    graphHandler = GraphHandler(
         SQLHandler=sqlHandler,
         RDFHandler=rdfHandler,
         IndexHandler=elasticsearchHandler,
@@ -525,9 +528,7 @@ def main():
         start_time = time.time()
         kg_integrated, extraction_metadata_integrated = transformer.transform_HF_models_with_related_entities(
             extracted_entities=extracted_entities,
-            save_output=True,
-            kg_output_dir=args.output_dir+"/kg",
-            extraction_metadata_output_dir=args.output_dir+"/extraction_metadata",
+            save_output=False,
         )
         end_time = time.time()
         logger.info(f"Transformation process took {end_time - start_time:.2f} seconds")
@@ -597,6 +598,8 @@ def main():
                               extraction_name="hf_extraction",
                               remote_db=args.remote_db,
                               kg_chunks_size=args.chunk_size,
+                              save_load_input=True,
+                              load_input_dir=args.output_dir+"/kg",
                               save_load_output=True,
                               load_output_dir=args.output_dir+"/chunks")
     else:
@@ -605,11 +608,21 @@ def main():
                               extraction_name="hf_extraction",
                               remote_db=args.remote_db,
                               kg_chunks_size=0,
+                              save_load_input=True,
+                              load_input_dir=args.output_dir+"/kg",
                               save_load_output=True,
                               load_output_dir=args.output_dir+"/chunks")
     end_time = time.time()
     logger.info(f"Database update with KG took {end_time - start_time:.2f} seconds")
-
+    
+    logger.info("ETL process completed successfully")
+    
+    # logger.info("Printing database state")
+    # start_time = time.time()
+    # loader.print_DB_states()
+    # end_time = time.time()
+    # logger.info(f"Printing database state took {end_time - start_time:.2f} seconds")
+    
     # """Main entry point for HuggingFace ETL process."""
     # etl = HuggingFaceETLComponent()
     # etl.run()

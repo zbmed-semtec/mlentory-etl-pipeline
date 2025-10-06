@@ -12,6 +12,7 @@ data/load_queue/*.ttl
 data/datasets/*.json
 *.log
 
+data/neo4j_data
 data/mysql_data
 data/virtuoso_data
 data/elasticsearch_data
