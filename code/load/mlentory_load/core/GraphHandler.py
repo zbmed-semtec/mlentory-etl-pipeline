@@ -4,9 +4,10 @@ import os
 import hashlib
 import pprint
 import logging
+import time
 import pandas as pd
-from rdflib import Graph, URIRef, Literal, BNode
-from rdflib.namespace import RDF, XSD, FOAF
+from rdflib import Graph, URIRef, Literal, BNode, Namespace
+from rdflib.namespace import RDF, XSD, FOAF, RDFS, SKOS
 from rdflib.util import from_n3
 from pandas import Timestamp
 from tqdm import tqdm
@@ -16,6 +17,27 @@ import pprint
 
 from mlentory_load.dbHandler import SQLHandler, RDFHandler, IndexHandler
 from mlentory_load.core.Entities import HFModel
+from mlentory_transform.utils.enums import SchemasURL
+
+# Namespaces for schema resolution
+SCHEMA = Namespace(SchemasURL.SCHEMA.value)
+FAIR4ML = Namespace(SchemasURL.FAIR4ML.value)
+
+# Predicates to help resolve human-readable names from identifiers
+_NAME_PREDICATES_N3 = [
+    SCHEMA.name.n3(),
+    # SKOS.prefLabel.n3(),
+    # RDFS.label.n3(),
+]
+
+_PREDICATES_TO_RESOLVE_N3 = {
+    SCHEMA.keywords.n3(): True,
+    FAIR4ML.sharedBy.n3(): True,
+    FAIR4ML.mlTask.n3(): True,
+    FAIR4ML.fineTunedFrom.n3(): True,
+    FAIR4ML.trainedOn.n3(): True,
+    FAIR4ML.testedOn.n3(): True,
+}
 
 
 class GraphHandler:
@@ -74,6 +96,16 @@ class GraphHandler:
 
         self.new_triplets = []
         self.old_triplets = []
+
+        # KG-related state
+        self.models_to_index = []
+        self.id_to_model_entity = {}
+        self.curr_update_date = None
+        self.df_to_transform = None
+        self.df = None
+        self.kg = None
+        self.extraction_metadata = None
+        self.entities_in_kg = {}
 
     def update_current_graph(self):
         """
@@ -432,17 +464,26 @@ class GraphHandler:
         current_graph.bind("mlentory", URIRef("https://mlentory.com/"))
         current_graph.bind("prov", URIRef("https://www.w3.org/ns/prov#"))
 
-        query = f"""
-        CONSTRUCT {{ ?s ?p ?o }}
-        WHERE {{
-            GRAPH <{self.graph_identifier}> {{
-                ?s ?p ?o
+        # If the handler is Neo4j-based (no SPARQL), return the store-backed graph directly
+        if hasattr(self.RDFHandler, "is_neo4j") and self.RDFHandler.is_neo4j:
+            try:
+                result_graph = self.RDFHandler.query(None, None)
+                current_graph += result_graph
+                return current_graph
+            except Exception:
+                return current_graph
+        else:
+            query = f"""
+            CONSTRUCT {{ ?s ?p ?o }}
+            WHERE {{
+                GRAPH <{self.graph_identifier}> {{
+                    ?s ?p ?o
+                }}
             }}
-        }}
-        """
+            """
 
-        result_graph = self.RDFHandler.query(self.RDFHandler.sparql_endpoint, query)
-        current_graph += result_graph
+            result_graph = self.RDFHandler.query(self.RDFHandler.sparql_endpoint, query)
+            current_graph += result_graph
 
         return current_graph
 
@@ -451,6 +492,268 @@ class GraphHandler:
 
     def text_to_uri_term(self, text):
         return URIRef(f"mlentory:/{self.platform}/{text}")
+
+    # ========================= KG Integration Helpers =========================
+    def set_kg(self, kg: Graph):
+        """
+        Set the knowledge graph to be used for updates and indexing.
+
+        Args:
+            kg (Graph): The KG to be loaded and processed.
+        """
+        self.kg = kg
+
+    def set_extraction_metadata(self, extraction_metadata: Graph):
+        """
+        Set the extraction metadata graph that contains metadata nodes.
+
+        Args:
+            extraction_metadata (Graph): Graph containing metadata nodes.
+        """
+        self.extraction_metadata = extraction_metadata
+
+    def update_graph(self):
+        """
+        Update graphs across all databases and indices using the current KG.
+
+        This method:
+        1. Updates extraction metadata graph
+        2. Updates current RDF store graph
+        3. Updates search indices
+        """
+        start_time = time.time()
+        self.update_extraction_metadata_graph_with_kg()
+        end_time = time.time()
+        self.logger.info(
+            f"update_extraction_metadata_graph_with_kg took {end_time - start_time:.2f} seconds"
+        )
+
+        start_time = time.time()
+        self.update_current_graph()
+        end_time = time.time()
+        self.logger.info(
+            f"update_current_graph took {end_time - start_time:.2f} seconds"
+        )
+
+        start_time = time.time()
+        self.update_indexes_with_kg()
+        end_time = time.time()
+        self.logger.info(
+            f"update_indexes_with_kg took {end_time - start_time:.2f} seconds"
+        )
+
+    def update_extraction_metadata_graph_with_kg(self):
+        """
+        Update the metadata graph using information from a knowledge graph
+        containing metadata nodes stored in `self.extraction_metadata`.
+
+        Expected metadata triples are of the form:
+        <graph/data> <graph/meta/subject> <.../predicate> <.../object> .
+        """
+        if self.extraction_metadata is None:
+            return
+
+        meta_ns = self.graph_identifier + "/meta/"
+
+        max_extraction_time = None
+        min_extraction_time = None
+
+        triplets_metadata: Dict[URIRef, Dict[URIRef, URIRef]] = {}
+
+        self.logger.info("Processing extraction metadata...")
+        for triplet in tqdm(
+            self.extraction_metadata, desc="Creating extraction triples dictionaries for upload"
+        ):
+            if triplet[0] not in triplets_metadata:
+                triplets_metadata[triplet[0]] = {triplet[1]: triplet[2]}
+            else:
+                triplets_metadata[triplet[0]][triplet[1]] = triplet[2]
+
+        batch_size = 50000
+        batch_triplets: List[Tuple[URIRef, URIRef, URIRef, Dict]] = []
+        kg_subjects: Set[URIRef] = set()
+
+        for metadata_node in tqdm(
+            triplets_metadata, desc="Processing extraction metadata nodes"
+        ):
+            metadata_node_dict = triplets_metadata[metadata_node]
+
+            subject = metadata_node_dict[URIRef(meta_ns + "subject")]
+            predicate = metadata_node_dict[URIRef(meta_ns + "predicate")]
+            object_value = metadata_node_dict[URIRef(meta_ns + "object")]
+
+            kg_subjects.add(subject)
+
+            confidence = float(metadata_node_dict[URIRef(meta_ns + "confidence")])
+            extraction_method = str(
+                metadata_node_dict[URIRef(meta_ns + "extractionMethod")]
+            )
+            extraction_time = str(
+                metadata_node_dict[URIRef(meta_ns + "extractionTime")]
+            ).split(".")[0]
+
+            extraction_time = datetime.strptime(
+                extraction_time, "%Y-%m-%dT%H:%M:%S"
+            ).strftime("%Y-%m-%d_%H-%M-%S")
+
+            if min_extraction_time is None:
+                min_extraction_time = extraction_time
+            else:
+                min_extraction_time = min(min_extraction_time, extraction_time)
+
+            if max_extraction_time is None:
+                max_extraction_time = extraction_time
+            else:
+                max_extraction_time = max(max_extraction_time, extraction_time)
+
+            extraction_info = {
+                "confidence": confidence,
+                "extraction_method": extraction_method,
+                "extraction_time": extraction_time,
+            }
+
+            batch_triplets.append((subject, predicate, object_value, extraction_info))
+            if len(batch_triplets) == batch_size:
+                self.process_triplet_batch(batch_triplets)
+                batch_triplets = []
+
+        if len(batch_triplets) > 0:
+            self.process_triplet_batch(batch_triplets)
+
+        if self.curr_update_date is None:
+            self.curr_update_date = max_extraction_time
+
+        self.deprecate_triplet_ranges_for_changed_models(
+            kg_subjects, min_extraction_time, 10000
+        )
+
+        self.update_triplet_ranges_for_unchanged_models(self.curr_update_date)
+        self.curr_update_date = None
+
+    def _resolve_identifier(
+        self, identifier_n3: str, entities_lookup: Dict[str, Dict[str, List[str]]]
+    ) -> Optional[str]:
+        """
+        Resolve a single identifier (URI N3 string) to its name using a lookup.
+
+        Args:
+            identifier_n3 (str): Identifier string in N3 format.
+            entities_lookup (Dict[str, Dict[str, List[str]]]): Map of entity URIs to properties.
+
+        Returns:
+            Optional[str]: Resolved name if found.
+        """
+        if not (identifier_n3.startswith("<") and identifier_n3.endswith(">")):
+            identifier_n3 = "<" + str(identifier_n3) + ">"
+
+        if identifier_n3 in entities_lookup:
+            entity_props = entities_lookup[identifier_n3]
+            for name_predicate_n3 in _NAME_PREDICATES_N3:
+                if name_predicate_n3 in entity_props:
+                    return entity_props[name_predicate_n3][0]
+
+        return identifier_n3[1:-1]
+
+    def _resolve_identifier_list(
+        self, identifiers_list: List[str], entities_lookup: Dict[str, Dict[str, List[str]]]
+    ) -> List[str]:
+        """
+        Resolve list of potential identifiers (N3) to names using a lookup.
+
+        Args:
+            identifiers_list (List[str]): Strings that may be URIs (N3).
+            entities_lookup (Dict[str, Dict[str, List[str]]]): Entities map.
+
+        Returns:
+            List[str]: Resolved names where possible.
+        """
+        resolved_list: List[str] = []
+        for identifier_n3 in identifiers_list:
+            resolved_name = self._resolve_identifier(identifier_n3, entities_lookup)
+            resolved_list.append(resolved_name if resolved_name else identifier_n3)
+        return resolved_list
+
+    def update_indexes_with_kg(self):
+        """
+        Update search indices with new and modified models found in `self.kg`.
+        """
+        if self.kg is None:
+            return
+
+        new_models = []
+
+        entities_in_kg: Dict[str, Dict[str, List[str]]] = {}
+        self.logger.info("Updating search indices...")
+        for triplet in tqdm(self.kg, desc="Processing current KG triplets"):
+            entity_uri = str(triplet[0].n3())
+            if entity_uri not in entities_in_kg:
+                entities_in_kg[entity_uri] = {triplet[1].n3(): [str(triplet[2])]}
+            else:
+                if triplet[1].n3() not in entities_in_kg[entity_uri]:
+                    entities_in_kg[entity_uri][triplet[1].n3()] = [str(triplet[2])]
+                else:
+                    entities_in_kg[entity_uri][triplet[1].n3()].append(str(triplet[2]))
+
+        self.logger.info("Updating search indices...")
+        for entity_uri, entity_dict in tqdm(
+            entities_in_kg.items(), desc="Processing entities"
+        ):
+            if (
+                "MLModel"
+                in entity_dict["<http://www.w3.org/1999/02/22-rdf-syntax-ns#type>"][0]
+            ):
+                resolved_entity_dict: Dict[str, List[str]] = {}
+                for predicate_uri_str, objects_list in entity_dict.items():
+                    if _PREDICATES_TO_RESOLVE_N3.get(predicate_uri_str, False):
+                        resolved_entity_dict[predicate_uri_str] = self._resolve_identifier_list(
+                            objects_list, entities_in_kg
+                        )
+                    else:
+                        resolved_entity_dict[predicate_uri_str] = objects_list
+
+                platform = ""
+                if (
+                    "https://www.openml.org"
+                    in entity_dict["<https://schema.org/url>"][0]
+                ):
+                    platform = "OpenML"
+                elif "https://bioimage.io" in entity_dict["<https://schema.org/url>"][0]:
+                    platform = "AI4Life"
+                else:
+                    platform = "Hugging Face"
+
+                index_model_entity = self.IndexHandler.create_model_index_entity_with_dict(
+                    resolved_entity_dict, entity_uri, platform
+                )
+
+                search_result_final = None
+                for index in [
+                    self.IndexHandler.hf_index,
+                    self.IndexHandler.openml_index,
+                    self.IndexHandler.ai4life_index,
+                ]:
+                    search_result = self.IndexHandler.search(
+                        index,
+                        {"query": {"match_phrase": {"db_identifier": str(entity_uri)}}},
+                    )
+                    if search_result:
+                        search_result_final = search_result
+                        break
+
+                if not search_result_final:
+                    new_models.append(index_model_entity)
+                else:
+                    self.IndexHandler.update_document(
+                        index_model_entity.meta.index,
+                        search_result_final[0]["_id"],
+                        index_model_entity.to_dict(),
+                    )
+
+        if len(new_models) > 0:
+            self.logger.info(
+                f"Adding {len(new_models)} new models to search index..."
+            )
+            self.IndexHandler.add_documents(new_models)
 
     def _batch_get_or_create_triplet_ids(
         self, triplets: List[Tuple[URIRef, URIRef, URIRef]]

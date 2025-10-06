@@ -86,41 +86,12 @@ class LoadProcessor:
         self.upload_timeout = timeout_seconds
         logger.info(f"Upload timeout set to {timeout_seconds} seconds")
 
-    def update_dbs_with_df(self, df: DataFrame):
-        """
-        Update all databases with new data from DataFrame.
-
-        Args:
-            df (DataFrame): Data to be loaded into databases
-        """
-
-        # The graph handler updates the SQL and RDF databases with the new data
-        self.GraphHandler.set_df(df)
-        self.GraphHandler.update_graph()
-
-    def load_df(self, df: DataFrame, output_ttl_file_path: str = None):
-        """
-        Load DataFrame into databases and optionally save TTL file.
-
-        Args:
-            df (DataFrame): Data to be loaded
-            output_ttl_file_path (str, optional): Path to save TTL output
-        """
-        self.update_dbs_with_df(df)
-
-        if output_ttl_file_path is not None:
-            print("OUTPUT TTL FILE PATH\n", output_ttl_file_path)
-            current_graph = self.GraphHandler.get_current_graph()
-            current_date = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-            output_ttl_file_path = os.path.join(
-                output_ttl_file_path, f"{current_date}_mlentory_graph.nt"
-            )
-            current_graph.serialize(output_ttl_file_path, format="nt")
-
     def update_dbs_with_kg(self, kg: Graph, extraction_metadata: Graph,
                                             extraction_name: str = "hf_extraction",
                                             remote_db: bool = False, 
                                             kg_chunks_size: int = 100, 
+                                            save_load_input: bool = False,
+                                            load_input_dir: str = "",
                                             save_load_output: bool = False, 
                                             load_output_dir: str = "", 
                                             trigger_etl: bool = True):
@@ -141,6 +112,12 @@ class LoadProcessor:
         
         if (save_load_output or remote_db) and (load_output_dir == ""):
             raise ValueError("No output directory found")
+        
+        if save_load_input and load_input_dir == "":
+            raise ValueError("No input directory found")
+        
+        # if save_load_input and load_input_dir != "":
+        #     uploaself.RDFHandler
         
         if remote_db:
             # For remote uploads, we need to save chunks and get file paths
@@ -545,9 +522,9 @@ class LoadProcessor:
 
         result_graph = self.GraphHandler.get_current_graph()
 
-        # print("VIRTUOSO TRIPlETS\n")
-        # for i, (s, p, o) in enumerate(result_graph):
-        #     print(f"{i}: {s} {p} {o}")
+        print("RDF TRIPlETS\n")
+        for i, (s, p, o) in enumerate(result_graph):
+            print(f"{i}: {s} {p} {o}")
 
         result_count = result_graph.query(
             """SELECT (COUNT(DISTINCT ?s) AS ?count) WHERE{?s ?p ?o}"""
