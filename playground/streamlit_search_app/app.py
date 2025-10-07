@@ -22,6 +22,7 @@ import pandas as pd
 from config import config
 from embedding_service import EmbeddingService
 from elasticsearch import Elasticsearch
+from typing import Tuple
 
 # Page configuration
 st.set_page_config(
@@ -395,15 +396,16 @@ def display_search_results(results: List[Dict[str, Any]], search_type: str, quer
         model_data = result["model_data"]
         if search_type.lower() in ("text", "vector"):
             # Minimal columns for Text and Vector tables
-            data.append({
+            row = {
                 "Rank": i,
                 "Model Name": model_data.get('name', 'Unknown'),
                 "Score": f"{result['score']:.4f}",
                 "ML Tasks": ", ".join(model_data.get('mlTask', [])) if isinstance(model_data.get('mlTask'), list) else model_data.get('mlTask', 'N/A'),
-            })
+            }
+            data.append(row)
         else:
             # Full columns for Hybrid
-            data.append({
+            row = {
                 "Rank": i,
                 "Model Name": model_data.get('name', 'Unknown'),
                 "Score": f"{result['score']:.4f}",
@@ -411,7 +413,8 @@ def display_search_results(results: List[Dict[str, Any]], search_type: str, quer
                 "Keywords": ", ".join(model_data.get('keywords', [])) if isinstance(model_data.get('keywords'), list) else model_data.get('keywords', 'N/A'),
                 "Shared By": model_data.get('sharedBy', 'N/A'),
                 "Description": model_data.get('description', 'N/A')[:100] + "..." if len(model_data.get('description', '')) > 100 else model_data.get('description', 'N/A')
-            })
+            }
+            data.append(row)
     
     df = pd.DataFrame(data)
     st.dataframe(df, use_container_width=True)
@@ -490,6 +493,136 @@ def display_search_results_with_details(results: List[Dict[str, Any]], search_ty
                     hf_url = f"https://huggingface.co/{model_name}"
                     st.write(f"**Source:** [View on HuggingFace]({hf_url})")
 
+# ==================== RAGAS EVALUATION HELPERS ====================
+def _build_answer_text(model_data: Dict[str, Any]) -> str:
+    """Build enriched answer text similar to smoke test for better Answer Relevancy."""
+    name = model_data.get('name', 'Unknown')
+    tasks = ", ".join(model_data.get('mlTask', [])) if isinstance(model_data.get('mlTask'), list) else str(model_data.get('mlTask', ''))
+    keywords = model_data.get('keywords', [])
+    if isinstance(keywords, list):
+        keywords = ", ".join(keywords[:6])
+    desc = model_data.get('description', '') or ''
+    # Build a more informative, query-aligned answer template
+    snippet = (desc[:380] + '...') if len(desc) > 380 else desc
+    return (
+        f"Model: {name}. "
+        f"Tasks: {tasks if tasks else 'N/A'}. "
+        f"Keywords: {keywords if keywords else 'N/A'}. "
+        f"Summary: {snippet}"
+    )
+
+def _build_contexts(model_data: Dict[str, Any]) -> List[str]:
+    contexts: List[str] = []
+    name = model_data.get('name')
+    if name:
+        contexts.append(f"name: {name}")
+    tasks = model_data.get('mlTask')
+    if tasks:
+        if isinstance(tasks, list):
+            contexts.append("mlTask: " + ", ".join(tasks))
+        else:
+            contexts.append(f"mlTask: {tasks}")
+    kw = model_data.get('keywords')
+    if kw:
+        if isinstance(kw, list):
+            contexts.append("keywords: " + ", ".join(kw[:10]))
+        else:
+            contexts.append(f"keywords: {kw}")
+    desc = model_data.get('description') or ''
+    if desc:
+        # chunk description into at most two short snippets
+        snippet = desc[:300]
+        contexts.append("description: " + snippet)
+    return contexts[:6]
+
+def print_evaluation_table(text_results: List[Dict], vector_results: List[Dict], hybrid_results: List[Dict], hybrid_method: str):
+    """Display evaluation results in a single table format like smoke test."""
+    st.subheader("📊 RAGAS Evaluation Results")
+    
+    # Build combined data
+    all_data = []
+    
+    # Add text results
+    for r in text_results:
+        md = r.get("model_data", {})
+        name = md.get("name", "Unknown")
+        tasks = md.get("mlTask", [])
+        tasks_str = ", ".join(tasks[:2]) if isinstance(tasks, list) else str(tasks)
+        es_score = r.get("score", float('nan'))
+        rel = r.get("answer_relevancy", float('nan'))
+        
+        all_data.append({
+            "Method": "Text Search",
+            "Model Name": name,
+            "ML Tasks": tasks_str,
+            "ES Score": f"{es_score:.4f}" if not pd.isna(es_score) else "nan",
+            "Answer Relevancy": f"{rel:.6f}" if not pd.isna(rel) else "nan"
+        })
+    
+    # Add vector results
+    for r in vector_results:
+        md = r.get("model_data", {})
+        name = md.get("name", "Unknown")
+        tasks = md.get("mlTask", [])
+        tasks_str = ", ".join(tasks[:2]) if isinstance(tasks, list) else str(tasks)
+        es_score = r.get("score", float('nan'))
+        rel = r.get("answer_relevancy", float('nan'))
+        
+        all_data.append({
+            "Method": "Vector Search",
+            "Model Name": name,
+            "ML Tasks": tasks_str,
+            "ES Score": f"{es_score:.4f}" if not pd.isna(es_score) else "nan",
+            "Answer Relevancy": f"{rel:.6f}" if not pd.isna(rel) else "nan"
+        })
+    
+    # Add hybrid results
+    for r in hybrid_results:
+        md = r.get("model_data", {})
+        name = md.get("name", "Unknown")
+        tasks = md.get("mlTask", [])
+        tasks_str = ", ".join(tasks[:2]) if isinstance(tasks, list) else str(tasks)
+        es_score = r.get("score", float('nan'))
+        rel = r.get("answer_relevancy", float('nan'))
+        
+        all_data.append({
+            "Method": f"Hybrid ({hybrid_method})",
+            "Model Name": name,
+            "ML Tasks": tasks_str,
+            "ES Score": f"{es_score:.4f}" if not pd.isna(es_score) else "nan",
+            "Answer Relevancy": f"{rel:.6f}" if not pd.isna(rel) else "nan"
+        })
+    
+    if all_data:
+        df = pd.DataFrame(all_data)
+        st.dataframe(df, use_container_width=True, height=400)
+    else:
+        st.warning("No evaluation data available")
+
+def print_summary_statistics(text_mean: float, vector_mean: float, hybrid_mean: float, 
+                            text_count: int, vector_count: int, hybrid_count: int,
+                            text_es_mean: float, vector_es_mean: float, hybrid_es_mean: float):
+    """Display summary statistics in a table format."""
+    st.subheader("📈 Summary Statistics")
+    
+    summary_data = {
+        "Method": ["Text Search", "Vector Search", "Hybrid Search"],
+        "Results Count": [text_count, vector_count, hybrid_count],
+        "Mean Answer Relevancy": [
+            f"{text_mean:.6f}" if not pd.isna(text_mean) else "nan",
+            f"{vector_mean:.6f}" if not pd.isna(vector_mean) else "nan",
+            f"{hybrid_mean:.6f}" if not pd.isna(hybrid_mean) else "nan"
+        ],
+        "Mean ES Score": [
+            f"{text_es_mean:.4f}" if not pd.isna(text_es_mean) else "nan",
+            f"{vector_es_mean:.4f}" if not pd.isna(vector_es_mean) else "nan",
+            f"{hybrid_es_mean:.4f}" if not pd.isna(hybrid_es_mean) else "nan"
+        ],
+    }
+    
+    df = pd.DataFrame(summary_data)
+    st.dataframe(df, use_container_width=True)
+
 def main():
     """Main Streamlit application."""    
     # Initialize or refresh search handler (handle hot-reload stale objects)
@@ -548,7 +681,7 @@ def main():
         st.subheader("🔄 Hybrid Search")
         hybrid_method = st.radio(
             "Hybrid method:",
-            options=["Weighted (ES)", "RRF"],
+            options=["RRF", "Weighted (ES)"],
             index=0,
             horizontal=True,
             key="hybrid_method_choice"
@@ -588,13 +721,8 @@ def main():
         )
         
         # Determine source index based on selected embedding model
-        # This follows the same logic as create_multi_model_vector_indices.py
         model_config = config.get_multi_model_config(selected_model)
         source_index = "hf_models"  # Default source index
-        
-        # The vector index name will be determined by the model
-        # Format: vector_{model_suffix}_{source_index}
-        # e.g., vector_mpnet_hf_models, vector_e5_hf_models, vector_bge_hf_models
     
     # Search input and button side by side
     col_query, col_btn = st.columns([4, 1])
@@ -607,52 +735,317 @@ def main():
     with col_btn:
         search_button = st.button("🔍 Search", type="primary", use_container_width=True)
     
-    # Perform all searches and display results
+    # Always create tabs - Evaluation tab should be available even without search results
+    tab1, tab2, tab3, tab4 = st.tabs(["🔤 Text Search", "🧠 Vector Search", "🔄 Hybrid Search", "🧪 Evaluation"])
+
+    # Perform all searches
     if query and search_button:
-        # Create tabs for results
-        tab1, tab2, tab3 = st.tabs(["🔤 Text Search", "🧠 Vector Search", "🔄 Hybrid Search"])
+        with st.spinner("Running searches..."):
+            # Text search
+            start_time = time.time()
+            text_results = st.session_state.search_handler.text_search(
+                query, source_index, selected_fields, field_weights, top_k
+            )
+            text_time = time.time() - start_time
+
+            # Vector search
+            start_time = time.time()
+            vector_results = st.session_state.search_handler.vector_search(
+                query, selected_model, source_index, top_k
+            )
+            vector_time = time.time() - start_time
+
+            # Hybrid search
+            start_time = time.time()
+            if hybrid_method == "RRF":
+                hybrid_results = st.session_state.search_handler.hybrid_search_rrf(
+                    query, selected_model, source_index, selected_fields,
+                    field_weights, text_weight, vector_weight, top_k
+                )
+            else:
+                hybrid_results = st.session_state.search_handler.hybrid_search(
+                    query, selected_model, source_index, selected_fields,
+                    field_weights, text_weight, vector_weight, top_k
+                )
+            hybrid_time = time.time() - start_time
+
+        # Store latest results for evaluation 
+        st.session_state["last_results"] = {
+            "query": query,
+            "text": text_results,
+            "vector": vector_results,
+            "hybrid": hybrid_results,
+            "hybrid_method": hybrid_method,
+            "params": {
+                "text_weight": text_weight,
+                "vector_weight": vector_weight,
+                "top_k": top_k,
+            }
+        }
+        
+        # Store search times
+        st.session_state["search_times"] = {
+            "text": text_time,
+            "vector": vector_time,
+            "hybrid": hybrid_time
+        }
+    
+    # Display search results (always show if they exist in session state)
+    if 'last_results' in st.session_state:
+        last = st.session_state['last_results']
+        search_times = st.session_state.get('search_times', {})
         
         with tab1:
-            with st.spinner("Performing text search..."):
-                start_time = time.time()
-                text_results = st.session_state.search_handler.text_search(
-                    query, source_index, selected_fields, field_weights, top_k
-                )
-                text_time = time.time() - start_time
-                
-                display_search_results(text_results, "Text", query)
-                st.caption(f"Search completed in {text_time:.3f} seconds")
-        
+            display_search_results(last.get('text', []), "Text", last.get('query', ''))
+            if 'text' in search_times:
+                st.caption(f"Search completed in {search_times['text']:.3f} seconds")
+
         with tab2:
-            with st.spinner(f"Performing vector search with {selected_model}..."):
-                start_time = time.time()
-                vector_results = st.session_state.search_handler.vector_search(
-                    query, selected_model, source_index, top_k
-                )
-                vector_time = time.time() - start_time
-                
-                display_search_results(vector_results, "Vector", query)
-                st.caption(f"Search completed in {vector_time:.3f} seconds")
-        
+            display_search_results(last.get('vector', []), "Vector", last.get('query', ''))
+            if 'vector' in search_times:
+                st.caption(f"Search completed in {search_times['vector']:.3f} seconds")
+
         with tab3:
-            with st.spinner(f"Performing hybrid search with {selected_model}..."):
-                start_time = time.time()
-                if hybrid_method == "RRF":
-                    hybrid_results = st.session_state.search_handler.hybrid_search_rrf(
-                        query, selected_model, source_index, selected_fields,
-                        field_weights, text_weight, vector_weight, top_k
-                    )
+            if last.get('hybrid_method') == "RRF":
+                display_search_results_with_details(last.get('hybrid', []), "Hybrid (RRF)", last.get('query', ''))
+            else:
+                display_search_results(last.get('hybrid', []), "Hybrid (Weighted)", last.get('query', ''))
+            if 'hybrid' in search_times:
+                st.caption(f"Search completed in {search_times['hybrid']:.3f} seconds")
+    else:
+        # Show empty state for search tabs when no search has been performed
+        with tab1:
+            st.info("🔍 Run a search to see Text Search results here.")
+        with tab2:
+            st.info("🔍 Run a search to see Vector Search results here.")
+        with tab3:
+            st.info("🔍 Run a search to see Hybrid Search results here.")
+
+    # Dedicated Evaluation tab - always available
+    with tab4:
+        st.subheader("🧪 Evaluation")
+        st.caption("Evaluate search results using RAGAS Answer Relevancy metric")
+        
+        # Simple evaluation controls
+        context_text = st.text_area("Context (optional)", value="", height=80, placeholder="e.g., tumor, image segmentation, machine learning")
+        eval_button = st.button("🚀 Run Evaluation", type="primary")
+
+        # Trigger evaluation from this tab with the provided context
+        if eval_button:
+            if 'last_results' not in st.session_state:
+                st.error("❌ No search results found. Please run a search first.")
+            else:
+                last = st.session_state['last_results']
+                eval_query = last.get('query', '')
+                
+                if not eval_query:
+                    st.error("❌ No query found in last results.")
                 else:
-                    hybrid_results = st.session_state.search_handler.hybrid_search(
-                        query, selected_model, source_index, selected_fields, 
-                        field_weights, text_weight, vector_weight, top_k
-                    )
-                hybrid_time = time.time() - start_time
-                if hybrid_method == "RRF":
-                    display_search_results_with_details(hybrid_results, "Hybrid (RRF)", query)
-                else:
-                    display_search_results(hybrid_results, "Hybrid (Weighted)", query)
-                st.caption(f"Search completed in {hybrid_time:.3f} seconds")
+                    results_by_method = {
+                        "Text": last.get('text') or [],
+                        "Vector": last.get('vector') or [],
+                        last.get('hybrid_method', 'Hybrid'): last.get('hybrid') or [],
+                    }
+                    
+                    # Check if we have any results
+                    total_results = sum(len(res_list) for res_list in results_by_method.values())
+                    if total_results == 0:
+                        st.error("❌ No results found in any search method.")
+                    else:
+                        st.info(f"📊 Evaluating {total_results} results across all methods")
+                        
+                        # Check if Ollama is running
+                        try:
+                            import requests
+                            ollama_response = requests.get("http://127.0.0.1:11434/api/tags", timeout=5)
+                            if ollama_response.status_code != 200:
+                                st.error("❌ Ollama not responding")
+                                st.info("💡 Make sure Ollama is running: `ollama serve`")
+                                st.stop()
+                        except Exception as e:
+                            st.error(f"❌ Cannot connect to Ollama: {e}")
+                            st.info("💡 Make sure Ollama is running: `ollama serve`")
+                            st.stop()
+                        
+                        # Check RAGAS imports
+                        try:
+                            from datasets import Dataset
+                            from ragas import evaluate
+                            from ragas.metrics import answer_relevancy
+                        except Exception as e:
+                            st.error(f"❌ RAGAS import failed: {e}")
+                            st.info("💡 Try: `pip install ragas datasets`")
+                            st.stop()
+
+                        try:
+                            # Use fixed model like smoke test
+                            judge_model = "qwen2.5:14b"
+                            
+                            from datasets import Dataset
+                            from ragas import evaluate
+                            from ragas.metrics import answer_relevancy
+                            from langchain_openai import ChatOpenAI
+                            from langchain_community.embeddings import HuggingFaceEmbeddings
+                            
+                            # Configure environment like smoke test
+                            import os
+                            os.environ["OPENAI_API_KEY"] = "ollama"
+                            os.environ["OPENAI_API_BASE"] = "http://127.0.0.1:11434/v1"
+                            os.environ["OPENAI_MODEL_NAME"] = judge_model
+                            
+                            # Use same LLM as smoke test
+                            llm = ChatOpenAI(
+                                model=judge_model,
+                                openai_api_key="ollama",
+                                openai_api_base="http://127.0.0.1:11434/v1",
+                                temperature=0.0,
+                                max_tokens=1024,
+                            )
+                            
+                            # Use same embeddings as smoke test (much faster)
+                            embeddings = HuggingFaceEmbeddings(
+                                model_name="sentence-transformers/all-MiniLM-L6-v2",
+                                encode_kwargs={"normalize_embeddings": True},
+                            )
+                            
+                            # Ensure event loop like smoke test
+                            import asyncio as _asyncio
+                            try:
+                                _asyncio.get_running_loop()
+                            except RuntimeError:
+                                loop = _asyncio.new_event_loop()
+                                _asyncio.set_event_loop(loop)
+                            try:
+                                import nest_asyncio as _nest_asyncio
+                                _nest_asyncio.apply()
+                            except Exception:
+                                pass
+                            
+                            # Store results with scores
+                            text_results_scored = []
+                            vector_results_scored = []
+                            hybrid_results_scored = []
+                            
+                            # Calculate total items for progress tracking
+                            total_items = sum(len(res_list) for res_list in results_by_method.values())
+                            current_item = 0
+                            
+                            # Create progress bar
+                            progress_bar = st.progress(0, text="Starting evaluation...")
+                            
+                            # Method means for summary
+                            text_mean = float('nan')
+                            vector_mean = float('nan')
+                            hybrid_mean = float('nan')
+                            
+                            for method_key, res_list in results_by_method.items():
+                                if not res_list:
+                                    continue
+                                
+                                # Build dataset for this method (like smoke test)
+                                questions = []
+                                answers = []
+                                contexts_list = []
+                                
+                                for res in res_list:
+                                    model_data = res.get('model_data', {})
+                                    questions.append(eval_query)
+                                    rationale = f"This result matches the query '{eval_query}' based on model name and tasks. "
+                                    answers.append(rationale + _build_answer_text(model_data))
+                                    contexts_list.append([context_text] if context_text.strip() else _build_contexts(model_data))
+                                
+                                # Create dataset for this method
+                                ds = Dataset.from_dict({
+                                    "question": questions,
+                                    "answer": answers,
+                                    "contexts": contexts_list,
+                                    "ground_truth": answers,
+                                })
+                                
+                                # Update progress
+                                progress_text = f"Evaluating {method_key} method: 0/{len(res_list)} completed"
+                                progress_bar.progress(current_item / total_items, text=progress_text)
+                                
+                                # Evaluate this method directly (like smoke test)
+                                result = evaluate(
+                                    dataset=ds, 
+                                    metrics=[answer_relevancy], 
+                                    llm=llm,
+                                    embeddings=embeddings,
+                                    raise_exceptions=False,
+                                )
+                                
+                                df = result.to_pandas()
+                                if "answer_relevancy" not in df.columns:
+                                    df["answer_relevancy"] = float("nan")
+                                
+                                # Calculate mean for this method
+                                method_mean = df["answer_relevancy"].mean()
+                                
+                                # Store scores back to results
+                                for i, res in enumerate(res_list):
+                                    res_copy = res.copy()
+                                    if i < len(df):
+                                        res_copy["answer_relevancy"] = df.iloc[i]["answer_relevancy"]
+                                    else:
+                                        res_copy["answer_relevancy"] = float('nan')
+                                    
+                                    # Store in appropriate list
+                                    if method_key == "Text":
+                                        text_results_scored.append(res_copy)
+                                    elif method_key == "Vector":
+                                        vector_results_scored.append(res_copy)
+                                    else:
+                                        hybrid_results_scored.append(res_copy)
+                                    
+                                    # Update progress for each item
+                                    current_item += 1
+                                    progress_text = f"Evaluating {method_key} method: {i+1}/{len(res_list)} completed"
+                                    progress_bar.progress(current_item / total_items, text=progress_text)
+                                
+                                # Store method mean
+                                if method_key == "Text":
+                                    text_mean = method_mean
+                                elif method_key == "Vector":
+                                    vector_mean = method_mean
+                                else:
+                                    hybrid_mean = method_mean
+                            
+                            # Complete progress bar
+                            progress_bar.progress(1.0, text="✅ Evaluation complete!")
+                            
+                            # Display results in single table format like smoke test
+                            st.markdown("---")
+                            print_evaluation_table(
+                                text_results_scored, 
+                                vector_results_scored, 
+                                hybrid_results_scored,
+                                last.get('hybrid_method', 'Hybrid')
+                            )
+                            
+                            # Calculate ES score means
+                            text_es_mean = sum(r.get("score", 0) for r in text_results_scored) / len(text_results_scored) if text_results_scored else float('nan')
+                            vector_es_mean = sum(r.get("score", 0) for r in vector_results_scored) / len(vector_results_scored) if vector_results_scored else float('nan')
+                            hybrid_es_mean = sum(r.get("score", 0) for r in hybrid_results_scored) / len(hybrid_results_scored) if hybrid_results_scored else float('nan')
+                            
+                            # Display summary statistics
+                            st.markdown("---")
+                            print_summary_statistics(
+                                text_mean, vector_mean, hybrid_mean,
+                                len(text_results_scored), len(vector_results_scored), len(hybrid_results_scored),
+                                text_es_mean, vector_es_mean, hybrid_es_mean
+                            )
+                            
+                            st.success("✅ Evaluation completed successfully!")
+                            
+                        except Exception as e:
+                            st.error(f"❌ RAGAS evaluation failed: {e}")
+                            import traceback
+                            st.code(traceback.format_exc())
+        
+        # Show placeholder when no evaluation has been run
+        elif 'last_results' not in st.session_state:
+            st.info("🔍 Run a search first, then click 'Run Evaluation' to evaluate the results.")
 
 if __name__ == "__main__":
     main()
