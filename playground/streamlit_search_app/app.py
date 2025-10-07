@@ -397,27 +397,57 @@ def display_search_results(results: List[Dict[str, Any]], search_type: str, quer
         if search_type.lower() in ("text", "vector"):
             # Minimal columns for Text and Vector tables
             row = {
+                "Query": query,
                 "Rank": i,
                 "Model Name": model_data.get('name', 'Unknown'),
                 "Score": f"{result['score']:.4f}",
                 "ML Tasks": ", ".join(model_data.get('mlTask', [])) if isinstance(model_data.get('mlTask'), list) else model_data.get('mlTask', 'N/A'),
+                "Annotation": None
             }
             data.append(row)
         else:
             # Full columns for Hybrid
             row = {
+                "Query": query,
                 "Rank": i,
                 "Model Name": model_data.get('name', 'Unknown'),
                 "Score": f"{result['score']:.4f}",
                 "ML Tasks": ", ".join(model_data.get('mlTask', [])) if isinstance(model_data.get('mlTask'), list) else model_data.get('mlTask', 'N/A'),
                 "Keywords": ", ".join(model_data.get('keywords', [])) if isinstance(model_data.get('keywords'), list) else model_data.get('keywords', 'N/A'),
                 "Shared By": model_data.get('sharedBy', 'N/A'),
-                "Description": model_data.get('description', 'N/A')[:100] + "..." if len(model_data.get('description', '')) > 100 else model_data.get('description', 'N/A')
+                "Description": model_data.get('description', 'N/A')[:100] + "..." if len(model_data.get('description', '')) > 100 else model_data.get('description', 'N/A'),
+                "Annotation": None
             }
             data.append(row)
     
     df = pd.DataFrame(data)
-    st.dataframe(df, use_container_width=True)
+    edited_df = st.data_editor(
+        df,
+        column_config={
+            "Annotation": st.column_config.SelectboxColumn(
+                "Annotation",
+                help="Annotate relevance",
+                options=["relevant", "partially relevant", "irrelevant"],
+                required=False,
+            )
+        },
+        use_container_width=True,
+        hide_index=False,
+    )
+    
+    # Download button for annotations (includes annotator name)
+    annotator = st.text_input("Annotator name (optional)", key=f"annotator_{search_type}")
+    annotation_df = edited_df[["Query", "Model Name", "Annotation"]].dropna(subset=["Annotation"])
+    if annotator:
+        annotation_df.insert(0, "Annotator", annotator)
+    if not annotation_df.empty:
+        csv = annotation_df.to_csv(index=False).encode('utf-8')
+        st.download_button(
+            label="Download annotations as CSV",
+            data=csv,
+            file_name=f"{search_type.lower()}_annotations.csv",
+            mime="text/csv",
+        )
     
     # Show detailed results in expandable sections
     for i, result in enumerate(results, 1):
@@ -454,10 +484,12 @@ def display_search_results_with_details(results: List[Dict[str, Any]], search_ty
     for i, result in enumerate(results, 1):
         model_data = result["model_data"]
         row = {
+            "Query": query,
             "Rank": i,
             "Model Name": model_data.get('name', 'Unknown'),
             "RRF Score": f"{result['score']:.6f}",
             "ML Tasks": ", ".join(model_data.get('mlTask', [])) if isinstance(model_data.get('mlTask'), list) else model_data.get('mlTask', 'N/A'),
+            "Annotation": None
         }
         if 'ranking_details' in result:
             details = result['ranking_details']
@@ -465,7 +497,34 @@ def display_search_results_with_details(results: List[Dict[str, Any]], search_ty
             row["Vector Rank"] = details['vector_rank'] if details['vector_rank'] else '-'
         data.append(row)
     df = pd.DataFrame(data)
-    st.dataframe(df, use_container_width=True)
+    edited_df = st.data_editor(
+        df,
+        column_config={
+            "Annotation": st.column_config.SelectboxColumn(
+                "Annotation",
+                help="Annotate relevance",
+                options=["relevant", "partially relevant", "irrelevant"],
+                required=False,
+            )
+        },
+        use_container_width=True,
+        hide_index=False,
+    )
+    
+    # Download button for annotations (includes annotator name)
+    annotator = st.text_input("Annotator name (optional)", key=f"annotator_rrf_{search_type}")
+    annotation_df = edited_df[["Query", "Model Name", "Annotation"]].dropna(subset=["Annotation"])
+    if annotator:
+        annotation_df.insert(0, "Annotator", annotator)
+    if not annotation_df.empty:
+        csv = annotation_df.to_csv(index=False).encode('utf-8')
+        st.download_button(
+            label="Download annotations as CSV",
+            data=csv,
+            file_name=f"{search_type.lower()}_annotations.csv",
+            mime="text/csv",
+        )
+    
     for i, result in enumerate(results, 1):
         model_data = result["model_data"]
         model_name = model_data.get('name', 'Unknown')
