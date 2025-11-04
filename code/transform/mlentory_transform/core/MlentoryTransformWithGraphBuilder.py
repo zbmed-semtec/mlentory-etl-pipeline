@@ -158,7 +158,7 @@ class MlentoryTransformWithGraphBuilder:
             Transform the extracted data into a knowledge graph and save it to a file.
             """
         
-            knowledge_graph, extraction_metadata_graph = self.graph_builder_fair4ml.dataframe_to_graph(extracted_df, identifier_column="model_schema.org:name", platform=Platform.OPEN_ML.value)
+            knowledge_graph, extraction_metadata_graph = self.graph_builder_fair4ml.dataframe_to_graph(extracted_df, identifier_column="schema.org:name", platform=Platform.OPEN_ML.value)
             
             if save_output:
                 self.save_graph(knowledge_graph, "Transformed_OpenML_runs_kg", output_dir)
