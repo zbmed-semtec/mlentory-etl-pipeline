@@ -173,6 +173,9 @@ class AI4LifeExtractor:
         mapped["schema.org:url"] = [mapped["schema.org:url"], ai4life_url]
         mapped["schema.org:archivedAt"] = [mapped["schema.org:archivedAt"], ai4life_url]
         
+        #Handle licenses
+        mapped["schema.org:license"] = mapped["schema.org:license"].split("/")[-1]
+        
         # Process dates
         for date_field in ["schema.org:dateCreated", "schema.org:dateModified"]:
             if date_field in mapped and mapped[date_field] is not None:
