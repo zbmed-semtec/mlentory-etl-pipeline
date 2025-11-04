@@ -203,7 +203,7 @@ class GraphBuilderFAIR4ML(GraphBuilderBase):
             self.add_triple_with_metadata(
                 entity_uri,
                 RDF.type,
-                self.namespaces["fair4ml"]["ML_Model"],
+                self.namespaces["fair4ml"]["MLModel"],
                 {"extraction_method": ExtractionMethod.ETL.value, "confidence": 1.0},
                 self.transformation_time
             )
