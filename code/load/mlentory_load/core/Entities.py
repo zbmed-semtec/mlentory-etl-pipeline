@@ -106,7 +106,7 @@ class AI4Life(Document):
     description = Text()
     license = Text()
     sharedBy = Text()
-    keywords = Keyword(multi=True)   
+    keywords = Keyword(multi=True)
     platform = Keyword()
     dateCreated = Date()
     

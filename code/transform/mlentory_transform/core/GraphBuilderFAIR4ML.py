@@ -298,6 +298,7 @@ class GraphBuilderFAIR4ML(GraphBuilderBase):
                  # Default case: treat as string if predicate not found in schema
                  for v in values_list:
                      if isinstance(v, str) and v.strip() in ["", "None", "No context to answer the question", "Information not found"]:
+                         continue
                          objects.append(Literal("Information not found", datatype=XSD.string))
                      elif v is not None:
                          objects.append(Literal(str(v), datatype=XSD.string))
@@ -310,6 +311,7 @@ class GraphBuilderFAIR4ML(GraphBuilderBase):
             # Default to string if schema lookup fails
             for v in values_list:
                  if isinstance(v, str) and v.strip() in ["", "None", "No context to answer the question", "Information not found"]:
+                     continue
                      objects.append(Literal("Information not found", datatype=XSD.string))
                  elif v is not None:
                      objects.append(Literal(str(v), datatype=XSD.string))
@@ -321,11 +323,11 @@ class GraphBuilderFAIR4ML(GraphBuilderBase):
             if isinstance(item_value, str):
                 # Handle common non-informative strings
                 if item_value.strip() in ["", "None", "No context to answer the question", "Information not found"]:
-                    objects.append(Literal("Information not found", datatype=XSD.string))
                     continue # Skip further processing for this value
+                    objects.append(Literal("Information not found", datatype=XSD.string))
             elif item_value is None:
-                 objects.append(Literal("Information not found", datatype=XSD.string))
                  continue
+                 objects.append(Literal("Information not found", datatype=XSD.string))
 
             item_value_str = str(item_value) # Use string representation for processing
 
@@ -623,7 +625,24 @@ class GraphBuilderFAIR4ML(GraphBuilderBase):
                         objects.append(defined_term_uri)
 
                 elif "CreativeWork" in range_value:
-                    if platform == Platform.HUGGING_FACE.value and ":" in item_value_str:
+                    # Special handling for license values that might not be valid URIs
+                    print("CREATIVE WORK!!!!!!!!!!!")
+                    print(predicate)
+                    print(item_value_str)
+                    if "license" in predicate.lower():
+                        # Check if it's a valid URI
+                        try:
+                            # Try to validate if it's a URI-like string
+                            if item_value_str.startswith(('http://', 'https://', 'ftp://', 'file://')):
+                                # It looks like a URI, try to create URIRef
+                                objects.append(URIRef(item_value_str))
+                            else:
+                                # It's a license identifier like "CC BY-NC 4.0", treat as literal
+                                objects.append(Literal(item_value_str, datatype=XSD.string))
+                        except Exception as e:
+                            print(f"Warning: Could not process license value '{item_value_str}' as URI for predicate '{predicate}': {e}. Treating as string.")
+                            objects.append(Literal(item_value_str, datatype=XSD.string))
+                    elif platform == Platform.HUGGING_FACE.value and ":" in item_value_str:
                         objects.append(Literal(item_value_str, datatype=XSD.string))
                     else:
                         print(f"Creating in FAIR4ML CreativeWork for {item_value_str}")

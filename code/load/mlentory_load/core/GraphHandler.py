@@ -11,7 +11,7 @@ from rdflib.util import from_n3
 from pandas import Timestamp
 from tqdm import tqdm
 from datetime import datetime
-from typing import Callable, List, Dict, Set, Tuple, Optional
+from typing import Callable, List, Dict, Set, Tuple, Optional, Union
 import pprint
 
 from mlentory_load.dbHandler import SQLHandler, RDFHandler, IndexHandler
@@ -369,6 +369,55 @@ class GraphHandler:
             update_query, (formatted_date, formatted_date, False)
         )
 
+    def deprecate_triplet_ranges_for_changed_models(self, subjects: Set[URIRef], curr_update_date: Union[str, datetime], batch_size: int = 10000):
+        """
+        Deprecate triplets for changed models.
+        
+        Args:
+            subjects (Set[URIRef]): Set of subject URIs for models that have changed
+            curr_update_date (Union[str, datetime]): Current update date, can be either a datetime object
+                or a string in format 'YYYY-MM-DD_HH-MM-SS'
+            batch_size (int): Batch size for updating version ranges
+        """
+        if not subjects:
+            return
+
+        # Convert curr_update_date to datetime if it's a string
+        if isinstance(curr_update_date, str):
+            try:
+                # Try the format with underscore first
+                curr_update_date = datetime.strptime(curr_update_date, "%Y-%m-%d_%H-%M-%S")
+            except ValueError:
+                try:
+                    # Try the format with space if underscore format fails
+                    curr_update_date = datetime.strptime(curr_update_date, "%Y-%m-%d %H:%M:%S")
+                except ValueError:
+                    raise ValueError(
+                        "curr_update_date must be either a datetime object or a string in format 'YYYY-MM-DD_HH-MM-SS' or 'YYYY-MM-DD HH:MM:SS'"
+                    )
+
+        # Convert URIRef objects to N3 format strings for database storage
+        subject_n3_list = [str(subject.n3()) for subject in subjects]
+        
+        for i in range(0, len(subject_n3_list), batch_size):
+            batch_subject_n3_list = subject_n3_list[i:min(i+batch_size, len(subject_n3_list))]
+            curr_update_date_str = curr_update_date.strftime("%Y-%m-%d %H:%M:%S")
+            update_query = """
+                UPDATE "Version_Range" vr1
+                SET deprecated = %s, use_end = %s
+                FROM "Triplet" t 
+                JOIN "Version_Range" vr2 ON t.id = vr2.triplet_id
+                WHERE t.subject = ANY(%s)
+                AND vr2.use_end < %s
+                AND vr2.deprecated = %s
+                AND vr1.triplet_id = vr2.triplet_id
+            """
+            
+            self.SQLHandler.execute_sql(
+                update_query,
+                (True, curr_update_date_str, batch_subject_n3_list, curr_update_date_str, False),
+            )
+
     def get_current_graph(self) -> Graph:
         """
         Retrieve current version of the RDF graph.
@@ -604,6 +653,7 @@ class GraphHandler:
             return
 
         # Use unnest on parallel arrays for a more robust query
+        # Can I use this query to update the version ranges in batch?x
         query = """
             SELECT t.id, u.t_id, u.e_id
             FROM "Version_Range" t
@@ -723,7 +773,7 @@ class GraphHandler:
             triplet_ids, extraction_info_ids, extraction_times
         )
         
-        self.deprecate_old_triplets_in_batch(min_extraction_time)
+        # self.deprecate_old_triplets_in_batch(min_extraction_time)
 
         # Add new triplets to the list
         for i, (is_new_triplet, triplet) in enumerate(zip(is_new, triplets)):

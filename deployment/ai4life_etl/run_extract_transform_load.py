@@ -32,6 +32,9 @@ VIRTUOSO_SPARQL_ENDPOINT = os.getenv("VIRTUOSO_SPARQL_ENDPOINT", f"http://{VIRTU
 ELASTICSEARCH_HOST = os.getenv("ELASTICSEARCH_HOST", "elastic_db")
 ELASTICSEARCH_PORT = int(os.getenv("ELASTICSEARCH_PORT", "9200")) # Env vars are strings
 
+# REMOTE_API_BASE_URL = os.getenv("REMOTE_API_BASE_URL", "http://10.0.7.249:8000")
+REMOTE_API_BASE_URL = os.getenv("REMOTE_API_BASE_URL", "http://backend:8000")
+
 def setup_logging() -> logging.Logger:
     """
     Sets up the logging system.
@@ -157,6 +160,7 @@ def initialize_load_processor(
         IndexHandler=elasticsearchHandler,
         GraphHandler=graphHandler,
         kg_files_directory=kg_files_directory,
+        remote_api_base_url=REMOTE_API_BASE_URL
     )
 
     
@@ -200,6 +204,35 @@ def parse_args() -> argparse.Namespace:
         default=False,
         help="Load the extraction data into the database",
     )
+    
+    parser.add_argument(
+        "--remote-db",
+        "-rd",
+        # action="store_true",
+        default=False,
+        help="Use remote databases for loading data.",
+    )
+    
+    parser.add_argument(
+        "--chunking",
+        default=False,
+        help="Wheter or not to chunk the data for the uploading step"
+    )
+    
+    parser.add_argument(
+        "--chunk-size",
+        type=int,
+        default=1000,
+        help="Size of chunks when uploading to remote database (default: 1000, use smaller values for slower connections)"
+    )
+    
+    parser.add_argument(
+        "--upload-timeout",
+        type=int,
+        default=800,
+        help="Timeout in seconds for HTTP uploads to remote database (default: 600 seconds/10 minutes)"
+    )
+    
     return parser.parse_args()
 
 
@@ -262,8 +295,25 @@ def main():
 
     # Load data
     logger.info("Starting database update with KG...")
+    
+    logger.info("Starting database update with KG...")
     start_time = time.time()
-    loader.update_dbs_with_kg(kg=kg_integrated, extraction_metadata=kg_metadata_integrated, remote_db=False, save_load_output=True, extraction_name="ai4life_models",kg_chunks_size=0,
+    if args.chunking is True:
+        logger.info(f"Using chunk size: {args.chunk_size}")
+        loader.update_dbs_with_kg(kg_integrated,
+                              kg_metadata_integrated,
+                              extraction_name="ai4life_extraction",
+                              remote_db=args.remote_db,
+                              kg_chunks_size=args.chunk_size,
+                              save_load_output=True,
+                              load_output_dir=args.output_dir+"/chunks")
+    else:
+        loader.update_dbs_with_kg(kg_integrated,
+                              kg_metadata_integrated,
+                              extraction_name="ai4life_extraction",
+                              remote_db=args.remote_db,
+                              kg_chunks_size=0,
+                              save_load_output=True,
                               load_output_dir=args.output_dir+"/chunks")
     end_time = time.time()
     logger.info(f"Database update with KG took {end_time - start_time:.2f} seconds")

@@ -142,7 +142,7 @@ class IndexHandler:
 
         index_run_entity.db_identifier = uri
         index_run_entity.name = ""
-        index_run_entity.license = ""
+        index_run_entity.license = "information not found"
         index_run_entity.mlTask = []
         index_run_entity.sharedBy = ""
         index_run_entity.modelCategory = []
@@ -159,7 +159,7 @@ class IndexHandler:
             elif "sharedBy" in key:
                 index_run_entity.sharedBy = value[0]
             elif "license" in key:
-                index_run_entity.license = value[0].lower()
+                index_run_entity.license = "information not found"
             elif "mlTask" in key:
                 value = [v.lower() for v in value]
                 index_run_entity.mlTask.extend(value)
@@ -278,6 +278,8 @@ class IndexHandler:
                 index_model_entity.name = (
                     value[0].split("/")[-2] + "/" + value[0].split("/")[-1]
                 )
+            elif "name" in key:
+                index_model_entity.name = value[0]
             elif "description" in key:
                 index_model_entity.description = value[0]
             elif "sharedBy" in key:
