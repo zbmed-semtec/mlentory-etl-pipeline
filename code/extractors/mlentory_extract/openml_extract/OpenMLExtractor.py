@@ -537,6 +537,8 @@ class OpenMLExtractor:
                         value = getattr(obj, attr)
                         if key == "version":
                             value = str(value)
+                        if "licence" in key:
+                            value = value.split("/")[-1]
                         metadata[key] = self._wrap_metadata(value, method="openml_python_package")
             self.logger.debug(f"Successfully fetched dataset metadata for dataset_id={dataset_id}")
             return metadata
