@@ -19,6 +19,7 @@ from mlentory_transform.core.MlentoryTransform import (
     MlentoryTransform,
     KnowledgeGraphHandler,
 )
+from mlentory_transform.core import MlentoryTransformWithGraphBuilder
 from mlentory_load.core import LoadProcessor, GraphHandlerForKG
 from mlentory_load.dbHandler import SQLHandler, RDFHandler, IndexHandler
 # from openml_etl_component import OpenMLETLComponent
@@ -147,13 +148,17 @@ def initialize_transformer(config_path: str, logger: logging.Logger) -> Mlentory
         )
         logger.info("FAIR4ML schema loaded successfully")
         
-        kg_handler = KnowledgeGraphHandler(
-            FAIR4ML_schema_data=new_schema, 
-            base_namespace="https://w3id.org/mlentory/mlentory_graph/"
-        )
-        logger.info("KnowledgeGraphHandler initialized")
+        # kg_handler = KnowledgeGraphHandler(
+        #     FAIR4ML_schema_data=new_schema, 
+        #     base_namespace="https://w3id.org/mlentory/mlentory_graph/"
+        # )
+        # logger.info("KnowledgeGraphHandler initialized")
         
-        transformer = MlentoryTransform(kg_handler, None)
+        # transformer = MlentoryTransform(kg_handler, None)
+        transformer = MlentoryTransformWithGraphBuilder(
+            base_namespace="https://w3id.org/mlentory/mlentory_graph/",
+            FAIR4ML_schema_data=new_schema
+        )
         logger.info("Transformer initialized successfully")
         return transformer
     except Exception as e:
@@ -278,7 +283,7 @@ Usage examples:
     parser.add_argument(
         "--save-transformation", "-st",
         action="store_true",
-        default=False,
+        default=True,
         help="Save the results of the transformation phase",
     )
     
@@ -464,7 +469,7 @@ def main():
         start_time = time.time()
         runs_kg, runs_extraction_metadata = transformer.transform_OpenML_runs(
             extracted_df=extracted_entities["run"],
-            save_output_in_json=args.save_transformation,
+            save_output=args.save_transformation,
             output_dir=args.output_dir+"/runs",
         )
         end_time = time.time()
@@ -475,7 +480,7 @@ def main():
         start_time = time.time()
         datasets_kg, datasets_extraction_metadata = transformer.transform_OpenML_datasets(
             extracted_df=extracted_entities["dataset"],
-            save_output_in_json=args.save_transformation,
+            save_output=args.save_transformation,
             output_dir=args.output_dir+"/datasets",
         )
         end_time = time.time()
