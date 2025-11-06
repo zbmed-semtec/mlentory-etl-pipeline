@@ -76,10 +76,10 @@ class GraphBuilderFAIR4ML(GraphBuilderBase):
             elif identifier_column == "schema.org:identifier":
                 entity_type = "Dataset" 
         elif identifier_column.startswith("model_"):
-                identifier_column = identifier_column[len("model_"):]
+                identifier_column = identifier_column.replace("model_", "")
                 entity_type = "MLModel"
         elif identifier_column.startswith("dataset_"):
-                identifier_column = identifier_column[len("dataset_"):]
+                identifier_column = identifier_column.replace("dataset_", "")
                 entity_type = "Dataset"
         else:
             entity_type = "MLModel"
