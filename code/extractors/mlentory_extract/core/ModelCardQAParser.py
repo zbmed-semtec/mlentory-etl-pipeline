@@ -1,5 +1,4 @@
 import pandas as pd
-import torch
 import transformers
 from transformers import pipeline
 from datasets import Dataset
@@ -14,7 +13,7 @@ import math
 from datetime import datetime
 from tqdm import tqdm
 
-from mlentory_extract.core.QAInferenceEngine import QAInferenceEngine
+# from mlentory_extract.core.QAInferenceEngine import QAInferenceEngine
 from mlentory_extract.core.QAMatchingEngine import QAMatchingEngine
 
 
@@ -74,6 +73,7 @@ class ModelCardQAParser:
         except ModuleNotFoundError:
             # If transformers.torch is not available, assume no GPU
             self.device = None
+            print("\nNOT USING GPU\n")
 
         # Store configuration data
         self.tags_language = set(tag.lower() for tag in tags_language)
@@ -554,7 +554,7 @@ class ModelCardQAParser:
                     HF_df.loc[df_idx, f"q_id_{q_id}"] = answer
 
             # Clear some memory
-            if hasattr(torch.cuda, "empty_cache"):
-                torch.cuda.empty_cache()
+            # if hasattr(torch.cuda, "empty_cache"):
+            #     torch.cuda.empty_cache()
 
         return HF_df

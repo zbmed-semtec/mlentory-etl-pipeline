@@ -138,12 +138,12 @@ services:
       target: no_gpu_hf
     volumes:
       - ../data/configuration/hf:/app/configuration/hf
-      - ../data/transform_queue:/transform_queue
-      - ../data/datasets:/datasets
-      - ../code/extractors:/app/extractors  # Mount the entire package
+      - ../data/virtuoso_data/kg_files:/kg_files
+      - ../code/extractors:/app/extractors
       - ../code/transform:/app/transform
       - ../code/load:/app/load
       - ./hf_etl:/app/hf_etl
+      - /var/run/docker.sock:/var/run/docker.sock 
     dns:
       - 1.1.1.1
     command: ["tail", "-f", "/dev/null"]
@@ -152,7 +152,7 @@ services:
 
   openml_etl_with_no_gpu:
     profiles: 
-      - no_gpu
+      # - no_gpu
       - openml_no_gpu
       - combined_extraction
     container_name: openml_no_gpu
@@ -175,7 +175,7 @@ services:
     
   ai4life_etl_with_no_gpu:
     profiles: 
-      - no_gpu
+      # - no_gpu
       - ai4life_no_gpu
       - combined_extraction
     container_name: ai4life_no_gpu
