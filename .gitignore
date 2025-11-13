@@ -24,6 +24,8 @@ data/transform_queue/*.tsv
 data/transform_queue/*.json
 data/transform_queue/
 
+data/
+
 data/pgadmin_data
 
 deployment/scheduler/logs
