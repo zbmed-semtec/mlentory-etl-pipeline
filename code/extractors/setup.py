@@ -9,16 +9,20 @@ setup(
         "pandas>=2.3.2,<3.0.0",
         "transformers>=4.56.0",
         "datasets>=2.19.2",
-        "torch>=2.7.1",
         "huggingface-hub>=0.34.4",
         "tqdm>=4.67.1",
         "openml>=0.15.1",
         "arxiv>=2.2.0",
         "scikit-learn>=1.7.1",
-        "vllm>=0.10.1.1",
         "selenium>=4.35.0",
         "hypha_rpc==0.20.55"
     ],
+    extras_require={
+        "gpu": [
+            "torch>=2.7.1",
+            "vllm>=0.10.1.1",
+        ],
+    },
     python_requires=">=3.8.10",
     author="Nelson Q, Suhasini V ,Dhwani S",
     author_email="your.email@example.com",

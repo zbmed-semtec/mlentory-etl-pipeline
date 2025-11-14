@@ -40,7 +40,7 @@ RUN pip install --no-cache-dir -r /app/requirements/openml_requirements.txt
 
 # Copy the package files
 COPY code/extractors /app/extractors
-RUN pip3 install --no-deps -e /app/extractors
+RUN pip3 install --no-deps -e /app/extractors[gpu]
 
 COPY code/transform /app/transform
 RUN pip3 install --no-deps -e /app/transform
@@ -57,7 +57,7 @@ RUN pip install --no-cache-dir -r /app/requirements/hf_requirements.txt
 
 # Copy the package files
 COPY code/extractors /app/extractors
-RUN pip3 install --no-deps -e /app/extractors
+RUN pip3 install --no-deps -e /app/extractors[gpu]
 
 COPY code/transform /app/transform
 RUN pip3 install --no-deps -e /app/transform
