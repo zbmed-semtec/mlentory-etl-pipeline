@@ -34,15 +34,16 @@ class HFDatasetManager:
     def __init__(
         self,
         api_token: Optional[str] = None,
-        max_retries: int = 3,
-        base_backoff: float = 2.0,
-        max_backoff: float = 300.0,
+        max_retries: int = 6,
+        base_backoff: float = 5.0,
+        max_backoff: float = 400.0,
     ):
         """
         Initialize the HuggingFace Dataset Manager.
 
         Args:
             api_token (Optional[str]): HuggingFace API token for authenticated requests.
+                If None, will attempt to read from HF_TOKEN environment variable.
                 Defaults to None.
             max_retries (int): Maximum number of retries for rate-limited requests.
                 Defaults to 6.
@@ -54,10 +55,13 @@ class HFDatasetManager:
         Raises:
             ValueError: If the model_cards_dataset is invalid or inaccessible
         """
-        self.token = None
-        if api_token != None:
-            self.token = api_token
-            self.api = HfApi(token=api_token)
+        self.token = api_token
+        if self.token is None:
+            # Try to get token from environment variable
+            self.token = os.getenv('HF_TOKEN')
+
+        if self.token:
+            self.api = HfApi(token=self.token)
         else:
             self.api = HfApi()
 
@@ -77,11 +81,14 @@ class HFDatasetManager:
             tuple[int, Optional[float]]: A tuple containing the status code and retry-after seconds.
                 Returns (0, None) if unable to extract rate limit information.
         """
-        from huggingface_hub.utils import HfHubHTTPError
+        from huggingface_hub.errors import HfHubHTTPError as HfHubHTTPErrorErrors
+        from huggingface_hub.utils import HfHubHTTPError as HfHubHTTPErrorUtils
         from requests.exceptions import HTTPError
+        
+        hf_hub_error_types = (HfHubHTTPErrorErrors, HfHubHTTPErrorUtils, HTTPError)
 
         # Handle huggingface_hub HTTP errors
-        if isinstance(exc, HfHubHTTPError):
+        if isinstance(exc, hf_hub_error_types):
             if hasattr(exc, 'response') and exc.response is not None:
                 status_code = getattr(exc.response, 'status_code', 0)
                 if status_code == 429:
@@ -233,52 +240,57 @@ class HFDatasetManager:
         Returns:
             pd.DataFrame: DataFrame containing model metadata
         """
-        models = self._call_with_hf_retries(
-            self.api.list_models,
-            limit=limit, sort="lastModified", direction=-1, full=True
-        )
+        def _fetch_and_process_all_models():
+            models = self.api.list_models(
+                limit=limit, sort="lastModified", direction=-1, full=True
+            )
 
-        def process_model(model):
-            if model.last_modified <= latest_modification:
-                return None
+            def process_single_model(model):
+                if model.last_modified <= latest_modification:
+                    return None
 
-            card = None
-            try:
-                if self.token:
-                    card = self._call_with_hf_retries(ModelCard.load, model.modelId, token=self.token)
+                card = None
+                try:
+                    if self.token:
+                        card = self._call_with_hf_retries(ModelCard.load, model.modelId, token=self.token)
+                    else:
+                        card = self._call_with_hf_retries(ModelCard.load, model.modelId)
+                except Exception as e:
+                    logger.warning(f"Error loading model card for {model.id}: {e}")
+                    return None
+
+                model_info = {
+                    "modelId": model.id,
+                    "author": model.author,
+                    "last_modified": model.last_modified,
+                    "downloads": model.downloads,
+                    "likes": model.likes,
+                    "library_name": model.library_name,
+                    "tags": model.tags,
+                    "pipeline_tag": model.pipeline_tag,
+                    "createdAt": model.created_at,
+                    "card": card.content if card else "",
+                }
+
+                if self.has_model_enough_information(model_info):
+                    return model_info
                 else:
-                    card = self._call_with_hf_retries(ModelCard.load, model.modelId)
-            except Exception as e:
-                print(f"Error loading model card for {model.id}: {e}")
-                return None
+                    return None
 
-            model_info = {
-                "modelId": model.id,
-                "author": model.author,
-                "last_modified": model.last_modified,
-                "downloads": model.downloads,
-                "likes": model.likes,
-                "library_name": model.library_name,
-                "tags": model.tags,
-                "pipeline_tag": model.pipeline_tag,
-                "createdAt": model.created_at,
-                "card": card.content if card else "",
-            }
-            
-            if self.has_model_enough_information(model_info):
-                return model_info
-            else:
-                return None
+            model_data = []
+            with ThreadPoolExecutor(max_workers=threads) as executor:
+                future_to_model = {
+                    executor.submit(process_single_model, model): model for model in models
+                }
+                for future in as_completed(future_to_model):
+                    result = future.result()
+                    if result is not None:
+                        model_data.append(result)
 
-        model_data = []
-        with ThreadPoolExecutor(max_workers=threads) as executor:
-            future_to_model = {
-                executor.submit(process_model, model): model for model in models
-            }
-            for future in as_completed(future_to_model):
-                result = future.result()
-                if result is not None:
-                    model_data.append(result)
+            return model_data
+
+        # Wrap the entire fetch+process in retry logic
+        model_data = self._call_with_hf_retries(_fetch_and_process_all_models)
 
         return pd.DataFrame(model_data)
     
@@ -302,49 +314,44 @@ class HFDatasetManager:
         futures = []
         
         def process_model(model_id: str):
+            def _fetch_and_process():
+                models_to_process = self.api.list_models(
+                    model_name=model_id, limit=1, full=True
+                )
+                results = []
 
-            models_to_process = self._call_with_hf_retries(
-                self.api.list_models, model_name=model_id, limit=1, full=True
-            )
-            results = []
-            
-            for model in models_to_process:
-                card = None
-                try:
-                    if self.token:
-                        card = self._call_with_hf_retries(ModelCard.load, model.modelId, token=self.token)
-                    else:
-                        card = self._call_with_hf_retries(ModelCard.load, model.modelId)
-                except Exception as e:
-                    print(f"Error loading model card for {model_id}: {e}")
-                    continue
-                
-                # model_id = model.id
-                # if model_id is None:
-                #     model_id = 
-                
-                # print("\n\n\n =================== \n\n\n")
-                # print(f"Model ID: {model.id}")
-                # print(f"Model card: {card.content}")
-                # print("\n\n\n =================== \n\n\n")
-                
-                
-                model_info = {
-                    "modelId": model.id,
-                    "author": model.author,
-                    "last_modified": model.last_modified,
-                    "downloads": model.downloads,
-                    "likes": model.likes,
-                    "library_name": model.library_name,
-                    "tags": model.tags,
-                    "pipeline_tag": model.pipeline_tag,
-                    "createdAt": model.created_at,
-                    "card": card.content if card else "",
-                }
-                
-                if self.has_model_enough_information(model_info):
-                    results.append(model_info)
-            return results
+                # Iterate inside the retry-protected function
+                for model in models_to_process:
+                    card = None
+                    try:
+                        if self.token:
+                            card = self._call_with_hf_retries(ModelCard.load, model.modelId, token=self.token)
+                        else:
+                            card = self._call_with_hf_retries(ModelCard.load, model.modelId)
+                    except Exception as e:
+                        logger.warning(f"Error loading model card for {model_id}: {e}")
+                        continue
+
+                    model_info = {
+                        "modelId": model.id,
+                        "author": model.author,
+                        "last_modified": model.last_modified,
+                        "downloads": model.downloads,
+                        "likes": model.likes,
+                        "library_name": model.library_name,
+                        "tags": model.tags,
+                        "pipeline_tag": model.pipeline_tag,
+                        "createdAt": model.created_at,
+                        "card": card.content if card else "",
+                    }
+
+                    if self.has_model_enough_information(model_info):
+                        results.append(model_info)
+
+                return results
+
+            # Wrap the entire fetch+process in retry logic
+            return self._call_with_hf_retries(_fetch_and_process)
 
         with ThreadPoolExecutor(max_workers=threads) as executor:
             futures = [executor.submit(process_model, model_id) for model_id in model_ids]
@@ -373,60 +380,61 @@ class HFDatasetManager:
             pd.DataFrame: DataFrame containing dataset metadata with exactly 'limit' rows
                          (or fewer if not enough valid datasets are found)
         """
-        # Fetch initial batch of datasets (100x limit to have enough valid ones)
-        datasets = list(
-            itertools.islice(
-                self._call_with_hf_retries(self.api.list_datasets, sort="lastModified", direction=-1),
-                limit + 1000
-            )
-        )
-
-        dataset_data = []
-        futures = []
-
-        def process_dataset(dataset):
-            if not (latest_modification is None):
-                last_modified = dataset.last_modified.replace(
-                    tzinfo=latest_modification.tzinfo
+        def _fetch_and_process_all_datasets():
+            # Fetch initial batch of datasets (100x limit to have enough valid ones)
+            datasets = list(
+                itertools.islice(
+                    self.api.list_datasets(sort="lastModified", direction=-1),
+                    limit + 1000
                 )
-                if last_modified <= latest_modification:
+            )
+
+            dataset_data = []
+            futures = []
+
+            def process_single_dataset(dataset):
+                if not (latest_modification is None):
+                    last_modified = dataset.last_modified.replace(
+                        tzinfo=latest_modification.tzinfo
+                    )
+                    if last_modified <= latest_modification:
+                        return None
+
+                croissant_metadata = self.get_croissant_metadata(dataset.id)
+                if croissant_metadata == {}:
                     return None
+                return {
+                    "datasetId": dataset.id,
+                    "croissant_metadata": croissant_metadata,
+                    "extraction_metadata": {
+                        "extraction_method": "Downloaded_from_HF_Croissant_endpoint",
+                        "confidence": 1.0,
+                        "extraction_time": datetime.now().strftime("%Y-%m-%d_%H-%M-%S"),
+                    },
+                }
 
-            croissant_metadata = self.get_croissant_metadata(dataset.id)
-            if croissant_metadata == {}:
-                return None
-            # Print all the datasets properties
-            # print("\nDATASEEEEEEET\n")
-            # print(dataset)
-            return {
-                "datasetId": dataset.id,
-                "croissant_metadata": croissant_metadata,
-                "extraction_metadata": {
-                    "extraction_method": "Downloaded_from_HF_Croissant_endpoint",
-                    "confidence": 1.0,
-                    "extraction_time": datetime.now().strftime("%Y-%m-%d_%H-%M-%S"),
-                },
-            }
+            with ThreadPoolExecutor(max_workers=threads) as executor:
+                # Submit all tasks
+                for dataset in datasets:
+                    future = executor.submit(process_single_dataset, dataset)
+                    futures.append(future)
 
-        with ThreadPoolExecutor(max_workers=threads) as executor:
-            # Submit all tasks
-            for dataset in datasets:
-                future = executor.submit(process_dataset, dataset)
-                futures.append(future)
+                # Process results as they complete
+                for future in as_completed(futures):
+                    result = future.result()
+                    if result is not None:
+                        dataset_data.append(result)
+                        # If we've reached the limit, cancel remaining futures
+                        if len(dataset_data) >= limit:
+                            for f in futures:
+                                f.cancel()
+                            break
 
-            # Process results as they complete
-            for future in as_completed(futures):
-                result = future.result()
-                if result is not None:
-                    dataset_data.append(result)
-                    # If we've reached the limit, cancel remaining futures
-                    if len(dataset_data) >= limit:
-                        for f in futures:
-                            f.cancel()
-                        break
+            # Trim results to exact limit if we got more than needed
+            return dataset_data[:limit]
 
-        # Trim results to exact limit if we got more than needed
-        dataset_data = dataset_data[:limit]
+        # Wrap the entire fetch+process in retry logic
+        dataset_data = self._call_with_hf_retries(_fetch_and_process_all_datasets)
         return pd.DataFrame(dataset_data)
 
     def get_croissant_metadata(self, dataset_id: str) -> Dict:
