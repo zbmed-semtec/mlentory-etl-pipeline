@@ -9,7 +9,7 @@ setup(
         "pandas>=2.3.2,<3.0.0",
         "transformers>=4.56.0",
         "datasets>=2.19.2",
-        "huggingface-hub>=0.34.4",
+        "huggingface-hub",
         "tqdm>=4.67.1",
         "openml>=0.15.1",
         "arxiv>=2.2.0",
