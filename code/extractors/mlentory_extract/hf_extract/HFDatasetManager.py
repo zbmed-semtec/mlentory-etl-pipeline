@@ -1,18 +1,23 @@
-from typing import Optional, Union, Literal, Dict, List
+from typing import Optional, Union, Literal, Dict, List, Callable, TypeVar
 from datasets import load_dataset
 import pandas as pd
 from huggingface_hub import HfApi, ModelCard
 from datetime import datetime
 import requests
+import urllib3
+from urllib3.util.retry import Retry
 import itertools
 import arxiv
 import os
 import time
 import logging
+import random
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
+
+T = TypeVar('T')
 
 
 class HFDatasetManager:
@@ -29,6 +34,9 @@ class HFDatasetManager:
     def __init__(
         self,
         api_token: Optional[str] = None,
+        max_retries: int = 3,
+        base_backoff: float = 2.0,
+        max_backoff: float = 300.0,
     ):
         """
         Initialize the HuggingFace Dataset Manager.
@@ -36,8 +44,12 @@ class HFDatasetManager:
         Args:
             api_token (Optional[str]): HuggingFace API token for authenticated requests.
                 Defaults to None.
-            default_card (Optional[str]): Default HF card content.
-                Defaults to None (uses the standard path).
+            max_retries (int): Maximum number of retries for rate-limited requests.
+                Defaults to 6.
+            base_backoff (float): Base backoff time in seconds for exponential backoff.
+                Defaults to 2.0.
+            max_backoff (float): Maximum backoff time in seconds.
+                Defaults to 300.0.
 
         Raises:
             ValueError: If the model_cards_dataset is invalid or inaccessible
@@ -48,6 +60,104 @@ class HFDatasetManager:
             self.api = HfApi(token=api_token)
         else:
             self.api = HfApi()
+
+        # Retry configuration for rate-limited requests
+        self.max_retries = max_retries
+        self.base_backoff = base_backoff
+        self.max_backoff = max_backoff
+
+    def _extract_status_and_retry_after(self, exc: Exception) -> tuple[int, Optional[float]]:
+        """
+        Extract HTTP status code and retry-after header from an exception.
+
+        Args:
+            exc (Exception): The exception to analyze.
+
+        Returns:
+            tuple[int, Optional[float]]: A tuple containing the status code and retry-after seconds.
+                Returns (0, None) if unable to extract rate limit information.
+        """
+        from huggingface_hub.utils import HfHubHTTPError
+        from requests.exceptions import HTTPError
+
+        # Handle huggingface_hub HTTP errors
+        if isinstance(exc, HfHubHTTPError):
+            if hasattr(exc, 'response') and exc.response is not None:
+                status_code = getattr(exc.response, 'status_code', 0)
+                if status_code == 429:
+                    retry_after = exc.response.headers.get('Retry-After')
+                    if retry_after:
+                        try:
+                            return status_code, float(retry_after)
+                        except ValueError:
+                            pass
+                    return status_code, None
+            return 0, None
+
+        # Handle requests HTTP errors
+        elif isinstance(exc, HTTPError):
+            if hasattr(exc, 'response') and exc.response is not None:
+                status_code = getattr(exc.response, 'status_code', 0)
+                if status_code == 429:
+                    retry_after = exc.response.headers.get('Retry-After')
+                    if retry_after:
+                        try:
+                            return status_code, float(retry_after)
+                        except ValueError:
+                            pass
+                    return status_code, None
+            return 0, None
+
+        # Handle other exceptions that might contain response info
+        elif hasattr(exc, 'response'):
+            response = getattr(exc, 'response')
+            if response is not None:
+                status_code = getattr(response, 'status_code', 0)
+                if status_code == 429:
+                    retry_after = getattr(response, 'headers', {}).get('Retry-After')
+                    if retry_after:
+                        try:
+                            return status_code, float(retry_after)
+                        except ValueError:
+                            pass
+                    return status_code, None
+
+        return 0, None
+
+    def _call_with_hf_retries(self, fn: Callable[..., T], *args, **kwargs) -> T:
+        """
+        Call a function with automatic retry logic for HuggingFace rate limits.
+
+        Args:
+            fn (Callable): The function to call.
+            *args: Positional arguments for the function.
+            **kwargs: Keyword arguments for the function.
+
+        Returns:
+            T: The result of the function call.
+
+        Raises:
+            Exception: The original exception if max retries exceeded or not a 429 error.
+        """
+        attempt = 0
+        while True:
+            try:
+                return fn(*args, **kwargs)
+            except Exception as exc:
+                status, retry_after = self._extract_status_and_retry_after(exc)
+                if status != 429 or attempt >= self.max_retries:
+                    raise
+
+                delay = retry_after if retry_after is not None else min(
+                    self.max_backoff, self.base_backoff * (2 ** attempt) + random.uniform(0, 1)
+                )
+
+                logger.warning(
+                    f"HF 429 rate limit hit: retrying in {delay:.1f}s "
+                    f"(attempt {attempt+1}/{self.max_retries})"
+                )
+                time.sleep(delay)
+                attempt += 1
 
     def get_model_metadata_dataset(
         self, update_recent: bool = True, limit: int = 5, threads: int = 4
@@ -74,7 +184,8 @@ class HFDatasetManager:
             
             # Load base dataset
             # If this section ever freezes, just delete the cache and try again.
-            dataset = load_dataset(
+            dataset = self._call_with_hf_retries(
+                load_dataset,
                 "librarian-bots/model_cards_with_metadata",
                 revision="4e7edd391342ee5c182afd08a6f62bff38f44535",
             )["train"].to_pandas()
@@ -122,7 +233,8 @@ class HFDatasetManager:
         Returns:
             pd.DataFrame: DataFrame containing model metadata
         """
-        models = self.api.list_models(
+        models = self._call_with_hf_retries(
+            self.api.list_models,
             limit=limit, sort="lastModified", direction=-1, full=True
         )
 
@@ -133,9 +245,9 @@ class HFDatasetManager:
             card = None
             try:
                 if self.token:
-                    card = ModelCard.load(model.modelId, token=self.token)
+                    card = self._call_with_hf_retries(ModelCard.load, model.modelId, token=self.token)
                 else:
-                    card = ModelCard.load(model.modelId)
+                    card = self._call_with_hf_retries(ModelCard.load, model.modelId)
             except Exception as e:
                 print(f"Error loading model card for {model.id}: {e}")
                 return None
@@ -190,17 +302,19 @@ class HFDatasetManager:
         futures = []
         
         def process_model(model_id: str):
-            
-            models_to_process = self.api.list_models(model_name=model_id,limit=1,full=True)
+
+            models_to_process = self._call_with_hf_retries(
+                self.api.list_models, model_name=model_id, limit=1, full=True
+            )
             results = []
             
             for model in models_to_process:
                 card = None
                 try:
                     if self.token:
-                        card = ModelCard.load(model.modelId, token=self.token)
+                        card = self._call_with_hf_retries(ModelCard.load, model.modelId, token=self.token)
                     else:
-                        card = ModelCard.load(model.modelId)
+                        card = self._call_with_hf_retries(ModelCard.load, model.modelId)
                 except Exception as e:
                     print(f"Error loading model card for {model_id}: {e}")
                     continue
@@ -262,7 +376,8 @@ class HFDatasetManager:
         # Fetch initial batch of datasets (100x limit to have enough valid ones)
         datasets = list(
             itertools.islice(
-                self.api.list_datasets(sort="lastModified", direction=-1), limit + 1000
+                self._call_with_hf_retries(self.api.list_datasets, sort="lastModified", direction=-1),
+                limit + 1000
             )
         )
 
@@ -324,16 +439,27 @@ class HFDatasetManager:
         Returns:
             Dict: The croissant metadata for the dataset, or an empty dictionary if not found.
         """
-        API_URL = f"https://huggingface.co/api/datasets/{dataset_id}/croissant"
-        if self.token:
-            headers = {"Authorization": f"Bearer {self.token}"}
-        else:
-            headers = {}
-        response = requests.get(API_URL, headers=headers)
-        if response.status_code == 200:
-            return response.json()
-        else:
-            return {}
+        def _fetch_croissant():
+            # Create a session with retry configuration for 429 errors
+            retry_strategy = Retry(
+                total=self.max_retries,
+                status_forcelist=[429],
+                backoff_factor=self.base_backoff,
+                respect_retry_after_header=True,
+            )
+            adapter = requests.adapters.HTTPAdapter(max_retries=retry_strategy)
+            session = requests.Session()
+            session.mount("https://", adapter)
+
+            API_URL = f"https://huggingface.co/api/datasets/{dataset_id}/croissant"
+            headers = {"Authorization": f"Bearer {self.token}"} if self.token else {}
+            response = session.get(API_URL, headers=headers)
+            if response.status_code == 200:
+                return response.json()
+            else:
+                return {}
+
+        return self._call_with_hf_retries(_fetch_croissant)
 
     def get_specific_datasets_metadata(
         self, 
