@@ -167,7 +167,7 @@ class HFDatasetManager:
                 attempt += 1
 
     def get_model_metadata_dataset(
-        self, update_recent: bool = True, limit: int = 5, threads: int = 4
+        self, update_recent: bool = False, limit: int = 5, threads: int = 4
     ) -> pd.DataFrame:
         """
         Retrieve and optionally update the HuggingFace dataset containing model card information.

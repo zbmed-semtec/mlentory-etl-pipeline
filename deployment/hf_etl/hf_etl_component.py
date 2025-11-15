@@ -179,7 +179,7 @@ class HuggingFaceETLComponent(BaseETLComponent):
                 output_dir=args.output_dir,
                 save_initial_data=False,
                 save_result_in_json=args.save_extraction,
-                update_recent=True,
+                update_recent=False,
                 related_entities_to_download=entities_to_download_config,
                 unstructured_text_strategy=args.unstructured_text_strategy,
                 threads=4,

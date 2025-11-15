@@ -46,7 +46,7 @@ class HFExtractor:
     def download_models_with_related_entities(
         self,
         num_models: int = 10,
-        update_recent: bool = True,
+        update_recent: bool = False,
         related_entities_to_download: List[str] = ["datasets", "base_models", "licenses", "keywords", "articles"],
         output_dir: str = "./outputs",
         save_initial_data: bool = False,
@@ -258,7 +258,7 @@ class HFExtractor:
     def download_models(
         self,
         num_models: int = 10,
-        update_recent: bool = True,
+        update_recent: bool = False,
         output_dir: str = "./outputs",
         save_raw_data: bool = False,
         save_result_in_json: bool = False,

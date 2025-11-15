@@ -499,7 +499,7 @@ def main():
                 output_dir=args.output_dir, # Use the base output dir
                 save_initial_data=False, # Controlled by save_extraction?
                 save_result_in_json=args.save_extraction, # Reuse flag
-                update_recent=True, # Default behavior
+                update_recent=False, # Default behavior
                 related_entities_to_download=entities_to_download_config,
                 unstructured_text_strategy=args.unstructured_text_strategy,
                 threads=4, # Reuse threads
