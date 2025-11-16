@@ -288,10 +288,13 @@ def parse_args() -> argparse.Namespace:
 Usage examples:
   # Full ETL with 50 models
   %(prog)s --num-models 50 --remote-db True
-  
+
+  # Full ETL with pagination (skip first 100 models)
+  %(prog)s --num-models 50 --offset 100 --remote-db True
+
   # Load from existing files
   %(prog)s --kg-file-path ./kg.nt --metadata-file-path ./metadata.nt --remote-db True
-  
+
   # Use dummy data for testing
   %(prog)s --use-dummy-data True --chunk-size 500
         """,
@@ -317,6 +320,9 @@ Usage examples:
     )
     parser.add_argument(
         "--num-models", "-nm", type=int, default=20, help="Number of models to download"
+    )
+    parser.add_argument(
+        "--offset", "-o", type=int, default=0, help="Offset for pagination when downloading models (only used when not updating recent models)"
     )
     parser.add_argument(
         "--num-datasets", "-nd", type=int, default=20, help="Number of datasets to download"
@@ -504,6 +510,7 @@ def main():
                 unstructured_text_strategy=args.unstructured_text_strategy,
                 threads=4, # Reuse threads
                 depth=2, # Default behavior
+                offset=args.offset, # Use the offset argument
             )
             end_time = time.time()
             logger.info(f"Model extraction with default parameters took {end_time - start_time:.2f} seconds")
