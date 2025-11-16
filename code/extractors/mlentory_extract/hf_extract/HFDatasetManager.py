@@ -167,25 +167,37 @@ class HFDatasetManager:
                 attempt += 1
 
     def get_model_metadata_dataset(
-        self, update_recent: bool = False, limit: int = 5, threads: int = 4
+        self,
+        update_recent: bool = False,
+        limit: int = 5,
+        threads: int = 4,
+        offset: int = 0,
     ) -> pd.DataFrame:
         """
-        Retrieve and optionally update the HuggingFace dataset containing model card information.
+        Retrieve and optionally update the HuggingFace dataset containing model card
+        information.
 
         The method first loads the existing dataset and then updates it with any models
         that have been modified since the most recent entry in the dataset.
 
         Args:
             update_recent (bool): Whether to fetch and append recent model updates.
-                Defaults to True.
-            limit (int): Maximum number of models to fetch. Defaults to 100.
+                Defaults to False.
+            limit (int): Maximum number of models to return after filtering. Defaults
+                to 5.
             threads (int): Number of threads for parallel processing. Defaults to 4.
+            offset (int): Zero-based offset into the filtered dataset when
+                ``update_recent`` is False. Ignored when ``update_recent`` is True.
+
         Returns:
-            pd.DataFrame: DataFrame containing model card information
+            pd.DataFrame: DataFrame containing model card information.
 
         Raises:
             Exception: If there's an error loading or updating the dataset
         """
+        if offset < 0:
+            raise ValueError("offset must be non-negative")
+
         try:
             logger.info(f"Loading models from HuggingFace dataset")
             
@@ -213,14 +225,21 @@ class HFDatasetManager:
 
                 # Sort by last_modified
                 dataset = dataset.sort_values("last_modified", ascending=False)
-            
-            # print("GOT HERREEEEE")
-            # Discard models with not enough information
-            dataset = self.filter_models(dataset)
 
-            # trim the dataset to the limit
-            dataset = dataset[: min(limit, len(dataset))]
-            
+                # Discard models with not enough information
+                dataset = self.filter_models(dataset)
+
+                # Trim to the requested limit (offset is ignored in this mode)
+                dataset = dataset[: min(limit, len(dataset))]
+            else:
+                # Discard models with not enough information
+                dataset = self.filter_models(dataset)
+
+                # Apply offset-based paging on the filtered dataset
+                start = min(offset, len(dataset))
+                end = min(offset + limit, len(dataset))
+                dataset = dataset[start:end]
+
             return dataset
 
         except Exception as e:
