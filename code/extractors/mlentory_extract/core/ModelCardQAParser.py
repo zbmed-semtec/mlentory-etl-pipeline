@@ -155,6 +155,7 @@ class ModelCardQAParser:
         }
 
     def get_repository_weight_HF(self, model_name: str) -> str:
+        return "Information not found"
         try:
             model_repo_weight = 0
             model_tree_file_information = self.hf_api.list_repo_tree(
