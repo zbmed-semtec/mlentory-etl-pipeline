@@ -384,12 +384,14 @@ Usage examples:
     
     parser.add_argument(
         "--kg-file-path",
+        "-kgfp",
         type=str,
         help="Path to an existing KG file .nt to load directly (skips extraction and transformation). Must be used with --metadata-file-path."
     )
     
     parser.add_argument(
         "--metadata-file-path", 
+        "-mdfp",
         type=str,
         help="Path to an existing metadata file .nt to load directly (skips extraction and transformation). Must be used with --kg-file-path."
     )
@@ -437,8 +439,8 @@ def main():
             # kg_format = "turtle" if args.kg_file_path.endswith(('.ttl', '.turtle')) else "nt"
             # metadata_format = "turtle" if args.metadata_file_path.endswith(('.ttl', '.turtle')) else "nt"
             
-            kg_integrated.parse(args.kg_file_path, format="nt")
-            extraction_metadata_integrated.parse(args.metadata_file_path, format="nt")
+            kg_integrated.parse(args.kg_file_path, format="ttl")
+            extraction_metadata_integrated.parse(args.metadata_file_path, format="ttl")
             
             end_time = time.time()
             logger.info(f"Loading files took {end_time - start_time:.2f} seconds")
