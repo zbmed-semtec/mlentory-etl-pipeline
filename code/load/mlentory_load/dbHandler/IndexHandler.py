@@ -25,7 +25,7 @@ import inspect
 import datetime 
 
 from mlentory_load.core.Entities import HFModel, OpenMLRun, AI4LifeModel
-
+from mlentory_load.core.Vectors import VectorIndexManager
 
 class IndexHandler:
     """
@@ -93,6 +93,28 @@ class IndexHandler:
         self.ai4life_index = index_name
         if not self.es.indices.exists(index=index_name):
             AI4LifeModel.init(index=index_name, using=self.es)
+    
+    def initialize_vector_indices(self):
+        """
+        Initialize vector indices for all platforms.
+        Creates vector indices (hf_vector_models, openml_vector_models, ai4life_vector_models)
+        if they don't exist. Population happens later in GraphHandlerForKG.update_vector_indexes().
+        """
+        platforms = ["hf", "openml", "ai4life"]
+        for platform in platforms:
+            try:
+                manager = VectorIndexManager(
+                    index_handler=self,
+                    platform=platform
+                )
+                # Only create the index structure, don't populate yet
+                # Population will happen in GraphHandlerForKG.update_vector_indexes()
+                # after data is loaded into regular indices
+                manager.initialize_vector_index()
+            except Exception as e:
+                print(f"Warning: Failed to initialize vector index for {platform}: {e}")
+                import traceback
+                traceback.print_exc()
 
     def create_hf_model_index_entity(self, row: pd.Series, model_uri: str):
         """
