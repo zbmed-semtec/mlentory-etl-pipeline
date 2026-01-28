@@ -96,9 +96,9 @@ class IndexHandler:
     
     def initialize_vector_indices(self):
         """
-        Initialize vector indices for all platforms.
-        Creates vector indices (hf_vector_models, openml_vector_models, ai4life_vector_models)
-        if they don't exist. Population happens later in GraphHandlerForKG.update_vector_indexes().
+        Initialize vector fields in existing indices for all platforms.
+        Adds vector field mappings to existing indices (hf_models, openml_models, ai4life_models)
+        without creating separate vector indices. Population happens later in GraphHandlerForKG.update_vector_indexes().
         """
         platforms = ["hf", "openml", "ai4life"]
         for platform in platforms:
