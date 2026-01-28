@@ -1,20 +1,8 @@
 """
 Vector Index Management for ETL Pipeline
-
-Self-contained module for creating and populating vector indices with embeddings.
+Self-contained module for adding vector fields to existing indices with embeddings.
 Includes integrated embedding functionality (no external EmbeddingService dependency).
-
-Location: mlentory-etl-pipeline/code/load/mlentory_load/core/vectors.py
-
-Usage:
-    from mlentory_load.core.vectors import VectorIndexManager
-    
-    manager = VectorIndexManager(
-        index_handler=indexHandler,
-        platform="hf"  # or "openml" or "ai4life"
-    )
-    manager.initialize_vector_index()  # Create index
-    manager.update_vector_index()      # Populate with embeddings
+Vector fields are added directly to the source index (e.g., hf_models) instead of creating separate vector indices.
 """
 
 import os
@@ -30,8 +18,15 @@ except ImportError:
     login = None
     print("Warning: sentence-transformers not installed. Vector indexing will be disabled.")
 
-# Metadata extraction is optional - if not available, we'll work with original data only
-run_extraction = None
+try:
+    from .MetadataProcessor import run_extraction_optimized
+except ImportError:
+    try:
+        # Fallback: try absolute import
+        from mlentory_load.core.MetadataProcessor import run_extraction_optimized
+    except ImportError:
+        print("Warning: metadata_processor not found. Metadata extraction will be disabled.")
+        run_extraction_optimized = None
 
 
 class VectorIndexManager:
@@ -70,9 +65,9 @@ class VectorIndexManager:
             "openml": "openml_models",
             "ai4life": "ai4life_models"
         }
-        
+
+        # Use source_index directly instead of creating a separate vector index
         self.source_index = self.source_index_map.get(platform, f"{platform}_models")
-        self.vector_index = self.source_index.replace("_models", "_vector_models")
         
         # Initialize embedding model directly
         self.model = None
@@ -269,72 +264,69 @@ class VectorIndexManager:
     
     def initialize_vector_index(self):
         """
-        Create the vector index if it doesn't exist.
-        This matches the structure from SEA-App/scripts/create_indices.py.
+        Add vector fields to the existing source index mapping.
+        Updates the index mapping to include vector fields without creating a separate index.
         """
         if not self.model:
-            self._log("Embedding model not available, skipping vector index creation", "warning")
+            self._log("Embedding model not available, skipping vector field initialization", "warning")
             return False
         
         try:
             es = self.index_handler.es
             
-            # Check if vector index already exists
-            if es.indices.exists(index=self.vector_index):
-                self._log(f"Vector index {self.vector_index} already exists", "info")
+            # Check if source index exists
+            if not es.indices.exists(index=self.source_index):
+                self._log(f"Source index {self.source_index} does not exist. Cannot add vector fields.", "error")
+                return False
+            
+            # Check current mapping to see if vector fields already exist
+            current_mapping = es.indices.get_mapping(index=self.source_index)
+            properties = current_mapping[self.source_index]["mappings"].get("properties", {})
+            
+            # Check if vector fields already exist
+            if "model_vector" in properties:
+                self._log(f"Vector fields already exist in {self.source_index}", "info")
                 return True
             
-            # Create index mapping (matches create_indices.py structure)
-            index_mapping = {
-                "mappings": {
-                    "properties": {
-                        # Original model fields
-                        "db_identifier": {"type": "keyword"},
-                        "name": {"type": "text"},
-                        "description": {"type": "text"},
-                        "license": {"type": "keyword"},
-                        "sharedBy": {"type": "text"},
-                        "mlTask": {"type": "keyword"},
-                        "keywords": {"type": "keyword"},
-                        "relatedDatasets": {"type": "text"},
-                        "baseModels": {"type": "text"},
-                        "platform": {"type": "keyword"},
-                        "dateCreated": {"type": "date"},
-                        
-                        # Extracted fields from description
-                        "version": {"type": "keyword"},
-                        "modalities": {"type": "keyword"},
-                        "domain": {"type": "keyword"},
-                        "architecture": {"type": "text"},
-                        "modelSize": {"type": "keyword"},
-                        "dataset": {"type": "text"},
-                        "trainingType": {"type": "keyword"},
-                        
-                        # MPNet vector field (single model_vector like create_indices.py)
-                        "model_vector": {
-                            "type": "dense_vector",
-                            "dims": self.embedding_dimension,
-                            "index": True,
-                            "similarity": "cosine"
-                        },
-                        
-                        # Searchable text field
-                        "searchable_text": {"type": "text"},
-                        
-                        # Metadata fields
-                        "vector_created_at": {"type": "date"},
-                        "embedding_model": {"type": "keyword"},
-                        "source_index": {"type": "keyword"}
-                    }
+            # Add vector fields to existing index mapping
+            vector_fields_mapping = {
+                "properties": {
+                    # Extracted fields from description (add if not present)
+                    "version": {"type": "keyword"},
+                    "modalities": {"type": "keyword"},
+                    "domain": {"type": "keyword"},
+                    "architecture": {"type": "text"},
+                    "modelSize": {"type": "keyword"},
+                    "dataset": {"type": "text"},
+                    "trainingType": {"type": "keyword"},
+                    
+                    # MPNet vector field
+                    "model_vector": {
+                        "type": "dense_vector",
+                        "dims": self.embedding_dimension,
+                        "index": True,
+                        "similarity": "cosine"
+                    },
+                    
+                    # Searchable text field
+                    "searchable_text": {"type": "text"},
+                    
+                    # Metadata fields
+                    "vector_created_at": {"type": "date"},
+                    "embedding_model": {"type": "keyword"}
                 }
             }
             
-            es.indices.create(index=self.vector_index, body=index_mapping)
-            self._log(f"Created vector index: {self.vector_index}", "info")
+            # Update the index mapping
+            es.indices.put_mapping(
+                index=self.source_index,
+                body=vector_fields_mapping
+            )
+            self._log(f"Added vector fields to index: {self.source_index}", "info")
             return True
             
         except Exception as e:
-            self._log(f"Failed to create vector index: {e}", "error")
+            self._log(f"Failed to add vector fields to index: {e}", "error")
             import traceback
             traceback.print_exc()
             return False
@@ -464,17 +456,20 @@ class VectorIndexManager:
                 text_parts.append(f"It was trained on the {datasets_str} datasets.")
         
         # Join all parts
-        return ' '.join(text_parts)
+        searchable_text = ' '.join(text_parts)
+
+        return searchable_text
     
-    def update_vector_index(self, model_ids: Optional[List[str]] = None, batch_size: int = 50):
+    def update_vector_index(self, model_ids: Optional[List[str]] = None, batch_size: int = 50, skip_existing: bool = False):
         """
-        Populate vector index with embeddings from the source index.
-        Matches the structure from SEA-App/scripts/create_indices.py.
+        Add vector fields to existing documents in the source index.
+        Updates documents in-place by adding vector embeddings and extracted metadata.
         
         Args:
             model_ids: Optional list of specific model IDs to update.
                       If None, updates all models from source index.
             batch_size: Number of models to process in each batch
+            skip_existing: If True, skip documents that already have model_vector field
         """
         if not self.model:
             self._log("Embedding model not available", "warning")
@@ -514,14 +509,21 @@ class VectorIndexManager:
                 # Process batch
                 for hit in hits:
                     model_data = hit["_source"]
+                    self._log(model_data)
                     model_id = hit["_id"]
                     
+                    # Skip if document already has vector fields and skip_existing is True
+                    if skip_existing and "model_vector" in model_data:
+                        continue
+                    
                     try:
-                        # Extract additional fields from description (optional - if run_extraction not available, use empty dict)
+                        # Extract additional fields from description using run_extraction_optimized
+                        # This extracts metadata ONLY from description, never from original data fields
+                        # run_extraction_optimized internally calls run_extraction from metadata_processor
                         extracted_data = {}
-                        if run_extraction:
+                        if run_extraction_optimized:
                             try:
-                                extracted_data = run_extraction(model_data)
+                                extracted_data = run_extraction_optimized(model_data)
                             except Exception as e:
                                 self._log(f"Extraction failed for model {model_id}, using original data only: {e}", "warning")
                                 extracted_data = {}
@@ -536,22 +538,21 @@ class VectorIndexManager:
                         # Generate embedding using integrated model
                         model_vector = self._encode_text(searchable_text)
                         
-                        # Create document with original data, extracted fields, vector, and searchable text
-                        doc_body = {
-                            **model_data,  # Original fields
+                        # Prepare update document with extracted fields, vector, and searchable text
+                        # Only update/add vector-related fields, keep existing document data intact
+                        update_doc = {
                             **extracted_data,  # Extracted fields
                             "model_vector": model_vector,
                             "searchable_text": searchable_text,  # Store the text used for embedding
                             "vector_created_at": time.strftime("%Y-%m-%dT%H:%M:%S"),
-                            "embedding_model": self.embedding_model,
-                            "source_index": self.source_index
+                            "embedding_model": self.embedding_model
                         }
                         
-                        # Save to Elasticsearch
-                        es.index(
-                            index=self.vector_index,
+                        # Update existing document in source index with vector fields
+                        es.update(
+                            index=self.source_index,
                             id=model_id,
-                            body=doc_body
+                            body={"doc": update_doc}
                         )
                         total_processed += 1
                         
@@ -568,9 +569,9 @@ class VectorIndexManager:
             
             # Clear scroll and refresh
             es.clear_scroll(scroll_id=scroll_id)
-            es.indices.refresh(index=self.vector_index)
+            es.indices.refresh(index=self.source_index)
             
-            self._log(f"Successfully processed {total_processed} models for vector index", "info")
+            self._log(f"Successfully processed {total_processed} models and added vector fields to {self.source_index}", "info")
             
         except Exception as e:
             self._log(f"Vector index update failed: {e}", "error")
