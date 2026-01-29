@@ -460,7 +460,7 @@ class VectorIndexManager:
 
         return searchable_text
     
-    def update_vector_index(self, model_ids: Optional[List[str]] = None, batch_size: int = 50, skip_existing: bool = False):
+    def update_vector_index(self, model_ids: Optional[List[str]] = None, batch_size: int = 50, skip_existing: bool = True):
         """
         Add vector fields to existing documents in the source index.
         Updates documents in-place by adding vector embeddings and extracted metadata.
