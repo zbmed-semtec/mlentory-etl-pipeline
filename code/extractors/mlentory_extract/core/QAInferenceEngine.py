@@ -9,7 +9,7 @@ from datasets import Dataset
 import re
 
 # Add vLLM imports
-from vllm import LLM, SamplingParams
+# from vllm import LLM, SamplingParams
 
 torch.backends.cuda.matmul.allow_tf32 = True
 

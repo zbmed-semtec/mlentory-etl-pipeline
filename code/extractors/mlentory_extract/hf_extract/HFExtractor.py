@@ -46,7 +46,7 @@ class HFExtractor:
     def download_models_with_related_entities(
         self,
         num_models: int = 10,
-        update_recent: bool = True,
+        update_recent: bool = False,
         related_entities_to_download: List[str] = ["datasets", "base_models", "licenses", "keywords", "articles"],
         output_dir: str = "./outputs",
         save_initial_data: bool = False,
@@ -55,6 +55,7 @@ class HFExtractor:
         unstructured_text_strategy: str = "None",
         threads: int = 4,
         depth: int = 1,
+        offset: int = 0,
     ) -> pd.DataFrame:
         """
         Download models with all related entities specified, then repeat the process for the base models found.
@@ -83,6 +84,7 @@ class HFExtractor:
                     save_raw_data=save_initial_data,
                     save_result_in_json=save_result_in_json,
                     unstructured_text_strategy=unstructured_text_strategy,
+                    offset=offset,
                 )
             else:
                 current_models_df = self.download_specific_models(
@@ -258,13 +260,14 @@ class HFExtractor:
     def download_models(
         self,
         num_models: int = 10,
-        update_recent: bool = True,
+        update_recent: bool = False,
         output_dir: str = "./outputs",
         save_raw_data: bool = False,
         save_result_in_json: bool = False,
         from_date: str = None,
         unstructured_text_strategy: str = "None",
         threads: int = 4,
+        offset: int = 0,
     ) -> pd.DataFrame:
         """
         Download and process model cards from HuggingFace.
@@ -298,7 +301,10 @@ class HFExtractor:
         
         # Load dataset
         original_HF_df = self.dataset_manager.get_model_metadata_dataset(
-            update_recent=update_recent, limit=num_models, threads=threads
+            update_recent=update_recent,
+            limit=num_models,
+            threads=threads,
+            offset=offset,
         )
         
         logger.info(f"Downloaded {len(original_HF_df)} models from HuggingFace dataset")

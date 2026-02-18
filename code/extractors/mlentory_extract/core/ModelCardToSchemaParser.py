@@ -16,7 +16,7 @@ from huggingface_hub import HfApi
 from huggingface_hub.hf_api import RepoFile, RepoFolder
 
 from mlentory_extract.core.QAMatchingEngine import QAMatchingEngine, RelevantSectionMatch
-from mlentory_extract.core.QAInferenceEngine import QAInferenceEngine, QAResult
+from mlentory_extract.core.QAInferenceEngine import QAResult
 from mlentory_extract.core.SchemaPropertyExtractor import SchemaPropertyExtractor
 
 # Define the structure for prepared grouped inputs
@@ -193,6 +193,7 @@ class ModelCardToSchemaParser:
         Returns:
             str: Size of the repository in gigabytes
         """
+        return "Information not found"
         try:
             model_repo_weight = 0
             model_tree_file_information = self.hf_api.list_repo_tree(
@@ -1029,6 +1030,9 @@ class ModelCardToSchemaParser:
         HF_df = self.parse_known_fields_HF(HF_df)
         logger.info("Step 2: Parsing fields from HF tags...")
         HF_df = self.parse_fields_from_tags_HF(HF_df)
+         # Filter models that have an empty list for codemeta:referencePublication
+        HF_df = HF_df[HF_df["codemeta:referencePublication"].apply(lambda x: len(x) > 0)]
+        logger.info(f"Number of models after filtering: {len(HF_df)}")
         logger.info("Step 3: Parsing fields from YAML section of model card ...")
         HF_df = self.parse_fields_from_yaml_HF(HF_df)
         

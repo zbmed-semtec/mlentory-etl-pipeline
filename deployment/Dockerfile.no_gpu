@@ -7,7 +7,7 @@ RUN echo '#!/bin/bash' > /usr/local/bin/run-hf-tests && \
     echo 'pytest -v /app/code/extractors/mlentory_extract/tests/hf_extract/ "$@"' >> /usr/local/bin/run-hf-tests && \
     chmod +x /usr/local/bin/run-hf-tests && \
     echo '#!/bin/bash' > /usr/local/bin/run-hf-etl && \
-    echo 'python3 /app/code/hf_etl/run_extract_transform_load.py "$@"' >> /usr/local/bin/run-hf-etl && \
+    echo 'python3 /app/hf_etl/run_extract_transform_load.py "$@"' >> /usr/local/bin/run-hf-etl && \
     chmod +x /usr/local/bin/run-hf-etl
 
 # Upgrade pip and install packaging
@@ -39,7 +39,7 @@ RUN pip3 install --no-deps -e /app/load
 FROM no_gpu_base AS no_gpu_hf
 RUN echo "Building HF ETL image without GPU..."
 
-RUN pip install --no-cache-dir -r /app/requirements/hf_requirements.txt
+RUN pip install --no-cache-dir -r /app/requirements/hf_no_gpu_requirements.txt
 
 # Copy and install local packages
 COPY code/extractors /app/extractors

@@ -450,8 +450,18 @@ class SQLHandler:
 
                 # Process in batches
                 for i in range(0, len(values), batch_size):
-                    batch = values[i : i + batch_size]
-                    
+                    raw_batch = values[i : i + batch_size]
+                    # Clean any text/byte fields in the batch to remove NULL characters
+                    batch = [
+                        tuple(
+                            self.clean_extracted_text(value)
+                            if isinstance(value, (bytes, str))
+                            else value
+                            for value in row
+                        )
+                        for row in raw_batch
+                    ]
+
                     # Use execute_values with fetch=True to get the returned IDs
                     batch_ids = execute_values(cursor, query, batch, fetch=True)
                     
@@ -542,3 +552,13 @@ class SQLHandler:
                 cursor.close()
                 
         return results
+
+    def clean_extracted_text(self, extracted_text: str | bytes) -> str:
+        if isinstance(extracted_text, bytes):
+            content = extracted_text.decode("utf-8", errors="replace").replace(
+                "\x00", "\ufffd"
+            )
+        else:
+            content = extracted_text.replace("\x00", "\ufffd")
+
+        return content

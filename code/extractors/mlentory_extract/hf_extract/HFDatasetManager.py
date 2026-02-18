@@ -1,18 +1,23 @@
-from typing import Optional, Union, Literal, Dict, List
+from typing import Optional, Union, Literal, Dict, List, Callable, TypeVar
 from datasets import load_dataset
 import pandas as pd
 from huggingface_hub import HfApi, ModelCard
 from datetime import datetime
 import requests
+import urllib3
+from urllib3.util.retry import Retry
 import itertools
 import arxiv
 import os
 import time
 import logging
+import random
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
+
+T = TypeVar('T')
 
 
 class HFDatasetManager:
@@ -29,52 +34,177 @@ class HFDatasetManager:
     def __init__(
         self,
         api_token: Optional[str] = None,
+        max_retries: int = 6,
+        base_backoff: float = 5.0,
+        max_backoff: float = 400.0,
     ):
         """
         Initialize the HuggingFace Dataset Manager.
 
         Args:
             api_token (Optional[str]): HuggingFace API token for authenticated requests.
+                If None, will attempt to read from HF_TOKEN environment variable.
                 Defaults to None.
-            default_card (Optional[str]): Default HF card content.
-                Defaults to None (uses the standard path).
+            max_retries (int): Maximum number of retries for rate-limited requests.
+                Defaults to 6.
+            base_backoff (float): Base backoff time in seconds for exponential backoff.
+                Defaults to 2.0.
+            max_backoff (float): Maximum backoff time in seconds.
+                Defaults to 300.0.
 
         Raises:
             ValueError: If the model_cards_dataset is invalid or inaccessible
         """
-        self.token = None
-        if api_token != None:
-            self.token = api_token
-            self.api = HfApi(token=api_token)
+        self.token = api_token
+        if self.token is None:
+            # Try to get token from environment variable
+            self.token = os.getenv('HF_TOKEN')
+
+        if self.token:
+            self.api = HfApi(token=self.token)
         else:
             self.api = HfApi()
 
+        # Retry configuration for rate-limited requests
+        self.max_retries = max_retries
+        self.base_backoff = base_backoff
+        self.max_backoff = max_backoff
+
+    def _extract_status_and_retry_after(self, exc: Exception) -> tuple[int, Optional[float]]:
+        """
+        Extract HTTP status code and retry-after header from an exception.
+
+        Args:
+            exc (Exception): The exception to analyze.
+
+        Returns:
+            tuple[int, Optional[float]]: A tuple containing the status code and retry-after seconds.
+                Returns (0, None) if unable to extract rate limit information.
+        """
+        from huggingface_hub.errors import HfHubHTTPError as HfHubHTTPErrorErrors
+        from huggingface_hub.utils import HfHubHTTPError as HfHubHTTPErrorUtils
+        from requests.exceptions import HTTPError
+        
+        hf_hub_error_types = (HfHubHTTPErrorErrors, HfHubHTTPErrorUtils, HTTPError)
+
+        # Handle huggingface_hub HTTP errors
+        if isinstance(exc, hf_hub_error_types):
+            if hasattr(exc, 'response') and exc.response is not None:
+                status_code = getattr(exc.response, 'status_code', 0)
+                if status_code == 429:
+                    retry_after = exc.response.headers.get('Retry-After')
+                    if retry_after:
+                        try:
+                            return status_code, float(retry_after)
+                        except ValueError:
+                            pass
+                    return status_code, None
+            return 0, None
+
+        # Handle requests HTTP errors
+        elif isinstance(exc, HTTPError):
+            if hasattr(exc, 'response') and exc.response is not None:
+                status_code = getattr(exc.response, 'status_code', 0)
+                if status_code == 429:
+                    retry_after = exc.response.headers.get('Retry-After')
+                    if retry_after:
+                        try:
+                            return status_code, float(retry_after)
+                        except ValueError:
+                            pass
+                    return status_code, None
+            return 0, None
+
+        # Handle other exceptions that might contain response info
+        elif hasattr(exc, 'response'):
+            response = getattr(exc, 'response')
+            if response is not None:
+                status_code = getattr(response, 'status_code', 0)
+                if status_code == 429:
+                    retry_after = getattr(response, 'headers', {}).get('Retry-After')
+                    if retry_after:
+                        try:
+                            return status_code, float(retry_after)
+                        except ValueError:
+                            pass
+                    return status_code, None
+
+        return 0, None
+
+    def _call_with_hf_retries(self, fn: Callable[..., T], *args, **kwargs) -> T:
+        """
+        Call a function with automatic retry logic for HuggingFace rate limits.
+
+        Args:
+            fn (Callable): The function to call.
+            *args: Positional arguments for the function.
+            **kwargs: Keyword arguments for the function.
+
+        Returns:
+            T: The result of the function call.
+
+        Raises:
+            Exception: The original exception if max retries exceeded or not a 429 error.
+        """
+        attempt = 0
+        while True:
+            try:
+                return fn(*args, **kwargs)
+            except Exception as exc:
+                status, retry_after = self._extract_status_and_retry_after(exc)
+                if status != 429 or attempt >= self.max_retries:
+                    raise
+
+                delay = retry_after if retry_after is not None else min(
+                    self.max_backoff, self.base_backoff * (2 ** attempt) + random.uniform(0, 1)
+                )
+
+                logger.warning(
+                    f"HF 429 rate limit hit: retrying in {delay:.1f}s "
+                    f"(attempt {attempt+1}/{self.max_retries})"
+                )
+                time.sleep(delay)
+                attempt += 1
+
     def get_model_metadata_dataset(
-        self, update_recent: bool = True, limit: int = 5, threads: int = 4
+        self,
+        update_recent: bool = False,
+        limit: int = 5,
+        threads: int = 4,
+        offset: int = 0,
     ) -> pd.DataFrame:
         """
-        Retrieve and optionally update the HuggingFace dataset containing model card information.
+        Retrieve and optionally update the HuggingFace dataset containing model card
+        information.
 
         The method first loads the existing dataset and then updates it with any models
         that have been modified since the most recent entry in the dataset.
 
         Args:
             update_recent (bool): Whether to fetch and append recent model updates.
-                Defaults to True.
-            limit (int): Maximum number of models to fetch. Defaults to 100.
+                Defaults to False.
+            limit (int): Maximum number of models to return after filtering. Defaults
+                to 5.
             threads (int): Number of threads for parallel processing. Defaults to 4.
+            offset (int): Zero-based offset into the filtered dataset when
+                ``update_recent`` is False. Ignored when ``update_recent`` is True.
+
         Returns:
-            pd.DataFrame: DataFrame containing model card information
+            pd.DataFrame: DataFrame containing model card information.
 
         Raises:
             Exception: If there's an error loading or updating the dataset
         """
+        if offset < 0:
+            raise ValueError("offset must be non-negative")
+
         try:
             logger.info(f"Loading models from HuggingFace dataset")
             
             # Load base dataset
             # If this section ever freezes, just delete the cache and try again.
-            dataset = load_dataset(
+            dataset = self._call_with_hf_retries(
+                load_dataset,
                 "librarian-bots/model_cards_with_metadata",
                 revision="4e7edd391342ee5c182afd08a6f62bff38f44535",
             )["train"].to_pandas()
@@ -95,14 +225,21 @@ class HFDatasetManager:
 
                 # Sort by last_modified
                 dataset = dataset.sort_values("last_modified", ascending=False)
-            
-            # print("GOT HERREEEEE")
-            # Discard models with not enough information
-            dataset = self.filter_models(dataset)
 
-            # trim the dataset to the limit
-            dataset = dataset[: min(limit, len(dataset))]
-            
+                # Discard models with not enough information
+                dataset = self.filter_models(dataset)
+
+                # Trim to the requested limit (offset is ignored in this mode)
+                dataset = dataset[: min(limit, len(dataset))]
+            else:
+                # Discard models with not enough information
+                dataset = self.filter_models(dataset)
+
+                # Apply offset-based paging on the filtered dataset
+                start = min(offset, len(dataset))
+                end = min(offset + limit, len(dataset))
+                dataset = dataset[start:end]
+
             return dataset
 
         except Exception as e:
@@ -122,51 +259,57 @@ class HFDatasetManager:
         Returns:
             pd.DataFrame: DataFrame containing model metadata
         """
-        models = self.api.list_models(
-            limit=limit, sort="lastModified", direction=-1, full=True
-        )
+        def _fetch_and_process_all_models():
+            models = self.api.list_models(
+                limit=limit, sort="lastModified", direction=-1, full=True
+            )
 
-        def process_model(model):
-            if model.last_modified <= latest_modification:
-                return None
+            def process_single_model(model):
+                if model.last_modified <= latest_modification:
+                    return None
 
-            card = None
-            try:
-                if self.token:
-                    card = ModelCard.load(model.modelId, token=self.token)
+                card = None
+                try:
+                    if self.token:
+                        card = self._call_with_hf_retries(ModelCard.load, model.modelId, token=self.token)
+                    else:
+                        card = self._call_with_hf_retries(ModelCard.load, model.modelId)
+                except Exception as e:
+                    logger.warning(f"Error loading model card for {model.id}: {e}")
+                    return None
+
+                model_info = {
+                    "modelId": model.id,
+                    "author": model.author,
+                    "last_modified": model.last_modified,
+                    "downloads": model.downloads,
+                    "likes": model.likes,
+                    "library_name": model.library_name,
+                    "tags": model.tags,
+                    "pipeline_tag": model.pipeline_tag,
+                    "createdAt": model.created_at,
+                    "card": card.content if card else "",
+                }
+
+                if self.has_model_enough_information(model_info):
+                    return model_info
                 else:
-                    card = ModelCard.load(model.modelId)
-            except Exception as e:
-                print(f"Error loading model card for {model.id}: {e}")
-                return None
+                    return None
 
-            model_info = {
-                "modelId": model.id,
-                "author": model.author,
-                "last_modified": model.last_modified,
-                "downloads": model.downloads,
-                "likes": model.likes,
-                "library_name": model.library_name,
-                "tags": model.tags,
-                "pipeline_tag": model.pipeline_tag,
-                "createdAt": model.created_at,
-                "card": card.content if card else "",
-            }
-            
-            if self.has_model_enough_information(model_info):
-                return model_info
-            else:
-                return None
+            model_data = []
+            with ThreadPoolExecutor(max_workers=threads) as executor:
+                future_to_model = {
+                    executor.submit(process_single_model, model): model for model in models
+                }
+                for future in as_completed(future_to_model):
+                    result = future.result()
+                    if result is not None:
+                        model_data.append(result)
 
-        model_data = []
-        with ThreadPoolExecutor(max_workers=threads) as executor:
-            future_to_model = {
-                executor.submit(process_model, model): model for model in models
-            }
-            for future in as_completed(future_to_model):
-                result = future.result()
-                if result is not None:
-                    model_data.append(result)
+            return model_data
+
+        # Wrap the entire fetch+process in retry logic
+        model_data = self._call_with_hf_retries(_fetch_and_process_all_models)
 
         return pd.DataFrame(model_data)
     
@@ -190,47 +333,44 @@ class HFDatasetManager:
         futures = []
         
         def process_model(model_id: str):
-            
-            models_to_process = self.api.list_models(model_name=model_id,limit=1,full=True)
-            results = []
-            
-            for model in models_to_process:
-                card = None
-                try:
-                    if self.token:
-                        card = ModelCard.load(model.modelId, token=self.token)
-                    else:
-                        card = ModelCard.load(model.modelId)
-                except Exception as e:
-                    print(f"Error loading model card for {model_id}: {e}")
-                    continue
-                
-                # model_id = model.id
-                # if model_id is None:
-                #     model_id = 
-                
-                # print("\n\n\n =================== \n\n\n")
-                # print(f"Model ID: {model.id}")
-                # print(f"Model card: {card.content}")
-                # print("\n\n\n =================== \n\n\n")
-                
-                
-                model_info = {
-                    "modelId": model.id,
-                    "author": model.author,
-                    "last_modified": model.last_modified,
-                    "downloads": model.downloads,
-                    "likes": model.likes,
-                    "library_name": model.library_name,
-                    "tags": model.tags,
-                    "pipeline_tag": model.pipeline_tag,
-                    "createdAt": model.created_at,
-                    "card": card.content if card else "",
-                }
-                
-                if self.has_model_enough_information(model_info):
-                    results.append(model_info)
-            return results
+            def _fetch_and_process():
+                models_to_process = self.api.list_models(
+                    model_name=model_id, limit=1, full=True
+                )
+                results = []
+
+                # Iterate inside the retry-protected function
+                for model in models_to_process:
+                    card = None
+                    try:
+                        if self.token:
+                            card = self._call_with_hf_retries(ModelCard.load, model.modelId, token=self.token)
+                        else:
+                            card = self._call_with_hf_retries(ModelCard.load, model.modelId)
+                    except Exception as e:
+                        logger.warning(f"Error loading model card for {model_id}: {e}")
+                        continue
+
+                    model_info = {
+                        "modelId": model.id,
+                        "author": model.author,
+                        "last_modified": model.last_modified,
+                        "downloads": model.downloads,
+                        "likes": model.likes,
+                        "library_name": model.library_name,
+                        "tags": model.tags,
+                        "pipeline_tag": model.pipeline_tag,
+                        "createdAt": model.created_at,
+                        "card": card.content if card else "",
+                    }
+
+                    if self.has_model_enough_information(model_info):
+                        results.append(model_info)
+
+                return results
+
+            # Wrap the entire fetch+process in retry logic
+            return self._call_with_hf_retries(_fetch_and_process)
 
         with ThreadPoolExecutor(max_workers=threads) as executor:
             futures = [executor.submit(process_model, model_id) for model_id in model_ids]
@@ -259,59 +399,61 @@ class HFDatasetManager:
             pd.DataFrame: DataFrame containing dataset metadata with exactly 'limit' rows
                          (or fewer if not enough valid datasets are found)
         """
-        # Fetch initial batch of datasets (100x limit to have enough valid ones)
-        datasets = list(
-            itertools.islice(
-                self.api.list_datasets(sort="lastModified", direction=-1), limit + 1000
-            )
-        )
-
-        dataset_data = []
-        futures = []
-
-        def process_dataset(dataset):
-            if not (latest_modification is None):
-                last_modified = dataset.last_modified.replace(
-                    tzinfo=latest_modification.tzinfo
+        def _fetch_and_process_all_datasets():
+            # Fetch initial batch of datasets (100x limit to have enough valid ones)
+            datasets = list(
+                itertools.islice(
+                    self.api.list_datasets(sort="lastModified", direction=-1),
+                    limit + 1000
                 )
-                if last_modified <= latest_modification:
+            )
+
+            dataset_data = []
+            futures = []
+
+            def process_single_dataset(dataset):
+                if not (latest_modification is None):
+                    last_modified = dataset.last_modified.replace(
+                        tzinfo=latest_modification.tzinfo
+                    )
+                    if last_modified <= latest_modification:
+                        return None
+
+                croissant_metadata = self.get_croissant_metadata(dataset.id)
+                if croissant_metadata == {}:
                     return None
+                return {
+                    "datasetId": dataset.id,
+                    "croissant_metadata": croissant_metadata,
+                    "extraction_metadata": {
+                        "extraction_method": "Downloaded_from_HF_Croissant_endpoint",
+                        "confidence": 1.0,
+                        "extraction_time": datetime.now().strftime("%Y-%m-%d_%H-%M-%S"),
+                    },
+                }
 
-            croissant_metadata = self.get_croissant_metadata(dataset.id)
-            if croissant_metadata == {}:
-                return None
-            # Print all the datasets properties
-            # print("\nDATASEEEEEEET\n")
-            # print(dataset)
-            return {
-                "datasetId": dataset.id,
-                "croissant_metadata": croissant_metadata,
-                "extraction_metadata": {
-                    "extraction_method": "Downloaded_from_HF_Croissant_endpoint",
-                    "confidence": 1.0,
-                    "extraction_time": datetime.now().strftime("%Y-%m-%d_%H-%M-%S"),
-                },
-            }
+            with ThreadPoolExecutor(max_workers=threads) as executor:
+                # Submit all tasks
+                for dataset in datasets:
+                    future = executor.submit(process_single_dataset, dataset)
+                    futures.append(future)
 
-        with ThreadPoolExecutor(max_workers=threads) as executor:
-            # Submit all tasks
-            for dataset in datasets:
-                future = executor.submit(process_dataset, dataset)
-                futures.append(future)
+                # Process results as they complete
+                for future in as_completed(futures):
+                    result = future.result()
+                    if result is not None:
+                        dataset_data.append(result)
+                        # If we've reached the limit, cancel remaining futures
+                        if len(dataset_data) >= limit:
+                            for f in futures:
+                                f.cancel()
+                            break
 
-            # Process results as they complete
-            for future in as_completed(futures):
-                result = future.result()
-                if result is not None:
-                    dataset_data.append(result)
-                    # If we've reached the limit, cancel remaining futures
-                    if len(dataset_data) >= limit:
-                        for f in futures:
-                            f.cancel()
-                        break
+            # Trim results to exact limit if we got more than needed
+            return dataset_data[:limit]
 
-        # Trim results to exact limit if we got more than needed
-        dataset_data = dataset_data[:limit]
+        # Wrap the entire fetch+process in retry logic
+        dataset_data = self._call_with_hf_retries(_fetch_and_process_all_datasets)
         return pd.DataFrame(dataset_data)
 
     def get_croissant_metadata(self, dataset_id: str) -> Dict:
@@ -324,16 +466,27 @@ class HFDatasetManager:
         Returns:
             Dict: The croissant metadata for the dataset, or an empty dictionary if not found.
         """
-        API_URL = f"https://huggingface.co/api/datasets/{dataset_id}/croissant"
-        if self.token:
-            headers = {"Authorization": f"Bearer {self.token}"}
-        else:
-            headers = {}
-        response = requests.get(API_URL, headers=headers)
-        if response.status_code == 200:
-            return response.json()
-        else:
-            return {}
+        def _fetch_croissant():
+            # Create a session with retry configuration for 429 errors
+            retry_strategy = Retry(
+                total=self.max_retries,
+                status_forcelist=[429],
+                backoff_factor=self.base_backoff,
+                respect_retry_after_header=True,
+            )
+            adapter = requests.adapters.HTTPAdapter(max_retries=retry_strategy)
+            session = requests.Session()
+            session.mount("https://", adapter)
+
+            API_URL = f"https://huggingface.co/api/datasets/{dataset_id}/croissant"
+            headers = {"Authorization": f"Bearer {self.token}"} if self.token else {}
+            response = session.get(API_URL, headers=headers)
+            if response.status_code == 200:
+                return response.json()
+            else:
+                return {}
+
+        return self._call_with_hf_retries(_fetch_croissant)
 
     def get_specific_datasets_metadata(
         self, 

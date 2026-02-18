@@ -288,10 +288,13 @@ def parse_args() -> argparse.Namespace:
 Usage examples:
   # Full ETL with 50 models
   %(prog)s --num-models 50 --remote-db True
-  
+
+  # Full ETL with pagination (skip first 100 models)
+  %(prog)s --num-models 50 --offset 100 --remote-db True
+
   # Load from existing files
   %(prog)s --kg-file-path ./kg.nt --metadata-file-path ./metadata.nt --remote-db True
-  
+
   # Use dummy data for testing
   %(prog)s --use-dummy-data True --chunk-size 500
         """,
@@ -317,6 +320,9 @@ Usage examples:
     )
     parser.add_argument(
         "--num-models", "-nm", type=int, default=20, help="Number of models to download"
+    )
+    parser.add_argument(
+        "--offset", "-o", type=int, default=0, help="Offset for pagination when downloading models (only used when not updating recent models)"
     )
     parser.add_argument(
         "--num-datasets", "-nd", type=int, default=20, help="Number of datasets to download"
@@ -378,12 +384,14 @@ Usage examples:
     
     parser.add_argument(
         "--kg-file-path",
+        "-kgfp",
         type=str,
         help="Path to an existing KG file .nt to load directly (skips extraction and transformation). Must be used with --metadata-file-path."
     )
     
     parser.add_argument(
         "--metadata-file-path", 
+        "-mdfp",
         type=str,
         help="Path to an existing metadata file .nt to load directly (skips extraction and transformation). Must be used with --kg-file-path."
     )
@@ -431,8 +439,8 @@ def main():
             # kg_format = "turtle" if args.kg_file_path.endswith(('.ttl', '.turtle')) else "nt"
             # metadata_format = "turtle" if args.metadata_file_path.endswith(('.ttl', '.turtle')) else "nt"
             
-            kg_integrated.parse(args.kg_file_path, format="nt")
-            extraction_metadata_integrated.parse(args.metadata_file_path, format="nt")
+            kg_integrated.parse(args.kg_file_path, format="ttl")
+            extraction_metadata_integrated.parse(args.metadata_file_path, format="ttl")
             
             end_time = time.time()
             logger.info(f"Loading files took {end_time - start_time:.2f} seconds")
@@ -499,11 +507,12 @@ def main():
                 output_dir=args.output_dir, # Use the base output dir
                 save_initial_data=False, # Controlled by save_extraction?
                 save_result_in_json=args.save_extraction, # Reuse flag
-                update_recent=True, # Default behavior
+                update_recent=False, # Default behavior
                 related_entities_to_download=entities_to_download_config,
                 unstructured_text_strategy=args.unstructured_text_strategy,
                 threads=4, # Reuse threads
                 depth=2, # Default behavior
+                offset=args.offset, # Use the offset argument
             )
             end_time = time.time()
             logger.info(f"Model extraction with default parameters took {end_time - start_time:.2f} seconds")

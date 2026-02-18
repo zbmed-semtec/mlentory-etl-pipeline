@@ -3,21 +3,23 @@ numpy==1.26.4
 pandas==2.2.2
 tqdm==4.66.4
 matplotlib==3.9.0
-seaborn==0.13.2
-rdflib==7.0.0
-# torch==2.6.0
+rdflib==7.1.4
+torch==2.6.0
+oxrdflib==0.4.0
 
-# OpenML Specific
-openml==0.14.0
+# HuggingFace Specific
+transformers>=4.48.0
+datasets~=3.0.0
+huggingface-hub~=0.30.0
+# vllm
 
 # Extractor Specific
-arxiv==2.1.0
+arxiv~=2.1.0
 scikit-learn==1.5.0
-selenium==4.21.0
 spdx_lookup==0.3.3
 
 # Transform Specific
-# demjson3
+# demjson3==2.2.4   
 
 # Load Specific
 docker==7.1.0
