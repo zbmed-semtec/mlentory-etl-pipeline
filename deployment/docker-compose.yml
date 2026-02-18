@@ -116,6 +116,7 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock 
     environment:
       - HF_TOKEN=${HF_TOKEN}
+      - PYTHONPATH=/app/extractors:/app/transform:/app/load
     deploy:
       resources:
         reservations:
@@ -144,6 +145,8 @@ services:
       - ../code/transform:/app/transform
       - ../code/load:/app/load
       - ./hf_etl:/app/hf_etl
+    environment:
+      - PYTHONPATH=/app/extractors:/app/transform:/app/load
     dns:
       - 1.1.1.1
     command: ["tail", "-f", "/dev/null"]
@@ -162,7 +165,7 @@ services:
       target: no_gpu_openml
     volumes:
       - ../data/configuration/openml:/app/configuration/openml
-      - ../code/extractors:/app/extractors 
+      - ../code/extractors:/app/extractors
       - ../code/transform:/app/transform
       - ../code/load:/app/load
       - ./openml_etl:/app/openml_etl
