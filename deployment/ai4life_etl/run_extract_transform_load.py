@@ -14,7 +14,6 @@ from mlentory_load.core import LoadProcessor, GraphHandlerForKG
 from mlentory_load.dbHandler import RDFHandler, SQLHandler, IndexHandler
 from mlentory_transform.core import (
     MlentoryTransform,
-    KnowledgeGraphHandler,
     MlentoryTransformWithGraphBuilder,
 )
 # from ai4life_etl_component import AI4LifeETLComponent
@@ -72,7 +71,7 @@ def initialize_extractor(config_path:str) -> AI4LifeExtractor:
         schema_file = schema_file
     )
 
-def initialize_transform(config_path: str) -> MlentoryTransform:
+def initialize_transform(config_path: str) -> MlentoryTransformWithGraphBuilder:
     """
     Initializes the transformer with the configuration data.
 
@@ -80,7 +79,7 @@ def initialize_transform(config_path: str) -> MlentoryTransform:
         config_path (str): The path to the configuration data.
 
     Returns:
-        MlentoryTransform: The transformer instance.
+        MlentoryTransformWithGraphBuilder: The transformer instance.
     """
     new_schema = pd.read_csv(
         f"{config_path}/transform/FAIR4ML_schema.csv", sep=",", lineterminator="\n"
