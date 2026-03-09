@@ -72,6 +72,9 @@ class LoadProcessor:
             self.IndexHandler.initialize_HF_index(index_name="hf_models")
             self.IndexHandler.initialize_OpenML_index(index_name="openml_models")
             self.IndexHandler.initialize_AI4Life_index(index_name="ai4life_models")
+            
+            # Initialize vector indices for vector search
+            self.IndexHandler.initialize_vector_indices()
         
         self.META_NS = self.GraphHandler.graph_identifier + "/meta/"
         self.STATEMENT_METADATA = URIRef(str(self.META_NS) + "StatementMetadata")

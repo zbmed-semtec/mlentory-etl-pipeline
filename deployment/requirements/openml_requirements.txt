@@ -26,3 +26,7 @@ psycopg2-binary==2.9.9
 elasticsearch==7.13.4
 elasticsearch-dsl<8.0.0 
 requests
+
+# Vector Search (for vector indices)
+sentence-transformers>=2.2.0
+torch>=2.0.0

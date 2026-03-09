@@ -113,6 +113,12 @@ class GraphHandlerForKG(GraphHandler):
         self.update_indexes_with_kg()
         end_time = time.time()
         self.logger.info(f"update_indexes_with_kg took {end_time - start_time:.2f} seconds")
+        
+        # Update vector indices after regular indexing
+        start_time = time.time()
+        self.update_vector_indexes()
+        end_time = time.time()
+        self.logger.info(f"update_vector_indexes took {end_time - start_time:.2f} seconds")
 
     def update_extraction_metadata_graph_with_kg(self):
         """
@@ -338,3 +344,51 @@ class GraphHandlerForKG(GraphHandler):
         if len(new_models) > 0:
             self.logger.info(f"Adding {len(new_models)} new models to search index...")
             self.IndexHandler.add_documents(new_models)
+    
+    def update_vector_indexes(self):
+        """
+        Update vector indices with embeddings for newly indexed models.
+        This is called after regular indexing completes.
+        """
+        try:
+            from mlentory_load.core.Vectors import VectorIndexManager
+            
+            # Determine platform from class attribute or index handler
+            platform = None
+            if hasattr(self, 'platform'):
+                # Normalize platform name
+                platform_str = str(self.platform).lower()
+                if 'hf' in platform_str or 'hugging' in platform_str:
+                    platform = "hf"
+                elif 'openml' in platform_str:
+                    platform = "openml"
+                elif 'ai4life' in platform_str or 'ai4' in platform_str:
+                    platform = "ai4life"
+            
+            if not platform:
+                # Try to infer from index handler
+                if hasattr(self.IndexHandler, 'hf_index') and self.IndexHandler.hf_index:
+                    platform = "hf"
+                elif hasattr(self.IndexHandler, 'openml_index') and self.IndexHandler.openml_index:
+                    platform = "openml"
+                elif hasattr(self.IndexHandler, 'ai4life_index') and self.IndexHandler.ai4life_index:
+                    platform = "ai4life"
+            
+            if not platform:
+                # Default to hf if can't determine
+                platform = "hf"
+            
+            manager = VectorIndexManager(
+                index_handler=self.IndexHandler,
+                platform=platform,
+                logger=self.logger if hasattr(self, 'logger') else None
+            )
+            
+            # Update vector index with all models (can be optimized to only update new ones)
+            manager.update_vector_index()
+            
+        except Exception as e:
+            if hasattr(self, 'logger'):
+                self.logger.warning(f"Vector index update failed: {e}")
+            else:
+                print(f"Warning: Vector index update failed: {e}")

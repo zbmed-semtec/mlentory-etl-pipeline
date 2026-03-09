@@ -11,6 +11,7 @@ oxrdflib==0.4.0
 transformers>=4.48.0
 datasets~=3.0.0
 huggingface-hub~=0.30.0
+sentence-transformers>=2.2.0
 vllm
 
 # Extractor Specific
