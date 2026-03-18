@@ -161,20 +161,27 @@ class AI4LifeExtractor:
                 mapped[out_key] = values[0] if len(values) == 1 else values
         
         # Handle special cases
-        if isinstance(mapped.get("schema.org:identifier"), list):
-            mapped["schema.org:identifier"] = " ".join(
-                str(x) for x in mapped["schema.org:identifier"] if x is not None
-            )
+        identifier = mapped.get("schema.org:identifier")
+        if isinstance(identifier, list):
+            identifier = " ".join(str(x) for x in identifier if x is not None)
+        if isinstance(identifier, str) and identifier:
+            identifier = identifier.split(" ")[0]
+        mapped["schema.org:identifier"] = identifier
         
-        mapped["schema.org:identifier"] = mapped["schema.org:identifier"].split(" ")[0]
+        # Handle additional urls (only if we have a valid identifier)
+        if identifier:
+            ai4life_url = f"https://bioimage.io/#/artifacts/{identifier}"
+            existing_url = mapped.get("schema.org:url")
+            existing_archived_at = mapped.get("schema.org:archivedAt")
+            mapped["schema.org:url"] = [existing_url, ai4life_url] if existing_url else [ai4life_url]
+            mapped["schema.org:archivedAt"] = [existing_archived_at, ai4life_url] if existing_archived_at else [ai4life_url]
         
-        # Handle additional urls
-        ai4life_url = f"https://bioimage.io/#/artifacts/{mapped['schema.org:identifier']}"
-        mapped["schema.org:url"] = [mapped["schema.org:url"], ai4life_url]
-        mapped["schema.org:archivedAt"] = [mapped["schema.org:archivedAt"], ai4life_url]
-        
-        #Handle licenses
-        mapped["schema.org:license"] = mapped["schema.org:license"].split("/")[-1]
+        # Handle licenses safely (may be None or non-string)
+        license_value = mapped.get("schema.org:license")
+        if isinstance(license_value, str) and license_value:
+            mapped["schema.org:license"] = license_value.split("/")[-1]
+        else:
+            mapped["schema.org:license"] = None
         
         # Process dates
         for date_field in ["schema.org:dateCreated", "schema.org:dateModified"]:
