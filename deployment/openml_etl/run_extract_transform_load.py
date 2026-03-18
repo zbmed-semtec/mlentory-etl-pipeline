@@ -222,6 +222,7 @@ def initialize_load_processor(kg_files_directory: str, logger: logging.Logger) -
             RDFHandler=rdfHandler,
             IndexHandler=elasticsearchHandler,
             kg_files_directory=kg_files_directory,
+            platform="openml",
             graph_identifier="https://w3id.org/mlentory/mlentory_graph",
             deprecated_graph_identifier="https://w3id.org/mlentory/deprecated_mlentory_graph",
         )
