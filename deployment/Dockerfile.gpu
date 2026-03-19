@@ -36,7 +36,26 @@ COPY deployment/requirements/ /app/requirements/
 FROM gpu_base AS gpu_openml
 RUN echo "Building OpenML ETL image for GPU..."
 
-RUN pip install --no-cache-dir -r /app/requirements/openml_requirements.txt
+RUN pip install --no-cache-dir --extra-index-url https://download.pytorch.org/whl/cu118 \
+    -r /app/requirements/openml_requirements.txt
+
+# Copy the package files
+COPY code/extractors /app/extractors
+RUN pip3 install --no-deps -e /app/extractors[gpu]
+
+COPY code/transform /app/transform
+RUN pip3 install --no-deps -e /app/transform
+
+COPY code/load /app/load
+RUN pip3 install --no-deps -e /app/load
+
+########################################################################################
+
+FROM gpu_base AS gpu_ai4life
+RUN echo "Building AI4Life ETL image for GPU..."
+
+RUN pip install --no-cache-dir --extra-index-url https://download.pytorch.org/whl/cu118 \
+    -r /app/requirements/ai4life_requirements.txt
 
 # Copy the package files
 COPY code/extractors /app/extractors
