@@ -153,6 +153,34 @@ services:
     networks:
       - mlentory_network
 
+  openml_etl_with_gpu:
+    profiles:
+      - openml_gpu
+    container_name: openml_gpu
+    build: 
+      context: ../
+      dockerfile: deployment/Dockerfile.gpu
+      target: gpu_openml
+    volumes:
+      - ../data/configuration/openml:/app/configuration/openml
+      - ../code/extractors:/app/extractors
+      - ../code/transform:/app/transform
+      - ../code/load:/app/load
+      - ./openml_etl:/app/openml_etl
+      - /var/run/docker.sock:/var/run/docker.sock 
+    deploy:
+      resources:
+        reservations:
+          devices:
+          - driver: nvidia
+            count: all
+            capabilities: [gpu]
+    dns:
+      - 1.1.1.1
+    command: ["tail", "-f", "/dev/null"]
+    networks:
+      - mlentory_network
+
   openml_etl_with_no_gpu:
     profiles: 
       # - no_gpu
@@ -176,6 +204,34 @@ services:
     networks:
       - mlentory_network
     
+  ai4life_etl_with_gpu:
+    profiles:
+      - ai4life_gpu
+    container_name: ai4life_gpu
+    build: 
+      context: ../
+      dockerfile: deployment/Dockerfile.gpu
+      target: gpu_ai4life
+    volumes:
+      - ../data/configuration/ai4life:/app/configuration/ai4life
+      - ../code/extractors:/app/extractors 
+      - ../code/transform:/app/transform
+      - ../code/load:/app/load
+      - ./ai4life_etl:/app/ai4life_etl
+      - /var/run/docker.sock:/var/run/docker.sock 
+    deploy:
+      resources:
+        reservations:
+          devices:
+          - driver: nvidia
+            count: all
+            capabilities: [gpu]
+    dns:
+      - 1.1.1.1
+    command: ["tail", "-f", "/dev/null"]
+    networks:
+      - mlentory_network
+
   ai4life_etl_with_no_gpu:
     profiles: 
       # - no_gpu
@@ -184,7 +240,7 @@ services:
     container_name: ai4life_no_gpu
     build: 
       context: ../
-      dockerfile: deployment/Dockerfile.ai4life_no_gpu
+      dockerfile: deployment/Dockerfile.no_gpu
       target: no_gpu_ai4life
     volumes:
       - ../data/configuration/ai4life:/app/configuration/ai4life
