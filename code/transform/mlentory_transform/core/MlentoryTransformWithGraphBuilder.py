@@ -489,17 +489,16 @@ class MlentoryTransformWithGraphBuilder:
         # Initialize a new graph for the disambiguated result
         disambiguated_graph = rdflib.Graph()
         
-        # Add all triples from the original graph except StatementMetadata instances
+        # Add all non-StatementMetadata triples from the original graph
+        for s, p, o in graph:
+            if s in metadata_nodes:
+                continue
+            disambiguated_graph.add((s, p, o))
+        
+        # Add only the best StatementMetadata for each statement
         for node_info in statement_groups.values():
             for p, o in graph.predicate_objects(node_info["node"]):
                 disambiguated_graph.add((node_info["node"], p, o))
-            
-        
-        # Add only the best StatementMetadata for each statement
-        # for best_metadata in statement_groups.values():
-        #     node = best_metadata["node"]
-        #     for p, o in graph.predicate_objects(node):
-        #         disambiguated_graph.add((node, p, o))
         
         # Save the disambiguated graph if requested
         # save_output_in_json = True
