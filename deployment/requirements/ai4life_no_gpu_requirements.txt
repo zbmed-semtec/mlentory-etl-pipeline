@@ -1,0 +1,30 @@
+## AI4Life ETL (no GPU) requirements
+#
+# Based on hf_no_gpu_requirements, but without HF-specific transformer stacks
+# and vLLM. Includes sentence-transformers for vector indexing.
+
+# Common
+numpy==1.26.4
+pandas==2.2.2
+tqdm==4.66.4
+matplotlib==3.9.0
+rdflib==7.1.4
+torch==2.6.0
+oxrdflib==0.4.0
+
+# Vector search / embeddings
+sentence-transformers>=2.2.0
+
+# Extractor specific (AI4Life shares these with HF/OpenML)
+arxiv~=2.1.0
+scikit-learn==1.5.0
+spdx_lookup==0.3.3
+
+# Load specific (DB, RDF, Elasticsearch, HTTP)
+docker==7.1.0
+sparqlwrapper==2.0.0
+psycopg2-binary==2.9.9
+elasticsearch==7.13.4
+elasticsearch-dsl<8.0.0
+requests
+
